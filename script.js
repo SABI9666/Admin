@@ -1,19 +1,19 @@
 // --- CONFIGURATION & GLOBAL STATE ---
 
-// The app's state, holding user and token information.
+// The app's state, holding user and token information after login.
 const appState = {
     jwtToken: null,
     currentUser: null,
 };
 
-// Your backend API URL.
+// Your backend API URL. Ensure this is correct.
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
 
 // --- CORE FUNCTIONS (API, Notifications, Logout) ---
 
 /**
- * Shows a temporary notification on the screen.
+ * Shows a temporary notification message on the screen.
  * @param {string} message The message to display.
  * @param {string} type The type of notification ('success', 'error', 'warning').
  */
@@ -25,7 +25,7 @@ function showNotification(message, type = 'info') {
     }
 
     const notification = document.createElement('div');
-    // The CSS file uses 'notification-success', 'notification-error', etc.
+    // These class names match the ones in your style.css
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
         <span>${message}</span>
@@ -41,11 +41,11 @@ function showNotification(message, type = 'info') {
 }
 
 /**
- * Handles all API requests to the backend.
+ * A reusable function to handle all API requests to the backend.
  * @param {string} endpoint The API endpoint to call (e.g., '/admin/dashboard').
  * @param {string} method The HTTP method ('GET', 'POST', 'PUT', 'DELETE').
  * @param {object|null} body The request body for POST/PUT requests.
- * @param {string|null} successMessage A message to show on success.
+ * @param {string|null} successMessage A message to show on a successful request.
  * @returns {Promise<any>} The JSON response from the server.
  */
 async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
@@ -70,6 +70,7 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
         if (!response.ok) {
+            // Try to parse error from backend, otherwise provide a generic message
             const errorData = await response.json().catch(() => ({ message: 'An unknown server error occurred.' }));
             throw new Error(errorData.message || `Request failed with status ${response.status}`);
         }
@@ -84,7 +85,7 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
     } catch (error) {
         showNotification(error.message, 'error');
         console.error('API Call Failed:', error);
-        throw error; // Propagate error to be caught by the calling function
+        throw error; // Allows the calling function to handle the error further if needed
     }
 }
 
@@ -95,11 +96,11 @@ function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
     showNotification('You have been successfully logged out.', 'success');
-    // Redirect is handled by the button's event listener.
+    // The redirect to index.html is handled in the button's event listener.
 }
 
 
-// --- ADMIN PANEL SCRIPT (Your Original Code, Unchanged) ---
+// --- ADMIN PANEL SCRIPT (Your Original Code) ---
 
 function initializeAdminPage() {
     // This function will run ONLY on admin.html
@@ -194,7 +195,6 @@ function renderAdminSection(section) {
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // API CALL SAMPLE: Using your apiCall function
         const response = await apiCall('/admin/dashboard', 'GET');
         const stats = response.stats;
         
@@ -231,7 +231,6 @@ async function renderAdminDashboard() {
 async function renderAdminUsers() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // API CALL SAMPLE: Getting users
         const response = await apiCall('/admin/users', 'GET');
         const users = response.users;
 
@@ -283,7 +282,6 @@ async function renderAdminUsers() {
 async function renderAdminSystemStats() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // API CALL SAMPLE: Getting system stats
         const response = await apiCall('/admin/system-stats', 'GET');
         const stats = response.stats;
         
@@ -305,32 +303,16 @@ async function renderAdminSystemStats() {
 
 async function handleStatusUpdate(userId, newStatus) {
     if (confirm(`Are you sure you want to change this user's status to ${newStatus}?`)) {
-        // API CALL SAMPLE: Updating user status
         await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, `User status updated to ${newStatus}.`)
-            .catch(() => {}); // Errors are handled by apiCall
+            .catch(() => {}); // Errors are handled by apiCall, so this catch can be empty
     }
     renderAdminUsers(); // Refresh the list
 }
 
 async function handleUserDelete(userId) {
     if (confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
-        // API CALL SAMPLE: Deleting a user
         await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.')
-            .catch(() => {});
+            .catch(() => {}); // Errors are handled by apiCall
         renderAdminUsers(); // Refresh the list
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-Tools
-
-Gemini can make mistakes, so do
