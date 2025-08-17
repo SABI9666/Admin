@@ -166,7 +166,7 @@
     <script>
         // Configuration - Update this with your actual backend URL
         window.ADMIN_CONFIG = {
-            API_BASE_URL: 'https://your-backend-url.vercel.app/api',
+            API_BASE_URL: 'https://steelconnect-backend.onrender.com',
             DEBUG_MODE: false // Set to true for development
         };
 
@@ -219,7 +219,9 @@
 
         // Network connectivity check
         function checkBackendConnection() {
-            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL || 'https://your-backend-url.vercel.app/api';
+            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL || 'https://steelconnect-backend.onrender.com
+
+';
             
             fetch(`${apiUrl.replace('/api', '')}/health`)
                 .then(response => response.json())
@@ -240,3 +242,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
