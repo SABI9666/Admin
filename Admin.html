@@ -1,792 +1,276 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteelConnect - Admin Panel</title>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* General Styling */
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #4b5563;
-            --background-color: #f3f4f6;
-            --sidebar-bg: #111827;
-            --sidebar-text: #d1d5db;
-            --sidebar-active-bg: #1f2937;
-            --card-bg: #ffffff;
-            --border-color: #e5e7eb;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --text-dark: #1f2937;
-            --text-light: #6b7280;
-            --success-color: #10b981;
-            --error-color: #ef4444;
-        }
+// server.js - SIMPLIFIED VERSION with Direct Imports
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-dark);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Sidebar Navigation */
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem 0;
-            transition: width 0.3s ease;
-        }
-
-        .sidebar-header {
-            padding: 0 1.5rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            border-bottom: 1px solid #374151;
-        }
-
-        .sidebar-header i {
-            font-size: 1.5rem;
-            color: var(--primary-color);
-        }
-
-        .sidebar-header h2 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .sidebar-nav {
-            flex-grow: 1;
-            list-style: none;
-            margin-top: 1.5rem;
-        }
-
-        .nav-item a {
-            display: flex;
-            align-items: center;
-            padding: 0.85rem 1.5rem;
-            color: var(--sidebar-text);
-            text-decoration: none;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s;
-            border-left: 3px solid transparent;
-        }
-
-        .nav-item a:hover {
-            background-color: var(--sidebar-active-bg);
-            color: #fff;
-        }
-
-        .nav-item a.active {
-            background-color: var(--sidebar-active-bg);
-            color: #fff;
-            border-left-color: var(--primary-color);
-        }
-
-        .nav-item a i {
-            width: 24px;
-            margin-right: 1rem;
-            text-align: center;
-        }
-
-        /* Main Content Area */
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .main-header {
-            background-color: var(--card-bg);
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        #page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .admin-profile {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .admin-profile .avatar {
-            width: 40px;
-            height: 40px;
-            background-color: var(--primary-color);
-            color: #fff;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            font-weight: 600;
-        }
-
-        .content-area {
-            padding: 2rem;
-        }
-
-        /* Dashboard Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .stat-card {
-            background-color: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .stat-card .icon {
-            font-size: 2rem;
-            padding: 1rem;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-        }
-
-        .stat-card .icon.users { background-color: #e0f2fe; color: #0ea5e9; }
-        .stat-card .icon.jobs { background-color: #dcfce7; color: #22c55e; }
-        .stat-card .icon.quotes { background-color: #fef3c7; color: #f59e0b; }
-        .stat-card .icon.messages { background-color: #e0e7ff; color: #6366f1; }
-
-        .stat-card .info h3 {
-            font-size: 2rem;
-            font-weight: 700;
-        }
-
-        .stat-card .info p {
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
-        /* Generic Table Styling */
-        .content-card {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            margin-top: 2rem;
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .card-header h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .data-table th, .data-table td {
-            padding: 1rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .data-table th {
-            background-color: #f9fafb;
-            font-weight: 600;
-            color: var(--text-light);
-            text-transform: uppercase;
-            font-size: 0.75rem;
-        }
-
-        .data-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .data-table tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-weight: 500;
-            font-size: 0.8rem;
-        }
-
-        .status-badge.open, .status-badge.submitted { background-color: #dcfce7; color: #166534; }
-        .status-badge.assigned, .status-badge.approved { background-color: #cffafe; color: #0e7490; }
-        .status-badge.completed { background-color: #e0e7ff; color: #3730a3; }
-        .status-badge.client, .status-badge.contractor { background-color: #dbeafe; color: #1e40af; }
+// Import routes directly
+import authRoutes from './src/routes/auth.js';
+import jobsRoutes from './src/routes/jobs.js';
+import quotesRoutes from './src/routes/quotes.js';
+import messagesRoutes from './src/routes/messages.js';
+// --- ADDED: Import for the new admin routes ---
+import adminRoutes from './src/routes/admin.js';
 
 
-        /* Form Styling */
-        .form-container {
-            max-width: 600px;
-        }
+// Import estimation routes (now fixed)
+let estimationRoutes;
+try {
+    const estimationModule = await import('./src/routes/estimation.js');
+    estimationRoutes = estimationModule.default;
+    console.log('✅ Estimation routes imported successfully');
+} catch (error) {
+    console.warn('⚠️ Estimation routes not available:', error.message);
+}
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+dotenv.config();
 
-        .form-group label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
+const app = express();
+const PORT = process.env.PORT || 10000;
 
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 1rem;
-            font-family: 'Inter', sans-serif;
-        }
+console.log('🚀 SteelConnect Backend Starting...');
+console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`⏰ Started at: ${new Date().toISOString()}`);
 
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: #fff;
-        }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-        }
-        .btn-danger {
-            background-color: var(--error-color);
-            color: #fff;
-        }
-        .btn-danger:hover {
-            background-color: #b91c1c;
-        }
+// --- Database Connection ---
+if (process.env.MONGODB_URI) {
+    mongoose.connect(process.env.MONGODB_URI)
+        .then(() => console.log('✅ MongoDB connected'))
+        .catch(err => console.error('❌ MongoDB connection error:', err));
+} else {
+    console.warn('⚠️ MONGODB_URI not found in environment variables');
+}
 
-        /* Modal Styling */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 400px;
-        }
-        .modal-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        .modal-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
+// --- Middleware ---
+const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(origin => origin.trim());
 
-        /* Loading Spinner */
-        .loader {
-            text-align: center;
-            padding: 3rem;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: var(--primary-color);
-            animation: spin 1s ease infinite;
-            margin: 0 auto 1rem;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-light);
-        }
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        .empty-state h4 {
-            font-size: 1.2rem;
-            color: var(--text-dark);
-            margin-bottom: 0.5rem;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- This container will hold the login modal -->
-    <div id="modal-container"></div>
-
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fas fa-shield-alt"></i>
-            <h2>Admin Panel</h2>
-        </div>
-        <ul class="sidebar-nav" id="sidebar-nav">
-            <li class="nav-item">
-                <a href="#dashboard" class="nav-link active" data-section="dashboard">
-                    <i class="fas fa-tachometer-alt fa-fw"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#jobs" class="nav-link" data-section="jobs">
-                    <i class="fas fa-briefcase fa-fw"></i>
-                    <span>Job Updates</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#quotes" class="nav-link" data-section="quotes">
-                    <i class="fas fa-file-invoice-dollar fa-fw"></i>
-                    <span>Quote Updates</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#subscriptions" class="nav-link" data-section="subscriptions">
-                    <i class="fas fa-credit-card fa-fw"></i>
-                    <span>Subscriptions</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#messages" class="nav-link" data-section="messages">
-                    <i class="fas fa-comments fa-fw"></i>
-                    <span>Messages</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#estimates" class="nav-link" data-section="estimates">
-                    <i class="fas fa-calculator fa-fw"></i>
-                    <span>Estimate Uploads</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#results" class="nav-link" data-section="results">
-                    <i class="fas fa-upload fa-fw"></i>
-                    <span>Result Upload</span>
-                </a>
-            </li>
-        </ul>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="main-header">
-            <h1 id="page-title">Dashboard</h1>
-            <div class="admin-profile">
-                <div class="info">
-                    <strong>Admin User</strong>
-                    <br>
-                    <small>administrator</small>
-                </div>
-                <div class="avatar">A</div>
-                <button id="logout-btn" class="btn btn-danger" style="padding: 0.5rem 1rem;">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </header>
-        <div class="content-area" id="content-area">
-            <!-- Content will be loaded here by JavaScript -->
-        </div>
-    </main>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const app = {
-            // --- CONFIGURATION ---
-            IS_LOCAL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
-            PROD_BACKEND_URL: 'https://steelconnect-backend.onrender.com/api',
-            get BACKEND_URL() {
-                return this.IS_LOCAL ? 'http://localhost:10000/api' : this.PROD_BACKEND_URL;
-            },
-
-            // --- STATE ---
-            adminToken: localStorage.getItem('adminToken'),
-            
-            // --- ELEMENTS ---
-            contentArea: document.getElementById('content-area'),
-            pageTitle: document.getElementById('page-title'),
-            navLinks: document.querySelectorAll('.nav-link'),
-            modalContainer: document.getElementById('modal-container'),
-            logoutBtn: document.getElementById('logout-btn'),
-
-            // --- INITIALIZATION ---
-            init() {
-                if (!this.adminToken) {
-                    this.showLoginModal();
-                } else {
-                    this.setupApp();
-                }
-            },
-            
-            setupApp() {
-                this.setupEventListeners();
-                this.handleRouting();
-                window.addEventListener('hashchange', this.handleRouting.bind(this));
-            },
-
-            // --- EVENT LISTENERS ---
-            setupEventListeners() {
-                this.navLinks.forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        window.location.hash = link.dataset.section;
-                    });
-                });
-                this.logoutBtn.addEventListener('click', () => this.logout());
-            },
-            
-            // --- AUTHENTICATION ---
-            showLoginModal() {
-                this.modalContainer.innerHTML = `
-                    <div class="modal-overlay">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h2>Admin Login</h2>
-                                <p>Please enter your credentials</p>
-                            </div>
-                            <form id="admin-login-form">
-                                <div class="form-group">
-                                    <label for="admin-email">Email</label>
-                                    <input type="email" id="admin-email" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="admin-password">Password</label>
-                                    <input type="password" id="admin-password" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
-                            </form>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('admin-login-form').addEventListener('submit', this.handleLogin.bind(this));
-            },
-
-            async handleLogin(e) {
-                e.preventDefault();
-                // NOTE: You need to create a POST /api/admin/login endpoint on your backend
-                // For now, we'll use a dummy token for demonstration.
-                const email = document.getElementById('admin-email').value;
-                const password = document.getElementById('admin-password').value;
-
-                // Replace this with a real API call
-                if (email === "admin@example.com" && password === "password") {
-                    this.adminToken = 'dummy-admin-jwt-token'; // This should come from your backend
-                    localStorage.setItem('adminToken', this.adminToken);
-                    this.modalContainer.innerHTML = '';
-                    this.setupApp();
-                } else {
-                    alert('Invalid credentials. Use admin@example.com and password.');
-                }
-            },
-
-            logout() {
-                localStorage.removeItem('adminToken');
-                this.adminToken = null;
-                window.location.reload();
-            },
-
-            // --- ROUTING ---
-            handleRouting() {
-                const hash = window.location.hash.substring(1) || 'dashboard';
-                this.loadSection(hash);
-            },
-            
-            // --- API CALLER ---
-            async apiCall(endpoint, method = 'GET', body = null) {
-                // This function now robustly handles API calls and errors.
-                // Ensure your backend routes are prefixed with /admin
-                try {
-                    const options = {
-                        method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${this.adminToken}`
-                        }
-                    };
-                    if (body) {
-                        options.body = JSON.stringify(body);
-                    }
-                    
-                    const response = await fetch(`${this.BACKEND_URL}/admin${endpoint}`, options);
-                    
-                    if (!response.ok) {
-                        if (response.status === 401 || response.status === 403) {
-                            this.logout(); // Token is invalid or expired, force logout
-                        }
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                } catch (error) {
-                    console.error(`API call to ${endpoint} failed:`, error);
-                    this.contentArea.innerHTML = `<div class="empty-state">
-                        <i class="fas fa-exclamation-triangle" style="color: var(--error-color);"></i>
-                        <h4>Failed to load data</h4>
-                        <p>${error.message}</p>
-                    </div>`;
-                    throw error;
-                }
-            },
-
-            // --- UI RENDERING ---
-            setLoading() {
-                this.contentArea.innerHTML = `
-                    <div class="loader">
-                        <div class="spinner"></div>
-                        <p>Loading content...</p>
-                    </div>`;
-            },
-            
-            updateActiveNav(section) {
-                this.navLinks.forEach(link => {
-                    link.classList.toggle('active', link.dataset.section === section);
-                });
-                this.pageTitle.textContent = section.charAt(0).toUpperCase() + section.slice(1).replace('-', ' ');
-            },
-
-            // --- SECTION LOADERS ---
-            loadSection(section) {
-                this.updateActiveNav(section);
-                this.setLoading();
-                
-                const sectionMap = {
-                    'dashboard': this.loadDashboard,
-                    'jobs': this.loadJobs,
-                    'quotes': this.loadQuotes,
-                    'subscriptions': this.loadSubscriptions,
-                    'messages': this.loadMessages,
-                    'estimates': this.loadEstimates,
-                    'results': this.loadResultUpload,
-                };
-
-                const loaderFunction = sectionMap[section] || (() => this.contentArea.innerHTML = '<h2>Section not found</h2>');
-                loaderFunction.call(this);
-            },
-
-            async loadDashboard() {
-                try {
-                    const data = await this.apiCall('/dashboard'); 
-                    const stats = data.stats;
-                    this.contentArea.innerHTML = `
-                        <div class="stats-grid">
-                            <div class="stat-card"><div class="icon users"><i class="fas fa-users"></i></div><div class="info"><h3>${stats.totalUsers || 0}</h3><p>Total Users</p></div></div>
-                            <div class="stat-card"><div class="icon jobs"><i class="fas fa-briefcase"></i></div><div class="info"><h3>${stats.totalJobs || 0}</h3><p>Total Jobs</p></div></div>
-                            <div class="stat-card"><div class="icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="info"><h3>${stats.totalQuotes || 0}</h3><p>Total Quotes</p></div></div>
-                            <div class="stat-card"><div class="icon messages"><i class="fas fa-comments"></i></div><div class="info"><h3>${stats.totalMessages || 0}</h3><p>Total Messages</p></div></div>
-                        </div>`;
-                } catch (error) { /* Handled by apiCall */ }
-            },
-
-            async loadJobs() {
-                try {
-                    const { jobs } = await this.apiCall('/jobs');
-                    let tableRows = '';
-                    if (!jobs || jobs.length === 0) {
-                        tableRows = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-briefcase"></i><h4>No jobs found</h4></div></td></tr>`;
-                    } else {
-                        jobs.forEach(job => {
-                            tableRows += `<tr>
-                                <td>${job.title}</td>
-                                <td>${job.posterName || 'N/A'}</td>
-                                <td>${job.budget}</td>
-                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
-                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
-                            </tr>`;
-                        });
-                    }
-                    this.contentArea.innerHTML = this.createTable('All Job Postings', ['Title', 'Poster', 'Budget', 'Status', 'Posted On'], tableRows);
-                } catch (error) { /* Handled by apiCall */ }
-            },
-
-            async loadQuotes() {
-                try {
-                     const { quotes } = await this.apiCall('/quotes');
-                     let tableRows = '';
-                    if (!quotes || quotes.length === 0) {
-                        tableRows = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-file-invoice-dollar"></i><h4>No quotes found</h4></div></td></tr>`;
-                    } else {
-                        quotes.forEach(quote => {
-                            tableRows += `<tr>
-                                <td>${quote.jobTitle || 'N/A'}</td>
-                                <td>${quote.designerName || 'N/A'}</td>
-                                <td>$${quote.quoteAmount}</td>
-                                <td><span class="status-badge ${quote.status}">${quote.status}</span></td>
-                                <td>${new Date(quote.createdAt).toLocaleDateString()}</td>
-                            </tr>`;
-                        });
-                    }
-                    this.contentArea.innerHTML = this.createTable('All Submitted Quotes', ['Job Title', 'Designer', 'Amount', 'Status', 'Submitted On'], tableRows);
-                } catch(error) { /* Handled by apiCall */ }
-            },
-
-            async loadSubscriptions() {
-                try {
-                    const { users } = await this.apiCall('/users');
-                    const userOptions = users.map(user => `<option value="${user.id}">${user.name} (${user.type})</option>`).join('');
-
-                    this.contentArea.innerHTML = `
-                        <div class="content-card">
-                            <div class="card-header"><h3>Manage Subscriptions</h3></div>
-                            <div style="padding: 1.5rem;">
-                                <div class="form-container">
-                                    <form id="subscription-form">
-                                        <div class="form-group"><label for="user-select">Select User</label><select id="user-select" name="userId" required><option value="">--Please choose a user--</option>${userOptions}</select></div>
-                                        <div class="form-group"><label for="subscription-value">Subscription Value ($)</label><input type="number" id="subscription-value" name="value" placeholder="e.g., 99.99" min="0" step="0.01" required></div>
-                                        <div class="form-group"><label for="subscription-type">Subscription Type</label><select id="subscription-type" name="type" required><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="one-time">One-Time</option></select></div>
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Subscription</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>`;
-                    document.getElementById('subscription-form').addEventListener('submit', this.handleAddSubscription.bind(this));
-                } catch (error) { /* Handled by apiCall */ }
-            },
-            
-            async handleAddSubscription(e) {
-                e.preventDefault();
-                const form = e.target;
-                const subscriptionData = { userId: form.userId.value, value: form.value.value, type: form.type.value };
-                try {
-                    await this.apiCall('/subscriptions', 'POST', subscriptionData);
-                    alert('Subscription added successfully!');
-                    form.reset();
-                } catch (error) {
-                    alert('Failed to add subscription: ' + error.message);
-                }
-            },
-
-            async loadMessages() {
-                try {
-                    const { messages } = await this.apiCall('/messages');
-                    let tableRows = '';
-                    if (!messages || messages.length === 0) {
-                        tableRows = `<tr><td colspan="4"><div class="empty-state"><i class="fas fa-comments"></i><h4>No messages found</h4></div></td></tr>`;
-                    } else {
-                        messages.forEach(msg => {
-                            tableRows += `<tr>
-                                <td>${msg.senderName}</td>
-                                <td>${msg.recipientName}</td>
-                                <td>${msg.text.substring(0, 50)}...</td>
-                                <td>${new Date(msg.createdAt).toLocaleString()}</td>
-                            </tr>`;
-                        });
-                    }
-                    this.contentArea.innerHTML = this.createTable('All Messages', ['From', 'To', 'Message Snippet', 'Date'], tableRows);
-                } catch (error) { /* Handled by apiCall */ }
-            },
-            
-            async loadEstimates() {
-                // NOTE: You need to create a '/admin/estimates' endpoint
-                this.contentArea.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-tools"></i>
-                        <h4>Under Construction</h4>
-                        <p>The estimate viewing feature is being developed.</p>
-                    </div>`;
-            },
-            
-            async loadResultUpload() {
-                try {
-                    const { users } = await this.apiCall('/users');
-                    const contractorOptions = users
-                        .filter(user => user.type === 'contractor')
-                        .map(user => `<option value="${user.id}">${user.name}</option>`).join('');
-
-                    this.contentArea.innerHTML = `
-                        <div class="content-card">
-                            <div class="card-header"><h3>Upload Result for Contractor</h3></div>
-                            <div style="padding: 1.5rem;">
-                                <div class="form-container">
-                                    <form id="result-upload-form">
-                                        <div class="form-group"><label for="contractor-select">Select Contractor</label><select id="contractor-select" name="contractorId" required><option value="">--Choose a contractor--</option>${contractorOptions}</select></div>
-                                        <div class="form-group"><label for="result-file">Upload Result File</label><input type="file" id="result-file" name="resultFile" required></div>
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload and Notify</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>`;
-                    // Add form submission handler for file upload
-                } catch (error) { /* Handled by apiCall */ }
-            },
-
-            // --- UTILITY ---
-            createTable(title, headers, rows) {
-                const headerHtml = headers.map(h => `<th>${h}</th>`).join('');
-                return `
-                    <div class="content-card">
-                        <div class="card-header"><h3>${title}</h3></div>
-                        <div class="table-container">
-                            <table class="data-table">
-                                <thead><tr>${headerHtml}</tr></thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
+        if (allowedOrigins.includes(origin) || 
+            origin.endsWith('.vercel.app') || 
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1')) {
+            callback(null, true);
+        } else {
+            console.warn(`⚠️ CORS Warning: Origin "${origin}" not in allowed list`);
+            if (process.env.NODE_ENV !== 'production') {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
             }
-        };
+        }
+    },
+    credentials: true,
+};
 
-        app.init();
+app.use(cors(corsOptions));
+app.use(helmet({ 
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(compression());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// --- Request logging middleware ---
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+// --- Health check route ---
+app.get('/health', (req, res) => {
+    res.json({
+        success: true,
+        message: 'SteelConnect Backend is healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
     });
-    </script>
-</body>
-</html>
+});
+
+// --- Root route ---
+app.get('/', (req, res) => {
+    res.json({ 
+        message: 'SteelConnect Backend API is running',
+        version: '1.0.0',
+        status: 'healthy',
+        endpoints: {
+            health: '/health',
+            auth: '/api/auth',
+            jobs: '/api/jobs',
+            quotes: '/api/quotes',
+            messages: '/api/messages',
+            estimation: '/api/estimation',
+            // --- ADDED: Admin endpoint info ---
+            admin: '/api/admin'
+        }
+    });
+});
+
+// --- Register Routes ---
+console.log('🔄 Registering routes...');
+
+// Auth routes
+if (authRoutes) {
+    app.use('/api/auth', authRoutes);
+    console.log('✅ Auth routes registered');
+} else {
+    console.error('❌ Auth routes failed to load');
+}
+
+// Jobs routes  
+if (jobsRoutes) {
+    app.use('/api/jobs', jobsRoutes);
+    console.log('✅ Jobs routes registered');
+} else {
+    console.error('❌ Jobs routes failed to load');
+}
+
+// Quotes routes
+if (quotesRoutes) {
+    app.use('/api/quotes', quotesRoutes);
+    console.log('✅ Quotes routes registered');
+} else {
+    console.error('❌ Quotes routes failed to load');
+}
+
+// Messages routes
+if (messagesRoutes) {
+    app.use('/api/messages', messagesRoutes);
+    console.log('✅ Messages routes registered');
+} else {
+    console.error('❌ Messages routes failed to load');
+}
+
+// Estimation routes
+if (estimationRoutes) {
+    app.use('/api/estimation', estimationRoutes);
+    console.log('✅ Estimation routes registered');
+} else {
+    console.warn('⚠️ Estimation routes unavailable - some services may be missing');
+}
+
+// --- ADDED: Register Admin Routes ---
+if (adminRoutes) {
+    app.use('/api/admin', adminRoutes);
+    console.log('✅ Admin routes registered');
+} else {
+    console.error('❌ Admin routes failed to load');
+}
+
+
+console.log('📦 Route registration completed');
+
+// --- API test endpoint ---
+app.get('/api', (req, res) => {
+    res.json({
+        message: 'SteelConnect API',
+        version: '1.0.0',
+        available_endpoints: [
+            'GET /health',
+            'GET /api',
+            'GET /api/auth/*',
+            'POST /api/auth/register',
+            'POST /api/auth/login',
+            'GET /api/jobs/*',
+            'GET /api/quotes/*', 
+            'GET /api/messages/*',
+            'GET /api/estimation/*',
+            // --- ADDED: Admin endpoint info ---
+            'GET /api/admin/*'
+        ]
+    });
+});
+
+// --- Error handling middleware ---
+app.use((error, req, res, next) => {
+    console.error('❌ Global Error Handler:', error);
+    
+    if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ 
+            success: false, 
+            error: 'File too large. Maximum size is 50MB.' 
+        });
+    }
+    
+    if (error.message === 'Not allowed by CORS') {
+        return res.status(403).json({
+            success: false,
+            error: 'CORS policy violation'
+        });
+    }
+    
+    res.status(error.status || 500).json({ 
+        success: false, 
+        error: error.message || 'Internal Server Error',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// --- 404 handler ---
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        error: `Route ${req.originalUrl} not found`,
+        available_routes: [
+            '/',
+            '/health',
+            '/api',
+            '/api/auth/*',
+            '/api/jobs/*',
+            '/api/quotes/*',
+            '/api/messages/*',
+            '/api/estimation/*',
+            // --- ADDED: Admin endpoint info ---
+            '/api/admin/*'
+        ]
+    });
+});
+
+// --- Graceful shutdown ---
+process.on('SIGTERM', () => {
+    console.log('🔴 SIGTERM received, shutting down gracefully...');
+    if (mongoose.connection.readyState === 1) {
+        mongoose.connection.close();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('🔴 SIGINT received, shutting down gracefully...');
+    if (mongoose.connection.readyState === 1) {
+        mongoose.connection.close();
+    }
+    process.exit(0);
+});
+
+// --- Start Server (Commented out for Vercel) ---
+/*
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('🎉 SteelConnect Backend Server Started');
+    console.log(`📍 Server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
+    
+    console.log('\n📋 Environment Check:');
+    console.log(`   MongoDB: ${process.env.MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   Anthropic API: ${process.env.ANTHROPIC_API_KEY ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   Firebase: ${process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 ? '✅ Configured' : '❌ Missing'}`);
+    console.log(`   CORS Origins: ${process.env.CORS_ORIGIN ? '✅ Configured' : '⚠️ Using defaults'}`);
+    
+    console.log('\n🔗 Available endpoints:');
+    console.log(`   Health: http://localhost:${PORT}/health`);
+    console.log(`   API: http://localhost:${PORT}/api`);
+    console.log('');
+});
+*/
+
+// --- ADDED: Export the app for Vercel ---
+export default app;
