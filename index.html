@@ -3,232 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - SteelConnect</title>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>SteelConnect - Admin Login</title>
     <link rel="stylesheet" href="style.css">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Inline critical admin styles */
-        .admin-body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        #admin-panel-container {
-            display: none; /* Initially hidden */
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .admin-sidebar {
-            width: 280px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        /* Styles specific to the login form page */
+        .login-page-body {
             display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-
-        .admin-main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .login-prompt-container {
-            display: none;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        .login-prompt-box {
+        .login-form-container {
             background: white;
             padding: 40px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
+            width: 100%;
             max-width: 400px;
         }
-
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            max-width: 400px;
+        .login-form-container h2 {
+            margin-bottom: 25px;
         }
-
-        .loading-spinner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 50px;
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
         }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box; /* Important for padding */
+        }
+        .btn-full-width {
+            width: 100%;
+            padding: 12px;
         }
     </style>
 </head>
-<body class="admin-body">
+<body class="login-page-body">
 
-    <div id="admin-panel-container">
-        <aside class="admin-sidebar">
-            <div class="admin-sidebar-header">
-                <div class="logo">SteelConnect</div>
-                <span class="admin-tag">Admin Panel</span>
-            </div>
-            
-            <nav class="admin-nav">
-                <a href="#" class="admin-nav-link active" data-section="dashboard">
-                    <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
-                </a>
-                <a href="#" class="admin-nav-link" data-section="users">
-                    <i class="fas fa-users fa-fw"></i> User Management
-                </a>
-                <a href="#" class="admin-nav-link" data-section="quotes">
-                    <i class="fas fa-file-invoice-dollar fa-fw"></i> Quotes Overview
-                </a>
-                <a href="#" class="admin-nav-link" data-section="system-stats">
-                    <i class="fas fa-server fa-fw"></i> System Stats
-                </a>
-            </nav>
-            
-            <div class="admin-sidebar-footer">
-                <div id="admin-user-info" class="user-info-small">
-                    </div>
-                <button id="admin-logout-btn" class="btn btn-danger">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </aside>
+    <div id="notification-container"></div>
 
-        <main class="admin-main-content">
-            <header class="admin-header">
-                <h1 id="admin-section-title">Dashboard</h1>
-                <div class="admin-header-actions">
-                    </div>
-            </header>
-            
-            <div id="admin-content-area" class="admin-content-area">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
+    <div class="login-form-container">
+        <h2>Admin Login</h2>
+        <form id="admin-login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required>
             </div>
-        </main>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full-width">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+        </form>
     </div>
-
-    <div id="admin-login-prompt" class="login-prompt-container">
-        <div class="login-prompt-box">
-            <i class="fas fa-shield-alt login-prompt-icon" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
-            <h2>Admin Access Required</h2>
-            <p>You must be logged in as an administrator to view this page.</p>
-            <div style="margin-top: 25px;">
-                <a href="index.html" class="btn btn-primary" style="margin-right: 10px;">
-                    <i class="fas fa-home"></i> Return to Homepage
-                </a>
-                <a href="login.html" class="btn btn-secondary">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <div id="notification-container" class="notification-container"></div>
-
-    <script>
-        // Configuration - Update this with your actual backend URL
-        window.ADMIN_CONFIG = {
-            // FIXED: Added the required /api path to the end of the URL.
-            API_BASE_URL: 'https://steelconnect-backend.onrender.com/api',
-            DEBUG_MODE: false // Set to true for development
-        };
-
-        // Debug logging
-        function debugLog(message, data = null) {
-            if (window.ADMIN_CONFIG.DEBUG_MODE) {
-                console.log('[ADMIN DEBUG]', message, data);
-            }
-        }
-
-        // Initialize admin page when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('DOM Content Loaded - Initializing Admin Page');
-            
-            const adminPanel = document.getElementById('admin-panel-container');
-            const loginPrompt = document.getElementById('admin-login-prompt');
-            
-            if (adminPanel && loginPrompt) {
-                debugLog('Admin elements found, starting initialization...');
-                
-                // Small delay to ensure all scripts are loaded
-                setTimeout(() => {
-                    if (typeof initializeAdminPage === 'function') {
-                        debugLog('Calling initializeAdminPage function');
-                        initializeAdminPage();
-                    } else {
-                        console.error('initializeAdminPage function not found - check script.js');
-                        // Fallback - show login prompt
-                        loginPrompt.style.display = 'flex';
-                        adminPanel.style.display = 'none';
-                    }
-                }, 100);
-            } else {
-                console.error('Admin panel elements not found');
-            }
-        });
-
-        // Error handler for script loading
-        window.addEventListener('error', function(e) {
-            console.error('Script error:', e.error);
-            // Show login prompt as fallback
-            const loginPrompt = document.getElementById('admin-login-prompt');
-            const adminPanel = document.getElementById('admin-panel-container');
-            if (loginPrompt && adminPanel) {
-                loginPrompt.style.display = 'flex';
-                adminPanel.style.display = 'none';
-            }
-        });
-
-        // Network connectivity check
-        function checkBackendConnection() {
-            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL;
-            
-            // The health check should now correctly point to your base URL without /api
-            fetch(`${apiUrl.replace('/api', '')}/health`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Health check failed');
-                    return response.json();
-                })
-                .then(data => {
-                    debugLog('Backend connection successful', data);
-                })
-                .catch(error => {
-                    console.warn('Backend connection failed:', error);
-                });
-        }
-
-        // Check connection on load
-        setTimeout(checkBackendConnection, 2000);
-    </script>
 
     <script src="script.js"></script>
+
 </body>
 </html>
