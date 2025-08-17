@@ -7,34 +7,39 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
+<body class="admin-body">
 
     <div id="notification-container"></div>
 
-    <div id="admin-login-prompt" style="display: flex;">
+    <div id="admin-login-prompt" class="login-prompt-container">
         <div class="login-prompt-box">
+            <i class="fas fa-shield-alt login-prompt-icon"></i>
             <h2>Access Denied</h2>
             <p>You must be logged in as an administrator to view this page.</p>
-            <a href="index.html" class="btn">Go to Login</a>
+            <a href="index.html" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Go to Login
+            </a>
         </div>
     </div>
 
     <div id="admin-panel-container" style="display: none;">
         <aside class="admin-sidebar">
-            <div class="sidebar-header">
-                <h2>SteelConnect</h2>
-                <span>Admin Panel</span>
+            <div class="admin-sidebar-header">
+                <div class="logo">SteelConnect</div>
+                <span class="admin-tag">Admin Panel</span>
             </div>
-            <div id="admin-user-info">
+            <div id="admin-user-info" class="user-info-small" style="padding: 20px;">
                 </div>
             <nav class="admin-nav">
-                <a href="#" class="admin-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                <a href="#" class="admin-nav-link" data-section="users"><i class="fas fa-users"></i> User Management</a>
-                <a href="#" class="admin-nav-link" data-section="quotes"><i class="fas fa-file-invoice"></i> Quotes</a>
-                <a href="#" class="admin-nav-link" data-section="system-stats"><i class="fas fa-chart-bar"></i> System Stats</a>
+                <a href="#" class="admin-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
+                <a href="#" class="admin-nav-link" data-section="users"><i class="fas fa-users fa-fw"></i> User Management</a>
+                <a href="#" class="admin-nav-link" data-section="quotes"><i class="fas fa-file-invoice-dollar fa-fw"></i> Quotes</a>
+                <a href="#" class="admin-nav-link" data-section="system-stats"><i class="fas fa-server fa-fw"></i> System Stats</a>
             </nav>
-            <div class="sidebar-footer">
-                <button id="admin-logout-btn" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <div class="admin-sidebar-footer">
+                <button id="admin-logout-btn" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </aside>
 
@@ -51,3 +56,9 @@
 
 </body>
 </html>
+## Summary of the Correct Flow
+A user opens index.html and sees the login form.
+
+They enter their credentials. script.js sees the admin-login-form and runs the login logic.
+
+On successful login, t
