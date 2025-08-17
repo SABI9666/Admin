@@ -137,8 +137,8 @@ async function handleAdminLogin(event) {
     loginButton.textContent = 'Logging in...';
 
     try {
-        // Use a generic apiCall without success message for login
-        const data = await apiCall('/auth/login', 'POST', { email, password });
+        // Updated API Call to use the dedicated admin login endpoint
+        const data = await apiCall('/auth/login/admin', 'POST', { email, password });
 
         // CRITICAL STEP: Store token and user info on successful login
         localStorage.setItem('jwtToken', data.token);
@@ -173,7 +173,7 @@ function initializeAdminPage() {
         try {
             const user = JSON.parse(userJson);
             // CRITICAL SECURITY CHECK: Verify the user has the 'admin' role.
-            if (user.role === 'admin') {
+            if (user.type === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
                 setupAdminPanel();
@@ -213,7 +213,7 @@ function setupAdminPanel() {
     // Populate user info in the sidebar
     document.getElementById('admin-user-info').innerHTML = `
         <strong>${appState.currentUser.name}</strong>
-        <small>${appState.currentUser.role}</small>
+        <small>${appState.currentUser.type}</small>
     `;
     document.getElementById('admin-logout-btn').addEventListener('click', logout);
 
@@ -328,7 +328,7 @@ async function renderAdminUsers() {
                             <tr data-user-id="${user._id}">
                                 <td>${user.name}</td>
                                 <td>${user.email}</td>
-                                <td><span class="user-role-badge ${user.role}">${user.role}</span></td>
+                                <td><span class="user-role-badge ${user.type}">${user.type}</span></td>
                                 <td>
                                     <select class="status-select" onchange="handleStatusUpdate('${user._id}', this.value)">
                                         <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
