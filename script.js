@@ -1,55 +1,58 @@
+// script.js for the SteelConnect Admin Panel
+
 // --- CONFIGURATION & GLOBAL STATE ---
 
-// The app's state, holding user and token information after login.
 const appState = {
     jwtToken: null,
     currentUser: null,
 };
 
-// Your backend API URL. Ensure this is correct.
+// The base URL for your backend API.
+// This should match the URL where your server is deployed.
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
 
-// --- CORE FUNCTIONS (API, Notifications, Logout) ---
+// --- CORE UTILITY FUNCTIONS ---
 
 /**
  * Shows a temporary notification message on the screen.
  * @param {string} message The message to display.
- * @param {string} type The type of notification ('success', 'error', 'warning').
+ * @param {string} type The type of notification ('success', 'error', 'info').
  */
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container');
     if (!container) {
-        console.error('Notification container not found!');
+        console.error('Fatal: Notification container element not found in the DOM!');
         return;
     }
 
     const notification = document.createElement('div');
-    // These class names match the ones in your style.css
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
         <span>${message}</span>
         <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
     `;
-
     container.appendChild(notification);
 
-    // Automatically remove the notification after 5 seconds.
+    // Automatically remove the notification after 5 seconds for a clean user experience.
     setTimeout(() => {
-        notification.remove();
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300); // Allow for fade-out transition
     }, 5000);
 }
 
 /**
- * A reusable function to handle all API requests to the backend.
- * @param {string} endpoint The API endpoint to call (e.g., '/admin/dashboard').
+ * A centralized and reusable function to handle all API requests.
+ * It automatically includes the authorization token and handles errors.
+ * @param {string} endpoint The API endpoint (e.g., '/admin/dashboard').
  * @param {string} method The HTTP method ('GET', 'POST', 'PUT', 'DELETE').
- * @param {object|null} body The request body for POST/PUT requests.
- * @param {string|null} successMessage A message to show on a successful request.
+ * @param {object|null} body The request payload for POST/PUT requests.
+ * @param {string|null} successMessage A message to show upon a successful request.
  * @returns {Promise<any>} The JSON response from the server.
  */
 async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
     const token = localStorage.getItem('jwtToken');
+    const fullUrl = `${API_BASE_URL}${endpoint}`;
 
     const options = {
         method,
@@ -67,10 +70,9 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        const response = await fetch(fullUrl, options);
 
         if (!response.ok) {
-            // Try to parse error from backend, otherwise provide a generic message
             const errorData = await response.json().catch(() => ({ message: 'An unknown server error occurred.' }));
             throw new Error(errorData.message || `Request failed with status ${response.status}`);
         }
@@ -84,94 +86,106 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         return data;
     } catch (error) {
         showNotification(error.message, 'error');
-        console.error('API Call Failed:', error);
-        throw error; // Allows the calling function to handle the error further if needed
+        console.error(`API Call Failed: ${method} ${fullUrl}`, error);
+        throw error; // Re-throw to allow calling function to handle it
     }
 }
 
 /**
- * Logs the user out by clearing credentials from local storage.
+ * Logs the user out by clearing credentials and redirecting to the homepage.
  */
 function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
     showNotification('You have been successfully logged out.', 'success');
-    // The redirect to index.html is handled in the button's event listener.
+    setTimeout(() => window.location.href = 'index.html', 1000); // Redirect after a short delay
 }
 
 
-// --- ADMIN PANEL SCRIPT (Your Original Code) ---
+// --- ADMIN PANEL INITIALIZATION & SETUP ---
 
+/**
+ * Main entry point for the admin page logic. Checks for admin credentials.
+ */
 function initializeAdminPage() {
-    // This function will run ONLY on admin.html
     const adminPanel = document.getElementById('admin-panel-container');
     if (!adminPanel) return; // Exit if not on the admin page
 
-    console.log("Admin Panel Initializing...");
-
-    // Reuse the main app's login check
     const token = localStorage.getItem('jwtToken');
-    const user = localStorage.getItem('currentUser');
+    const userJson = localStorage.getItem('currentUser');
 
-    if (token && user) {
+    if (token && userJson) {
         try {
-            appState.jwtToken = token;
-            const parsedUser = JSON.parse(user);
-            
-            // CRITICAL: Check if the user is an admin
-            if (parsedUser.role === 'admin') {
-                appState.currentUser = parsedUser;
+            const user = JSON.parse(userJson);
+            // CRITICAL SECURITY CHECK: Verify the user has the 'admin' role.
+            if (user.role === 'admin') {
+                appState.jwtToken = token;
+                appState.currentUser = user;
                 setupAdminPanel();
             } else {
-                showAdminLoginPrompt();
+                showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
             }
         } catch (error) {
-            showAdminLoginPrompt();
+            showAdminLoginPrompt("Invalid user data found. Please log in again.");
         }
     } else {
         showAdminLoginPrompt();
     }
 }
 
-function showAdminLoginPrompt() {
+/**
+ * Displays the login prompt and hides the admin panel.
+ * @param {string|null} message An optional message to display on the prompt.
+ */
+function showAdminLoginPrompt(message = null) {
     document.getElementById('admin-login-prompt').style.display = 'flex';
     document.getElementById('admin-panel-container').style.display = 'none';
+    if (message) {
+        document.querySelector('.login-prompt-box p').textContent = message;
+    }
 }
 
+/**
+ * Sets up the admin panel UI, event listeners, and loads the initial dashboard view.
+ */
 function setupAdminPanel() {
     document.getElementById('admin-login-prompt').style.display = 'none';
     document.getElementById('admin-panel-container').style.display = 'flex';
-    
-    // Display user info and setup logout
+
+    // Populate user info in the sidebar
     document.getElementById('admin-user-info').innerHTML = `
         <strong>${appState.currentUser.name}</strong>
         <small>${appState.currentUser.role}</small>
     `;
-    document.getElementById('admin-logout-btn').addEventListener('click', () => {
-        logout();
-        window.location.href = 'index.html'; // Redirect after logout
-    });
+    document.getElementById('admin-logout-btn').addEventListener('click', logout);
 
-    // Setup navigation
+    // Setup navigation links
     const navLinks = document.querySelectorAll('.admin-nav-link');
     navLinks.forEach(link => {
-        link.addEventListener('click', e => {
+        link.addEventListener('click', (e) => {
             e.preventDefault();
             navLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
             const section = link.dataset.section;
-            document.getElementById('admin-section-title').textContent = link.textContent;
+            document.getElementById('admin-section-title').textContent = link.textContent.trim();
             renderAdminSection(section);
         });
     });
 
-    // Load the default dashboard view
+    // Load the default view (Dashboard)
     renderAdminSection('dashboard');
 }
 
+
+// --- DYNAMIC CONTENT RENDERING ---
+
+/**
+ * Renders the content for a specific admin section.
+ * @param {string} section The name of the section to render.
+ */
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>'; // Loading state
+    contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
 
     switch (section) {
         case 'dashboard':
@@ -181,23 +195,22 @@ function renderAdminSection(section) {
             renderAdminUsers();
             break;
         case 'quotes':
-            // You can build this function using apiCall('/admin/quotes', 'GET')
-            contentArea.innerHTML = "Quotes overview section is under construction.";
+            contentArea.innerHTML = '<div class="empty-state">Quotes overview section is under construction.</div>';
             break;
         case 'system-stats':
             renderAdminSystemStats();
             break;
         default:
-            contentArea.innerHTML = 'Section not found.';
+            contentArea.innerHTML = '<div class="error-state">Section not found.</div>';
     }
 }
 
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const response = await apiCall('/admin/dashboard', 'GET');
+        const response = await apiCall('/admin/dashboard');
         const stats = response.stats;
-        
+
         contentArea.innerHTML = `
             <div class="admin-stats-grid">
                 <div class="admin-stat-card">
@@ -224,18 +237,18 @@ async function renderAdminDashboard() {
             </div>
         `;
     } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data.</div>';
+        contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data. Please try again later.</div>';
     }
 }
 
 async function renderAdminUsers() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const response = await apiCall('/admin/users', 'GET');
+        const response = await apiCall('/admin/users');
         const users = response.users;
 
-        if (users.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No users found.</div>';
+        if (!users || users.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No users found in the system.</div>';
             return;
         }
 
@@ -253,18 +266,18 @@ async function renderAdminUsers() {
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr data-user-id="${user.id}">
+                            <tr data-user-id="${user._id}">
                                 <td>${user.name}</td>
                                 <td>${user.email}</td>
                                 <td><span class="user-role-badge ${user.role}">${user.role}</span></td>
                                 <td>
-                                    <select class="status-select" onchange="handleStatusUpdate('${user.id}', this.value)">
+                                    <select class="status-select" onchange="handleStatusUpdate('${user._id}', this.value)">
                                         <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
                                         <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user.id}')">
+                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id}')">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </td>
@@ -275,16 +288,16 @@ async function renderAdminUsers() {
             </div>
         `;
     } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load user data.</div>';
+        contentArea.innerHTML = '<div class="error-state">Failed to load user data. Please try again later.</div>';
     }
 }
 
 async function renderAdminSystemStats() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const response = await apiCall('/admin/system-stats', 'GET');
+        const response = await apiCall('/admin/system-stats');
         const stats = response.stats;
-        
+
         contentArea.innerHTML = `
             <div class="system-stats-container">
                 <h3>System Information</h3>
@@ -301,18 +314,28 @@ async function renderAdminSystemStats() {
     }
 }
 
+
+// --- EVENT HANDLERS FOR USER ACTIONS ---
+
 async function handleStatusUpdate(userId, newStatus) {
-    if (confirm(`Are you sure you want to change this user's status to ${newStatus}?`)) {
-        await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, `User status updated to ${newStatus}.`)
-            .catch(() => {}); // Errors are handled by apiCall, so this catch can be empty
+    if (confirm(`Are you sure you want to change this user's status to "${newStatus}"?`)) {
+        await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.')
+            .then(() => renderAdminUsers()) // Refresh the user list on success
+            .catch(() => renderAdminUsers()); // Also refresh on failure to revert dropdown
+    } else {
+       // If the admin cancels the confirmation, refresh to revert the visual change in the dropdown
+       renderAdminUsers();
     }
-    renderAdminUsers(); // Refresh the list
 }
 
 async function handleUserDelete(userId) {
-    if (confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+    if (confirm('WARNING: Are you sure you want to permanently delete this user? This action cannot be undone.')) {
         await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.')
-            .catch(() => {}); // Errors are handled by apiCall
-        renderAdminUsers(); // Refresh the list
+            .then(() => renderAdminUsers()) // Refresh the user list
+            .catch(() => {}); // Error is already shown by apiCall
     }
 }
+
+// --- INITIALIZATION TRIGGER ---
+// Start the admin page logic once the DOM is fully loaded.
+document.addEventListener('DOMContentLoaded', initializeAdminPage);
