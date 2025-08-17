@@ -1,4 +1,4 @@
-// script.js for the SteelConnect Admin Panel
+// script.js for the SteelConnect Admin Panel (Handles both Login and Admin Panel)
 
 // --- CONFIGURATION & GLOBAL STATE ---
 
@@ -8,7 +8,6 @@ const appState = {
 };
 
 // The base URL for your backend API.
-// This should match the URL where your server is deployed.
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
 
@@ -34,7 +33,7 @@ function showNotification(message, type = 'info') {
     `;
     container.appendChild(notification);
 
-    // Automatically remove the notification after 5 seconds for a clean user experience.
+    // Automatically remove the notification after 5 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
         setTimeout(() => notification.remove(), 300); // Allow for fade-out transition
@@ -42,8 +41,7 @@ function showNotification(message, type = 'info') {
 }
 
 /**
- * A centralized and reusable function to handle all API requests.
- * It automatically includes the authorization token and handles errors.
+ * A centralized function to handle all API requests.
  * @param {string} endpoint The API endpoint (e.g., '/admin/dashboard').
  * @param {string} method The HTTP method ('GET', 'POST', 'PUT', 'DELETE').
  * @param {object|null} body The request payload for POST/PUT requests.
@@ -77,13 +75,21 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
             throw new Error(errorData.message || `Request failed with status ${response.status}`);
         }
 
-        const data = await response.json();
-
-        if (successMessage) {
-            showNotification(successMessage, 'success');
+        // Handle cases with no JSON response body (like a 204 No Content on DELETE)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+            if (successMessage) {
+                showNotification(successMessage, 'success');
+            }
+            return data;
+        } else {
+             if (successMessage) {
+                showNotification(successMessage, 'success');
+            }
+            return; // Return nothing if no JSON
         }
 
-        return data;
     } catch (error) {
         showNotification(error.message, 'error');
         console.error(`API Call Failed: ${method} ${fullUrl}`, error);
@@ -92,13 +98,65 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
 }
 
 /**
- * Logs the user out by clearing credentials and redirecting to the homepage.
+ * Logs the user out by clearing credentials and redirecting.
  */
 function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
     showNotification('You have been successfully logged out.', 'success');
-    setTimeout(() => window.location.href = 'index.html', 1000); // Redirect after a short delay
+    // Redirect to the login page (index.html) after logout
+    setTimeout(() => window.location.href = 'index.html', 1000);
+}
+
+
+// --- LOGIN PAGE LOGIC ---
+
+/**
+ * Sets up the event listener for the admin login form.
+ */
+function initializeLoginPage() {
+    const loginForm = document.getElementById('admin-login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleAdminLogin);
+    }
+}
+
+/**
+ * Handles the submission of the admin login form.
+ * @param {Event} event The form submission event.
+ */
+async function handleAdminLogin(event) {
+    event.preventDefault(); // Prevent default form submission
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const loginButton = event.target.querySelector('button[type="submit"]');
+    
+    // Disable button to prevent multiple submissions
+    loginButton.disabled = true;
+    loginButton.textContent = 'Logging in...';
+
+    try {
+        // Use a generic apiCall without success message for login
+        const data = await apiCall('/auth/login', 'POST', { email, password });
+
+        // CRITICAL STEP: Store token and user info on successful login
+        localStorage.setItem('jwtToken', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+
+        showNotification('Login successful! Redirecting...', 'success');
+        
+        // Redirect to the admin panel
+        setTimeout(() => {
+            window.location.href = 'admin.html';
+        }, 1000);
+
+    } catch (error) {
+        // Error notification is already handled by apiCall
+        console.error('Login failed:', error);
+        loginButton.disabled = false; // Re-enable the button on failure
+        loginButton.textContent = 'Login';
+    }
 }
 
 
@@ -108,9 +166,6 @@ function logout() {
  * Main entry point for the admin page logic. Checks for admin credentials.
  */
 function initializeAdminPage() {
-    const adminPanel = document.getElementById('admin-panel-container');
-    if (!adminPanel) return; // Exit if not on the admin page
-
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
 
@@ -141,7 +196,10 @@ function showAdminLoginPrompt(message = null) {
     document.getElementById('admin-login-prompt').style.display = 'flex';
     document.getElementById('admin-panel-container').style.display = 'none';
     if (message) {
-        document.querySelector('.login-prompt-box p').textContent = message;
+        const messageElement = document.querySelector('.login-prompt-box p');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
     }
 }
 
@@ -173,6 +231,7 @@ function setupAdminPanel() {
     });
 
     // Load the default view (Dashboard)
+    document.querySelector('.admin-nav-link[data-section="dashboard"]').classList.add('active');
     renderAdminSection('dashboard');
 }
 
@@ -315,15 +374,19 @@ async function renderAdminSystemStats() {
 }
 
 
-// --- EVENT HANDLERS FOR USER ACTIONS ---
+// --- EVENT HANDLERS FOR ADMIN ACTIONS ---
 
 async function handleStatusUpdate(userId, newStatus) {
     if (confirm(`Are you sure you want to change this user's status to "${newStatus}"?`)) {
-        await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.')
-            .then(() => renderAdminUsers()) // Refresh the user list on success
-            .catch(() => renderAdminUsers()); // Also refresh on failure to revert dropdown
+        try {
+            await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.');
+            // No need to call renderAdminUsers() here, success message is enough
+        } catch (error) {
+            // If the API call fails, refresh the list to revert the dropdown change
+            renderAdminUsers();
+        }
     } else {
-       // If the admin cancels the confirmation, refresh to revert the visual change in the dropdown
+       // If the admin cancels, refresh to revert the visual change in the dropdown
        renderAdminUsers();
     }
 }
@@ -336,6 +399,105 @@ async function handleUserDelete(userId) {
     }
 }
 
-// --- INITIALIZATION TRIGGER ---
-// Start the admin page logic once the DOM is fully loaded.
-document.addEventListener('DOMContentLoaded', initializeAdminPage);
+// --- GLOBAL INITIALIZATION TRIGGER ---
+// This one function runs when the page loads and decides which setup to run.
+document.addEventListener('DOMContentLoaded', () => {
+    // If we find the admin panel, we are on admin.html
+    if (document.getElementById('admin-panel-container')) {
+        initializeAdminPage();
+    } 
+    // If we find the login form, we are on index.html
+    else if (document.getElementById('admin-login-form')) {
+        initializeLoginPage();
+    }
+});
+
+
+
+
+
+
+I HAVE ONLY index.html do i need admin.html
+
+
+
+Show thinking
+Yes, you absolutely do. The entire system is designed around having two separate pages for security and organization.
+
+Think of it like a building:
+
+index.html is the public lobby with a reception desk (the login form).
+
+admin.html is the secure office area that you can only enter after you get a keycard (the JWT token) from the reception.
+
+Attempting to put the secure office inside the public lobby is confusing and insecure.
+
+Why You Need admin.html
+Security: You should not load the admin panel's HTML structure, even if it's hidden, for a user who isn't logged in. Separating the files ensures that only authenticated users ever receive the admin panel code.
+
+Organization: Your script.js is built to handle two different scenarios. It checks which page it's on and runs the appropriate functions. This keeps your code clean and manageable.
+
+Functionality: The login process is designed to redirect the user from the login page (index.html) to the protected panel page (admin.html) upon success.
+
+What to Put in admin.html
+Create a new file named admin.html. This file will contain the HTML structure for the dashboard, which your script.js will then control.
+
+Here is a starter template for admin.html. Notice it includes the specific IDs (admin-panel-container, admin-login-prompt, etc.) that your JavaScript file is looking for.
+
+admin.html
+
+HTML
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <div id="notification-container"></div>
+
+    <div id="admin-login-prompt" style="display: flex;">
+        <div class="login-prompt-box">
+            <h2>Access Denied</h2>
+            <p>You must be logged in as an administrator to view this page.</p>
+            <a href="index.html" class="btn">Go to Login</a>
+        </div>
+    </div>
+
+    <div id="admin-panel-container" style="display: none;">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2>SteelConnect</h2>
+                <span>Admin Panel</span>
+            </div>
+            <div id="admin-user-info">
+                </div>
+            <nav class="admin-nav">
+                <a href="#" class="admin-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="#" class="admin-nav-link" data-section="users"><i class="fas fa-users"></i> User Management</a>
+                <a href="#" class="admin-nav-link" data-section="quotes"><i class="fas fa-file-invoice"></i> Quotes</a>
+                <a href="#" class="admin-nav-link" data-section="system-stats"><i class="fas fa-chart-bar"></i> System Stats</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="admin-logout-btn" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </aside>
+
+        <main class="admin-main-content">
+            <header class="admin-header">
+                <h1 id="admin-section-title">Dashboard</h1>
+            </header>
+            <section id="admin-content-area">
+                </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
