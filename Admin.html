@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - SteelConnect</title>
     
+    <!-- External CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Custom CSS - Make sure this points to your main stylesheet -->
     <link rel="stylesheet" href="style.css">
     
     <style>
@@ -89,6 +92,7 @@
 </head>
 <body class="admin-body">
 
+    <!-- Admin Panel Container (Hidden by default) -->
     <div id="admin-panel-container">
         <aside class="admin-sidebar">
             <div class="admin-sidebar-header">
@@ -113,7 +117,8 @@
             
             <div class="admin-sidebar-footer">
                 <div id="admin-user-info" class="user-info-small">
-                    </div>
+                    <!-- User info will be populated by JavaScript -->
+                </div>
                 <button id="admin-logout-btn" class="btn btn-danger">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
@@ -124,10 +129,12 @@
             <header class="admin-header">
                 <h1 id="admin-section-title">Dashboard</h1>
                 <div class="admin-header-actions">
-                    </div>
+                    <!-- Add any header actions here -->
+                </div>
             </header>
             
             <div id="admin-content-area" class="admin-content-area">
+                <!-- Content will be dynamically loaded here -->
                 <div class="loading-spinner">
                     <div class="spinner"></div>
                 </div>
@@ -135,6 +142,7 @@
         </main>
     </div>
 
+    <!-- Login Prompt (Shown when not authenticated) -->
     <div id="admin-login-prompt" class="login-prompt-container">
         <div class="login-prompt-box">
             <i class="fas fa-shield-alt login-prompt-icon" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
@@ -151,14 +159,14 @@
         </div>
     </div>
 
+    <!-- Notification Container -->
     <div id="notification-container" class="notification-container"></div>
 
+    <!-- Scripts -->
     <script>
-        // Configuration - Using the API URL from the main script.js file is recommended,
-        // but if defined here, it must be correct.
+        // Configuration - Update this with your actual backend URL
         window.ADMIN_CONFIG = {
-            // FIXED: Added the required /api path to the end of the URL.
-            API_BASE_URL: 'https://steelconnect-backend.onrender.com/api',
+            API_BASE_URL: 'https://your-backend-url.vercel.app/api',
             DEBUG_MODE: false // Set to true for development
         };
 
@@ -173,6 +181,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('DOM Content Loaded - Initializing Admin Page');
             
+            // Show loading initially
             const adminPanel = document.getElementById('admin-panel-container');
             const loginPrompt = document.getElementById('admin-login-prompt');
             
@@ -210,19 +219,16 @@
 
         // Network connectivity check
         function checkBackendConnection() {
-            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL;
+            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL || 'https://your-backend-url.vercel.app/api';
             
-            // The health check should now correctly point to your base URL without /api
             fetch(`${apiUrl.replace('/api', '')}/health`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Health check failed');
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     debugLog('Backend connection successful', data);
                 })
                 .catch(error => {
                     console.warn('Backend connection failed:', error);
+                    // You could show a connection status indicator here
                 });
         }
 
@@ -230,6 +236,7 @@
         setTimeout(checkBackendConnection, 2000);
     </script>
 
+    <!-- Main application script -->
     <script src="script.js"></script>
 </body>
 </html>
