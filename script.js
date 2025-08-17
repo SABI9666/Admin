@@ -1,4 +1,4 @@
-
+// --- ADMIN PANEL SCRIPT ---
 
 function initializeAdminPage() {
     // This function will run ONLY on admin.html
