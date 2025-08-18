@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Styles specific to the login form page */
-        .login-page-body {
+        .admin-body { /* Changed this class name to match what script.js expects */
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            font-family: sans-serif; /* Added a default font */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .login-form-container {
@@ -43,13 +44,25 @@
             border-radius: 6px;
             box-sizing: border-box; /* Important for padding */
         }
+        .btn { /* Basic button styles for the demo */
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
         .btn-full-width {
             width: 100%;
             padding: 12px;
         }
     </style>
 </head>
-<body class="login-page-body">
+
+<body class="admin-body">
 
     <div id="notification-container"></div>
 
