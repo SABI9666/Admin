@@ -10,7 +10,6 @@ const appState = {
 // The base URL for your backend API.
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
-
 // --- CORE UTILITY FUNCTIONS ---
 
 /**
@@ -52,6 +51,8 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
     const token = localStorage.getItem('jwtToken');
     const fullUrl = `${API_BASE_URL}${endpoint}`;
 
+    console.log(`Making API call: ${method} ${fullUrl}`);
+
     const options = {
         method,
         headers: {
@@ -65,20 +66,25 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
 
     if (body) {
         options.body = JSON.stringify(body);
+        console.log('Request body:', body);
     }
 
     try {
         const response = await fetch(fullUrl, options);
+        
+        console.log(`Response status: ${response.status}`);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'An unknown server error occurred.' }));
-            throw new Error(errorData.message || `Request failed with status ${response.status}`);
+            console.error('API Error:', errorData);
+            throw new Error(errorData.error || errorData.message || `Request failed with status ${response.status}`);
         }
 
         // Handle cases with no JSON response body (like a 204 No Content on DELETE)
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const data = await response.json();
+            console.log('API Response:', data);
             if (successMessage) {
                 showNotification(successMessage, 'success');
             }
@@ -91,8 +97,8 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         }
 
     } catch (error) {
-        showNotification(error.message, 'error');
         console.error(`API Call Failed: ${method} ${fullUrl}`, error);
+        showNotification(error.message, 'error');
         throw error; // Re-throw to allow calling function to handle it
     }
 }
@@ -107,7 +113,6 @@ function logout() {
     // Redirect to the login page (index.html) after logout
     setTimeout(() => window.location.href = 'index.html', 1000);
 }
-
 
 // --- LOGIN PAGE LOGIC ---
 
@@ -132,6 +137,8 @@ async function handleAdminLogin(event) {
     const password = document.getElementById('password').value;
     const loginButton = event.target.querySelector('button[type="submit"]');
     
+    console.log('Attempting admin login for:', email);
+    
     // Disable button to prevent multiple submissions
     loginButton.disabled = true;
     loginButton.textContent = 'Logging in...';
@@ -139,6 +146,8 @@ async function handleAdminLogin(event) {
     try {
         // Updated API Call to use the dedicated admin login endpoint
         const data = await apiCall('/auth/login/admin', 'POST', { email, password });
+
+        console.log('Login successful:', data);
 
         // CRITICAL STEP: Store token and user info on successful login
         localStorage.setItem('jwtToken', data.token);
@@ -159,7 +168,6 @@ async function handleAdminLogin(event) {
     }
 }
 
-
 // --- ADMIN PANEL INITIALIZATION & SETUP ---
 
 /**
@@ -169,21 +177,30 @@ function initializeAdminPage() {
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
 
+    console.log('Initializing admin page...');
+    console.log('Token exists:', !!token);
+    console.log('User data exists:', !!userJson);
+
     if (token && userJson) {
         try {
             const user = JSON.parse(userJson);
+            console.log('Parsed user:', user);
+            
             // CRITICAL SECURITY CHECK: Verify the user has the 'admin' role.
             if (user.type === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
                 setupAdminPanel();
             } else {
+                console.log('Access denied - user type:', user.type);
                 showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
             }
         } catch (error) {
+            console.error('Error parsing user data:', error);
             showAdminLoginPrompt("Invalid user data found. Please log in again.");
         }
     } else {
+        console.log('No valid credentials found');
         showAdminLoginPrompt();
     }
 }
@@ -207,6 +224,8 @@ function showAdminLoginPrompt(message = null) {
  * Sets up the admin panel UI, event listeners, and loads the initial dashboard view.
  */
 function setupAdminPanel() {
+    console.log('Setting up admin panel...');
+    
     document.getElementById('admin-login-prompt').style.display = 'none';
     document.getElementById('admin-panel-container').style.display = 'flex';
 
@@ -235,7 +254,6 @@ function setupAdminPanel() {
     renderAdminSection('dashboard');
 }
 
-
 // --- DYNAMIC CONTENT RENDERING ---
 
 /**
@@ -245,6 +263,8 @@ function setupAdminPanel() {
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
     contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+    console.log('Rendering section:', section);
 
     switch (section) {
         case 'dashboard':
@@ -293,6 +313,30 @@ async function renderAdminDashboard() {
                         <span class="stat-label">Total Quotes</span>
                     </div>
                 </div>
+                <div class="admin-stat-card">
+                    <i class="fas fa-user-shield"></i>
+                    <div class="stat-info">
+                        <span class="stat-value">${stats.activeUsers}</span>
+                        <span class="stat-label">Active Users</span>
+                    </div>
+                </div>
+            </div>
+            <div class="admin-stats-details">
+                <h3>Recent Activity (Last 7 Days)</h3>
+                <div class="activity-grid">
+                    <div class="activity-item">
+                        <span class="activity-label">New Users:</span>
+                        <span class="activity-value">${stats.recentActivity.newUsers}</span>
+                    </div>
+                    <div class="activity-item">
+                        <span class="activity-label">New Jobs:</span>
+                        <span class="activity-value">${stats.recentActivity.newJobs}</span>
+                    </div>
+                    <div class="activity-item">
+                        <span class="activity-label">New Quotes:</span>
+                        <span class="activity-value">${stats.recentActivity.newQuotes}</span>
+                    </div>
+                </div>
             </div>
         `;
     } catch (error) {
@@ -325,18 +369,18 @@ async function renderAdminUsers() {
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr data-user-id="${user._id}">
-                                <td>${user.name}</td>
+                            <tr data-user-id="${user.id}">
+                                <td>${user.name || 'N/A'}</td>
                                 <td>${user.email}</td>
                                 <td><span class="user-role-badge ${user.type}">${user.type}</span></td>
                                 <td>
-                                    <select class="status-select" onchange="handleStatusUpdate('${user._id}', this.value)">
-                                        <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                                    <select class="status-select" onchange="handleStatusUpdate('${user.id}', this.value)">
+                                        <option value="active" ${(user.status === 'active' || user.isActive === true) ? 'selected' : ''}>Active</option>
+                                        <option value="suspended" ${(user.status === 'suspended' || user.isActive === false) ? 'selected' : ''}>Suspended</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id}')">
+                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user.id}')">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </td>
@@ -360,12 +404,42 @@ async function renderAdminSystemStats() {
         contentArea.innerHTML = `
             <div class="system-stats-container">
                 <h3>System Information</h3>
-                <ul>
-                    <li><strong>Node.js Version:</strong> ${stats.nodeVersion}</li>
-                    <li><strong>Platform:</strong> ${stats.platform}</li>
-                    <li><strong>Server Uptime:</strong> ${(stats.serverUptime / 3600).toFixed(2)} hours</li>
-                    <li><strong>Memory Usage (Heap Used):</strong> ${(stats.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB</li>
-                </ul>
+                <div class="stats-grid">
+                    <div class="stat-section">
+                        <h4>Server Info</h4>
+                        <ul>
+                            <li><strong>Node.js Version:</strong> ${stats.system.nodeVersion}</li>
+                            <li><strong>Platform:</strong> ${stats.system.platform}</li>
+                            <li><strong>Environment:</strong> ${stats.system.environment}</li>
+                            <li><strong>Server Uptime:</strong> ${stats.performance.uptime}</li>
+                        </ul>
+                    </div>
+                    <div class="stat-section">
+                        <h4>Memory Usage</h4>
+                        <ul>
+                            <li><strong>Heap Used:</strong> ${(stats.system.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB</li>
+                            <li><strong>Heap Total:</strong> ${(stats.system.memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB</li>
+                            <li><strong>RSS:</strong> ${(stats.system.memoryUsage.rss / 1024 / 1024).toFixed(2)} MB</li>
+                        </ul>
+                    </div>
+                    <div class="stat-section">
+                        <h4>Database Collections</h4>
+                        <ul>
+                            ${Object.entries(stats.database.collections).map(([name, info]) => 
+                                `<li><strong>${name}:</strong> ${info.total} documents</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                    <div class="stat-section">
+                        <h4>Performance</h4>
+                        <ul>
+                            <li><strong>Status:</strong> ${stats.performance.status}</li>
+                            <li><strong>Average Response Time:</strong> ${stats.performance.averageResponseTime}</li>
+                            <li><strong>Total Documents:</strong> ${stats.database.totalDocuments}</li>
+                            <li><strong>Estimated Storage:</strong> ${stats.database.estimatedSize}</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         `;
     } catch (error) {
@@ -373,14 +447,16 @@ async function renderAdminSystemStats() {
     }
 }
 
-
 // --- EVENT HANDLERS FOR ADMIN ACTIONS ---
 
 async function handleStatusUpdate(userId, newStatus) {
+    console.log('Updating user status:', { userId, newStatus });
+    
     if (confirm(`Are you sure you want to change this user's status to "${newStatus}"?`)) {
         try {
             await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.');
-            // No need to call renderAdminUsers() here, success message is enough
+            // Refresh the users list to show updated status
+            setTimeout(() => renderAdminUsers(), 1000);
         } catch (error) {
             // If the API call fails, refresh the list to revert the dropdown change
             renderAdminUsers();
@@ -392,22 +468,35 @@ async function handleStatusUpdate(userId, newStatus) {
 }
 
 async function handleUserDelete(userId) {
+    console.log('Attempting to delete user:', userId);
+    
     if (confirm('WARNING: Are you sure you want to permanently delete this user? This action cannot be undone.')) {
-        await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.')
-            .then(() => renderAdminUsers()) // Refresh the user list
-            .catch(() => {}); // Error is already shown by apiCall
+        try {
+            await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.');
+            // Refresh the user list after successful deletion
+            setTimeout(() => renderAdminUsers(), 1000);
+        } catch (error) {
+            // Error is already shown by apiCall, just log it
+            console.error('Failed to delete user:', error);
+        }
     }
 }
 
 // --- GLOBAL INITIALIZATION TRIGGER ---
 // This one function runs when the page loads and decides which setup to run.
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded - Initializing application...');
+    
     // If we find the admin panel, we are on admin.html
     if (document.getElementById('admin-panel-container')) {
+        console.log('Detected admin panel page');
         initializeAdminPage();
     } 
     // If we find the login form, we are on index.html
     else if (document.getElementById('admin-login-form')) {
+        console.log('Detected login page');
         initializeLoginPage();
+    } else {
+        console.log('Unknown page type');
     }
 });
