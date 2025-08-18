@@ -1,4 +1,4 @@
-// script.js for the Enhanced SteelConnect Admin Panel
+// script.js for the Enhanced SteelConnect Admin Panel - FIXED VERSION
 // --- CONFIGURATION & GLOBAL STATE ---
 const appState = {
     jwtToken: null,
@@ -27,21 +27,50 @@ const SUBSCRIPTION_PLANS = {
  * @param {string} type The type of notification ('success', 'error', 'info').
  */
 function showNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container');
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('notification-container');
     if (!container) {
-        console.error('Fatal: Notification container element not found in the DOM!');
-        return;
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '10000';
+        document.body.appendChild(container);
     }
+    
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        color: white;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 300px;
+        word-wrap: break-word;
+        transition: opacity 0.3s ease;
+        ${type === 'success' ? 'background-color: #28a745;' : ''}
+        ${type === 'error' ? 'background-color: #dc3545;' : ''}
+        ${type === 'info' ? 'background-color: #007bff;' : ''}
+        ${type === 'warning' ? 'background-color: #ffc107; color: #212529;' : ''}
+    `;
+    
     notification.innerHTML = `
         <span>${message}</span>
-        <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
+        <button class="notification-close" style="background: none; border: none; color: inherit; float: right; font-size: 18px; line-height: 1; margin-left: 10px; cursor: pointer; opacity: 0.7;" onclick="this.parentElement.remove()">&times;</button>
     `;
+    
     container.appendChild(notification);
+    
     setTimeout(() => {
         notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
     }, 5000);
 }
 
@@ -66,42 +95,78 @@ function hideGlobalLoader() {
 async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
     const token = localStorage.getItem('jwtToken');
     const fullUrl = `${API_BASE_URL}${endpoint}`;
+    
+    console.log(`Making ${method} request to: ${fullUrl}`); // Debug log
+    
     const options = {
         method,
         headers: {
             'Content-Type': 'application/json',
         },
+        // Add CORS headers for cross-origin requests
+        mode: 'cors',
+        credentials: 'omit', // Don't send cookies
     };
+    
     if (token) {
         options.headers['Authorization'] = `Bearer ${token}`;
+        console.log('Token included in request'); // Debug log
     }
+    
     if (body) {
         options.body = JSON.stringify(body);
+        console.log('Request body:', body); // Debug log
     }
+    
     try {
+        console.log('Sending request with options:', options); // Debug log
         const response = await fetch(fullUrl, options);
         
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'An unknown server error occurred.' }));
-            throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+        console.log('Response status:', response.status); // Debug log
+        console.log('Response headers:', Object.fromEntries(response.headers.entries())); // Debug log
+        
+        // Handle different response types
+        let responseData = null;
+        const contentType = response.headers.get("content-type");
+        
+        if (contentType && contentType.includes("application/json")) {
+            responseData = await response.json();
+            console.log('Response data:', responseData); // Debug log
+        } else {
+            const textResponse = await response.text();
+            console.log('Response text:', textResponse); // Debug log
+            // Try to parse as JSON in case content-type header is wrong
+            try {
+                responseData = JSON.parse(textResponse);
+            } catch (e) {
+                responseData = { message: textResponse || 'No response data' };
+            }
         }
         
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            const data = await response.json();
-            if (successMessage) {
-                showNotification(successMessage, 'success');
-            }
-            return data;
-        } else {
-             if (successMessage) {
-                showNotification(successMessage, 'success');
-            }
-            return;
+        if (!response.ok) {
+            const errorMessage = responseData?.message || responseData?.error || `HTTP ${response.status}: ${response.statusText}`;
+            console.error('API Error:', errorMessage); // Debug log
+            throw new Error(errorMessage);
         }
+        
+        if (successMessage) {
+            showNotification(successMessage, 'success');
+        }
+        
+        return responseData;
+        
     } catch (error) {
         console.error(`API Call Failed: ${method} ${fullUrl}`, error);
-        showNotification(error.message, 'error');
+        
+        // Provide more specific error messages
+        let errorMessage = error.message;
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Network error: Unable to connect to server. Please check your internet connection.';
+        } else if (error.message.includes('CORS')) {
+            errorMessage = 'Cross-origin request blocked. Please check server CORS settings.';
+        }
+        
+        showNotification(errorMessage, 'error');
         throw error;
     }
 }
@@ -112,61 +177,194 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
 function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
+    appState.jwtToken = null;
+    appState.currentUser = null;
     showNotification('You have been successfully logged out.', 'success');
-    setTimeout(() => window.location.href = 'index.html', 1000);
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1000);
 }
 
 // --- LOGIN PAGE LOGIC ---
 function initializeLoginPage() {
+    console.log('Initializing login page'); // Debug log
     hideGlobalLoader();
+    
     const loginForm = document.getElementById('admin-login-form');
     if (loginForm) {
+        console.log('Login form found, attaching event listener'); // Debug log
         loginForm.addEventListener('submit', handleAdminLogin);
+    } else {
+        console.error('Login form not found in DOM'); // Debug log
+    }
+    
+    // Add input validation
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    if (emailInput && passwordInput) {
+        emailInput.addEventListener('input', validateEmail);
+        passwordInput.addEventListener('input', validatePassword);
+    }
+}
+
+function validateEmail() {
+    const emailInput = document.getElementById('email');
+    const email = emailInput.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (email && !emailRegex.test(email)) {
+        emailInput.style.borderColor = '#dc3545';
+        showNotification('Please enter a valid email address', 'warning');
+    } else {
+        emailInput.style.borderColor = '';
+    }
+}
+
+function validatePassword() {
+    const passwordInput = document.getElementById('password');
+    const password = passwordInput.value;
+    
+    if (password && password.length < 3) {
+        passwordInput.style.borderColor = '#dc3545';
+    } else {
+        passwordInput.style.borderColor = '';
     }
 }
 
 async function handleAdminLogin(event) {
     event.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const loginButton = event.target.querySelector('button[type="submit"]');
+    console.log('Login form submitted'); // Debug log
     
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    if (!emailInput || !passwordInput) {
+        console.error('Email or password input not found'); // Debug log
+        showNotification('Login form inputs not found', 'error');
+        return;
+    }
+    
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    
+    console.log('Login attempt with email:', email); // Debug log (don't log password)
+    
+    // Client-side validation
+    if (!email) {
+        showNotification('Please enter your email address', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    if (!password) {
+        showNotification('Please enter your password', 'error');
+        passwordInput.focus();
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    const loginButton = event.target.querySelector('button[type="submit"]');
+    if (!loginButton) {
+        console.error('Submit button not found'); // Debug log
+        return;
+    }
+    
+    // Disable button and show loading state
     loginButton.disabled = true;
     loginButton.textContent = 'Logging in...';
+    loginButton.style.opacity = '0.7';
 
     try {
+        console.log('Sending login request...'); // Debug log
         const data = await apiCall('/auth/login/admin', 'POST', { email, password });
+        console.log('Login response received:', data); // Debug log
+        
+        // Validate response structure
+        if (!data) {
+            throw new Error('No data received from server');
+        }
+        
+        if (!data.token) {
+            throw new Error('No authentication token received');
+        }
+        
+        if (!data.user) {
+            throw new Error('No user data received');
+        }
+        
+        // Check if user has admin privileges
+        if (data.user.role !== 'admin' && data.user.type !== 'admin') {
+            throw new Error('Access denied: Admin privileges required');
+        }
+        
+        // Store credentials
         localStorage.setItem('jwtToken', data.token);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
+        
+        // Update app state
+        appState.jwtToken = data.token;
+        appState.currentUser = data.user;
+        
+        console.log('Login successful, redirecting...'); // Debug log
         showNotification('Login successful! Redirecting...', 'success');
+        
         setTimeout(() => {
             window.location.href = 'admin.html';
         }, 1000);
+        
     } catch (error) {
+        console.error('Login error:', error); // Debug log
+        
+        // Reset button state
         loginButton.disabled = false;
         loginButton.textContent = 'Login';
+        loginButton.style.opacity = '1';
+        
+        // Clear password field on error
+        passwordInput.value = '';
+        
+        // Focus on email field
+        emailInput.focus();
     }
 }
 
 // --- ADMIN PANEL INITIALIZATION & SETUP ---
 function initializeAdminPage() {
+    console.log('Initializing admin page'); // Debug log
+    
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
+    
+    console.log('Stored token exists:', !!token); // Debug log
+    console.log('Stored user data exists:', !!userJson); // Debug log
     
     if (token && userJson) {
         try {
             const user = JSON.parse(userJson);
+            console.log('Parsed user data:', user); // Debug log
+            
             if (user.role === 'admin' || user.type === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
+                console.log('Admin access granted, setting up panel'); // Debug log
                 setupAdminPanel();
             } else {
+                console.log('User does not have admin privileges'); // Debug log
                 showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
             }
         } catch (error) {
+            console.error('Error parsing user data:', error); // Debug log
             showAdminLoginPrompt("Invalid user data found. Please log in again.");
         }
     } else {
+        console.log('No valid credentials found'); // Debug log
         showAdminLoginPrompt();
     }
     
@@ -174,29 +372,63 @@ function initializeAdminPage() {
 }
 
 function showAdminLoginPrompt(message = null) {
+    console.log('Showing admin login prompt:', message); // Debug log
     hideGlobalLoader();
-    document.getElementById('admin-login-prompt').style.display = 'flex';
-    document.getElementById('admin-panel-container').style.display = 'none';
+    
+    const loginPrompt = document.getElementById('admin-login-prompt');
+    const panelContainer = document.getElementById('admin-panel-container');
+    
+    if (loginPrompt) {
+        loginPrompt.style.display = 'flex';
+    }
+    
+    if (panelContainer) {
+        panelContainer.style.display = 'none';
+    }
+    
     if (message) {
         const messageElement = document.querySelector('.login-prompt-box p');
         if (messageElement) {
             messageElement.textContent = message;
+            messageElement.style.color = '#dc3545'; // Red color for error messages
         }
     }
 }
 
 function setupAdminPanel() {
+    console.log('Setting up admin panel'); // Debug log
     hideGlobalLoader();
-    document.getElementById('admin-login-prompt').style.display = 'none';
-    document.getElementById('admin-panel-container').style.display = 'flex';
     
-    document.getElementById('admin-user-info').innerHTML = `
-        <strong>${appState.currentUser.name}</strong>
-        <small>${appState.currentUser.role || appState.currentUser.type}</small>
-    `;
+    const loginPrompt = document.getElementById('admin-login-prompt');
+    const panelContainer = document.getElementById('admin-panel-container');
     
-    document.getElementById('admin-logout-btn').addEventListener('click', logout);
+    if (loginPrompt) {
+        loginPrompt.style.display = 'none';
+    }
     
+    if (panelContainer) {
+        panelContainer.style.display = 'flex';
+    } else {
+        console.error('Admin panel container not found'); // Debug log
+        return;
+    }
+    
+    // Update user info
+    const userInfoElement = document.getElementById('admin-user-info');
+    if (userInfoElement && appState.currentUser) {
+        userInfoElement.innerHTML = `
+            <strong>${appState.currentUser.name || 'Admin User'}</strong>
+            <small>${appState.currentUser.role || appState.currentUser.type || 'admin'}</small>
+        `;
+    }
+    
+    // Setup logout button
+    const logoutButton = document.getElementById('admin-logout-btn');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', logout);
+    }
+    
+    // Setup navigation
     const navLinks = document.querySelectorAll('.admin-nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -204,19 +436,46 @@ function setupAdminPanel() {
             navLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
             const section = link.dataset.section;
-            document.getElementById('admin-section-title').textContent = link.textContent.trim();
+            const sectionTitle = document.getElementById('admin-section-title');
+            if (sectionTitle) {
+                sectionTitle.textContent = link.textContent.trim();
+            }
             renderAdminSection(section);
         });
     });
     
-    document.querySelector('.admin-nav-link[data-section="dashboard"]').classList.add('active');
-    renderAdminSection('dashboard');
+    // Activate dashboard by default
+    const dashboardLink = document.querySelector('.admin-nav-link[data-section="dashboard"]');
+    if (dashboardLink) {
+        dashboardLink.classList.add('active');
+        renderAdminSection('dashboard');
+    }
 }
 
 // --- DYNAMIC CONTENT RENDERING ---
 function renderAdminSection(section) {
+    console.log('Rendering admin section:', section); // Debug log
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    
+    if (!contentArea) {
+        console.error('Admin content area not found'); // Debug log
+        return;
+    }
+    
+    contentArea.innerHTML = '<div class="loading-spinner" style="text-align: center; padding: 40px;"><div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 15px;">Loading...</p></div>';
+    
+    // Add CSS animation for spinner
+    if (!document.querySelector('#spinner-style')) {
+        const style = document.createElement('style');
+        style.id = 'spinner-style';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     switch (section) {
         case 'dashboard':
@@ -241,400 +500,148 @@ function renderAdminSection(section) {
             renderAdminSystemStats();
             break;
         default:
-            contentArea.innerHTML = '<div class="error-state">Section not found.</div>';
+            contentArea.innerHTML = '<div class="error-state" style="text-align: center; padding: 40px; color: #dc3545;">Section not found.</div>';
     }
 }
 
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
+        console.log('Loading dashboard data...'); // Debug log
         const response = await apiCall('/admin/dashboard');
-        const stats = response.stats;
+        console.log('Dashboard data received:', response); // Debug log
+        
+        const stats = response.stats || {};
         contentArea.innerHTML = `
-            <div class="admin-stats-grid">
-                <div class="admin-stat-card"><i class="fas fa-users"></i><div class="stat-info"><span class="stat-value">${stats.totalUsers}</span><span class="stat-label">Total Users</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-file-invoice-dollar"></i><div class="stat-info"><span class="stat-value">${stats.totalQuotes}</span><span class="stat-label">Total Quotes</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-comments"></i><div class="stat-info"><span class="stat-value">${stats.totalMessages}</span><span class="stat-label">Total Messages</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-briefcase"></i><div class="stat-info"><span class="stat-value">${stats.totalJobs}</span><span class="stat-label">Total Jobs</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-crown"></i><div class="stat-info"><span class="stat-value">${stats.activeSubscriptions || 0}</span><span class="stat-label">Active Subscriptions</span></div></div>
-                <div class="admin-stat-card"><i class="fas fa-dollar-sign"></i><div class="stat-info"><span class="stat-value">$${stats.totalRevenue || 0}</span><span class="stat-label">Total Revenue</span></div></div>
+            <div class="admin-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-users" style="font-size: 2rem; color: #007bff;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">${stats.totalUsers || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Total Users</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-file-invoice-dollar" style="font-size: 2rem; color: #28a745;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">${stats.totalQuotes || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Total Quotes</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-comments" style="font-size: 2rem; color: #ffc107;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">${stats.totalMessages || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Total Messages</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-briefcase" style="font-size: 2rem; color: #dc3545;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">${stats.totalJobs || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Total Jobs</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-crown" style="font-size: 2rem; color: #6f42c1;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">${stats.activeSubscriptions || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Active Subscriptions</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-dollar-sign" style="font-size: 2rem; color: #20c997;"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" style="display: block; font-size: 1.5rem; font-weight: bold; color: #333;">$${stats.totalRevenue || 0}</span>
+                        <span class="stat-label" style="color: #6c757d; font-size: 0.9rem;">Total Revenue</span>
+                    </div>
+                </div>
             </div>
-            <div class="admin-quick-actions">
-                <h3>Quick Actions</h3>
-                <div class="quick-action-buttons">
-                    <button class="btn btn-primary" onclick="renderAdminSection('users')"><i class="fas fa-users"></i> Manage Users</button>
-                    <button class="btn btn-success" onclick="renderAdminSection('subscriptions')"><i class="fas fa-crown"></i> Manage Subscriptions</button>
-                    <button class="btn btn-info" onclick="renderAdminSection('quotes')"><i class="fas fa-file-invoice-dollar"></i> Review Quotes</button>
+            <div class="admin-quick-actions" style="background: white; padding: 25px; border-radius: 8px; border: 1px solid #dee2e6;">
+                <h3 style="margin-bottom: 20px; color: #333;">Quick Actions</h3>
+                <div class="quick-action-buttons" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="renderAdminSection('users')" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-users"></i> Manage Users
+                    </button>
+                    <button class="btn btn-success" onclick="renderAdminSection('subscriptions')" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-crown"></i> Manage Subscriptions
+                    </button>
+                    <button class="btn btn-info" onclick="renderAdminSection('quotes')" style="padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-invoice-dollar"></i> Review Quotes
+                    </button>
                 </div>
             </div>
         `;
     } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data. Please try again later.</div>';
+        console.error('Dashboard loading error:', error); // Debug log
+        contentArea.innerHTML = '<div class="error-state" style="text-align: center; padding: 40px; color: #dc3545;">Failed to load dashboard data. Please try again later.</div>';
     }
 }
 
+// Placeholder functions for other sections (keeping them simple for now)
 async function renderAdminUsers() {
     const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/users');
-        const users = response.users;
-        if (!users || users.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No users found in the system.</div>';
-            return;
-        }
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <button class="btn btn-primary" onclick="showAddUserModal()"><i class="fas fa-plus"></i> Add User</button>
-                    <input type="text" placeholder="Search users..." class="search-input" onkeyup="filterTable(this.value, 'users-table')">
-                </div>
-                <table class="admin-table" id="users-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${users.map(user => `
-                            <tr data-user-id="${user._id || user.id}">
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
-                                <td><span class="user-role-badge">${user.type || user.role}</span></td>
-                                <td>
-                                    <select class="status-select" onchange="handleStatusUpdate('${user._id || user.id}', this.value)">
-                                        <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <button class="btn btn-info btn-sm" onclick="showUserDetails('${user._id || user.id}')"><i class="fas fa-eye"></i></button>
-                                    <button class="btn btn-warning btn-sm" onclick="showEditUserModal('${user._id || user.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id || user.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load user data. Please try again later.</div>';
-    }
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">User management section is being loaded...</div>';
 }
 
 async function renderAdminQuotes() {
     const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/quotes');
-        const quotes = response.quotes;
-        if (!quotes || quotes.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No quotes found in the system.</div>';
-            return;
-        }
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <input type="text" placeholder="Search quotes..." class="search-input" onkeyup="filterTable(this.value, 'quotes-table')">
-                    <select onchange="filterQuotesByStatus(this.value)" class="filter-select">
-                        <option value="">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-                <table class="admin-table" id="quotes-table">
-                    <thead>
-                        <tr>
-                            <th>User</th><th>Details</th><th>Amount</th><th>Status</th><th>Attachments</th><th>Created</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${quotes.map(quote => `
-                            <tr data-quote-id="${quote._id || quote.id}">
-                                <td>${quote.userId ? quote.userId.name : 'N/A'}</td>
-                                <td class="quote-details">${quote.details ? quote.details.substring(0, 100) : 'N/A'}${quote.details && quote.details.length > 100 ? '...' : ''}</td>
-                                <td>
-                                    <input type="number" class="amount-input" value="${quote.amount || 0}" 
-                                           onchange="updateQuoteAmount('${quote._id || quote.id}', this.value)" placeholder="Enter amount">
-                                </td>
-                                <td>
-                                    <select class="status-select" onchange="updateQuoteStatus('${quote._id || quote.id}', this.value)">
-                                        <option value="pending" ${quote.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                        <option value="approved" ${quote.status === 'approved' ? 'selected' : ''}>Approved</option>
-                                        <option value="rejected" ${quote.status === 'rejected' ? 'selected' : ''}>Rejected</option>
-                                        <option value="completed" ${quote.status === 'completed' ? 'selected' : ''}>Completed</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    ${quote.attachments && quote.attachments.length > 0 
-                                        ? `<button class="btn btn-info btn-sm" onclick="viewAttachments('${quote._id || quote.id}')">
-                                             <i class="fas fa-paperclip"></i> ${quote.attachments.length} files
-                                           </button>`
-                                        : '<span class="text-muted">No attachments</span>'
-                                    }
-                                </td>
-                                <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                <td>
-                                    <button class="btn btn-info btn-sm" onclick="viewQuoteDetails('${quote._id || quote.id}')"><i class="fas fa-eye"></i></button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote._id || quote.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load quotes data.</div>';
-    }
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">Quotes management section is being loaded...</div>';
+}
+
+async function renderAdminMessages() {
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">Messages section is being loaded...</div>';
 }
 
 async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/jobs');
-        const jobs = response.jobs;
-        if (!jobs || jobs.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No jobs found in the system.</div>';
-            return;
-        }
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <button class="btn btn-primary" onclick="showAddJobModal()"><i class="fas fa-plus"></i> Add Job</button>
-                    <input type="text" placeholder="Search jobs..." class="search-input" onkeyup="filterTable(this.value, 'jobs-table')">
-                </div>
-                <table class="admin-table" id="jobs-table">
-                    <thead>
-                        <tr>
-                            <th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Status</th><th>Attachments</th><th>Posted</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${jobs.map(job => `
-                            <tr data-job-id="${job._id || job.id}">
-                                <td>${job.title || 'N/A'}</td>
-                                <td>${job.company || 'N/A'}</td>
-                                <td>${job.location || 'N/A'}</td>
-                                <td>
-                                    <input type="text" class="salary-input" value="${job.salary || ''}" 
-                                           onchange="updateJobSalary('${job._id || job.id}', this.value)" placeholder="Enter salary">
-                                </td>
-                                <td>
-                                    <select class="status-select" onchange="updateJobStatus('${job._id || job.id}', this.value)">
-                                        <option value="active" ${job.status === 'active' ? 'selected' : ''}>Active</option>
-                                        <option value="closed" ${job.status === 'closed' ? 'selected' : ''}>Closed</option>
-                                        <option value="pending" ${job.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    ${job.attachments && job.attachments.length > 0 
-                                        ? `<button class="btn btn-info btn-sm" onclick="viewJobAttachments('${job._id || job.id}')">
-                                             <i class="fas fa-paperclip"></i> ${job.attachments.length} files
-                                           </button>`
-                                        : '<span class="text-muted">No attachments</span>'
-                                    }
-                                </td>
-                                <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                <td>
-                                    <button class="btn btn-info btn-sm" onclick="viewJobDetails('${job._id || job.id}')"><i class="fas fa-eye"></i></button>
-                                    <button class="btn btn-warning btn-sm" onclick="editJob('${job._id || job.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteJob('${job._id || job.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load jobs data.</div>';
-    }
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">Jobs management section is being loaded...</div>';
 }
 
-// --- NEW ENHANCED MESSAGES SECTION ---
-async function renderAdminMessages() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/messages');
-        const messages = response.messages;
-        if (!messages || messages.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No messages found in the system.</div>';
-            return;
-        }
-
-        const users = [...new Map(messages.map(m => [m.senderId?._id, m.senderId])).values()];
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <div class="search-filter-row">
-                        <input type="text" placeholder="Search messages..." class="search-input" onkeyup="filterMessages(this.value)">
-                        <select onchange="filterMessages()" class="filter-select" id="message-type-filter">
-                            <option value="">All Types</option>
-                            <option value="quote">Quote</option>
-                            <option value="job">Job</option>
-                            <option value="support">Support</option>
-                            <option value="general">General</option>
-                        </select>
-                        <select onchange="filterMessages()" class="filter-select" id="message-user-filter">
-                            <option value="">All Users</option>
-                            ${users.map(user => user ? `<option value="${user._id}">${user.name}</option>` : '').join('')}
-                        </select>
-                    </div>
-                </div>
-                <div class="messages-view">
-                    <div class="messages-list" id="messages-list">
-                        ${messages.map((message) => `
-                            <div class="message-item" data-message-id="${message._id || message.id}" data-message-type="${message.type || 'general'}" data-user-id="${message.senderId?._id || 'unknown'}" data-message-content="${encodeURIComponent(JSON.stringify(message))}" onclick="selectMessage(this)">
-                                <div class="message-header">
-                                    <div class="sender-info">
-                                        <strong>${message.senderId ? message.senderId.name : 'Unknown User'}</strong>
-                                        <span class="message-type-badge ${message.type || 'general'}">${message.type || 'General'}</span>
-                                    </div>
-                                    <div class="message-meta">
-                                        <span class="message-date">${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</span>
-                                        ${message.unread ? '<span class="unread-indicator">●</span>' : ''}
-                                    </div>
-                                </div>
-                                <div class="message-preview">
-                                    ${message.content ? message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '') : 'No content'}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="message-detail" id="message-detail">
-                        <div class="no-message-selected">Select a message to view details</div>
-                    </div>
-                </div>
-            </div>
-            <style>
-                .messages-view { display: flex; height: 70vh; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-                .messages-list { width: 40%; border-right: 1px solid #ddd; overflow-y: auto; background: #f8f9fa; }
-                .message-item { display: block; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s; }
-                .message-item:hover { background-color: #e9ecef; }
-                .message-item.active { background-color: #007bff; color: white; }
-                .message-item.active .message-type-badge { background-color: rgba(255,255,255,0.2); color: white; }
-                .message-item.active .message-date, .message-item.active .message-preview { color: #f0f0f0; }
-                .message-item.hidden { display: none; }
-                .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-                .sender-info { display: flex; align-items: center; gap: 8px; }
-                .message-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6c757d; }
-                .message-date {}
-                .unread-indicator { color: #007bff; font-size: 14px; line-height: 1; }
-                .message-preview { font-size: 14px; color: #495057; line-height: 1.4; }
-                .message-type-badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; text-transform: capitalize; background-color: #e9ecef; color: #495057; }
-                .message-type-badge.quote { background-color: #d1ecf1; color: #0c5460; }
-                .message-type-badge.job { background-color: #d4edda; color: #155724; }
-                .message-type-badge.support { background-color: #f8d7da; color: #721c24; }
-                .message-type-badge.general { background-color: #e2e3e5; color: #383d41; }
-                .message-detail { width: 60%; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
-                .no-message-selected { margin: auto; text-align: center; color: #6c757d; font-size: 16px; }
-                .message-detail-header { padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; }
-                .message-detail-header h4 { margin: 0 0 5px 0; }
-                .message-detail-meta { font-size: 13px; color: #6c757d; }
-                .message-detail-meta span { margin-right: 15px; }
-                .message-detail-body { flex-grow: 1; line-height: 1.6; white-space: pre-wrap; font-size: 15px; }
-                .message-reply-form { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-                .message-reply-form textarea { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; margin-bottom: 10px; }
-                .message-reply-form .btn-container { text-align: right; }
-                .search-filter-row { display: flex; gap: 15px; margin-bottom: 15px; }
-                .search-filter-row .search-input { flex-grow: 1; }
-            </style>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load messages. Please try again later.</div>';
-    }
-}
-
-function selectMessage(element) {
-    // Highlight active item in the list
-    document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    
-    // Remove unread indicator if present
-    const unreadIndicator = element.querySelector('.unread-indicator');
-    if (unreadIndicator) {
-        unreadIndicator.remove();
-    }
-
-    const messageData = JSON.parse(decodeURIComponent(element.dataset.messageContent));
-    const detailView = document.getElementById('message-detail');
-
-    detailView.innerHTML = `
-        <div class="message-detail-header">
-            <h4>Conversation with ${messageData.senderId ? messageData.senderId.name : 'Unknown'}</h4>
-            <div class="message-detail-meta">
-                <span><i class="fas fa-calendar-alt"></i> ${new Date(messageData.createdAt).toLocaleString()}</span>
-                <span><i class="fas fa-tag"></i> Type: ${messageData.type || 'General'}</span>
-            </div>
-        </div>
-        <div class="message-detail-body">
-            <p>${messageData.content || 'No content available.'}</p>
-        </div>
-        <div class="message-reply-form">
-            <textarea id="reply-textarea" placeholder="Type your reply here..."></textarea>
-            <div class="btn-container">
-                <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
-                    <i class="fas fa-paper-plane"></i> Send Reply
-                </button>
-            </div>
-        </div>
-    `;
-    // In a real app, you would also mark the message as read via an API call
-    // apiCall(`/admin/messages/${messageData._id}/read`, 'PUT');
-}
-
-async function handleSendMessage(messageId) {
-    const replyContent = document.getElementById('reply-textarea').value;
-    if (!replyContent.trim()) {
-        showNotification('Reply cannot be empty.', 'error');
-        return;
-    }
-
-    try {
-        await apiCall(`/admin/messages/reply/${messageId}`, 'POST', { content: replyContent }, 'Reply sent successfully!');
-        // Optionally, re-render the messages or update the UI to show the reply
-        document.getElementById('reply-textarea').value = '';
-    } catch (error) {
-        // Error notification is handled by apiCall
-    }
-}
-
-function filterMessages() {
-    const searchText = document.querySelector('.search-input').value.toLowerCase();
-    const messageType = document.getElementById('message-type-filter').value;
-    const userId = document.getElementById('message-user-filter').value;
-    const messages = document.querySelectorAll('.message-item');
-
-    messages.forEach(message => {
-        const content = message.textContent.toLowerCase();
-        const type = message.dataset.messageType;
-        const msgUserId = message.dataset.userId;
-
-        const matchesSearch = content.includes(searchText);
-        const matchesType = !messageType || type === messageType;
-        const matchesUser = !userId || msgUserId === userId;
-
-        if (matchesSearch && matchesType && matchesUser) {
-            message.classList.remove('hidden');
-        } else {
-            message.classList.add('hidden');
-        }
-    });
-}
-
-
-// --- PLACEHOLDER FUNCTIONS FOR OTHER SECTIONS ---
 function renderAdminSubscriptions() {
-    document.getElementById('admin-content-area').innerHTML = '<div class="coming-soon">Subscription management is coming soon.</div>';
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">Subscription management is coming soon.</div>';
 }
 
 function renderAdminSystemStats() {
-    document.getElementById('admin-content-area').innerHTML = '<div class="coming-soon">System statistics are coming soon.</div>';
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = '<div class="coming-soon" style="text-align: center; padding: 40px; color: #6c757d;">System statistics are coming soon.</div>';
 }
+
+// --- INITIALIZATION ---
+// Automatically initialize based on current page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, current URL:', window.location.href); // Debug log
+    
+    // Determine which page we're on and initialize accordingly
+    if (window.location.pathname.includes('admin.html') || document.getElementById('admin-panel-container')) {
+        console.log('Initializing admin page'); // Debug log
+        initializeAdminPage();
+    } else if (document.getElementById('admin-login-form')) {
+        console.log('Initializing login page'); // Debug log
+        initializeLoginPage();
+    } else {
+        console.log('Unknown page type, checking for elements...'); // Debug log
+        // Fallback - check what elements exist and initialize accordingly
+        setTimeout(() => {
+            if (document.getElementById('admin-panel-container')) {
+                initializeAdminPage();
+            } else if (document.getElementById('admin-login-form')) {
+                initializeLoginPage();
+            }
+        }, 100);
+    }
+});
+
+// Global error handler
+window.addEventListener('error', function(event) {
+    console.error('Global error:', event.error);
+    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
+});
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    showNotification('A network error occurred. Please try again.', 'error');
+});
