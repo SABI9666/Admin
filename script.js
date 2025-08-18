@@ -1,29 +1,20 @@
 // script.js for the SteelConnect Admin Panel (Handles both Login and Admin Panel)
 
 // --- CONFIGURATION & GLOBAL STATE ---
-
 const appState = {
     jwtToken: null,
     currentUser: null,
 };
-
-// The base URL for your backend API.
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
-// --- CORE UTILITY FUNCTIONS ---
 
-/**
- * Shows a temporary notification message on the screen.
- * @param {string} message The message to display.
- * @param {string} type The type of notification ('success', 'error', 'info').
- */
+// --- CORE UTILITY FUNCTIONS ---
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container');
     if (!container) {
         console.error('Fatal: Notification container element not found in the DOM!');
         return;
     }
-
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -31,60 +22,36 @@ function showNotification(message, type = 'info') {
         <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
     `;
     container.appendChild(notification);
-
-    // Automatically remove the notification after 5 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300); // Allow for fade-out transition
+        setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
 
-/**
- * A centralized function to handle all API requests.
- * @param {string} endpoint The API endpoint (e.g., '/admin/dashboard').
- * @param {string} method The HTTP method ('GET', 'POST', 'PUT', 'DELETE').
- * @param {object|null} body The request payload for POST/PUT requests.
- * @param {string|null} successMessage A message to show upon a successful request.
- * @returns {Promise<any>} The JSON response from the server.
- */
 async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
     const token = localStorage.getItem('jwtToken');
     const fullUrl = `${API_BASE_URL}${endpoint}`;
-
-    console.log(`Making API call: ${method} ${fullUrl}`);
-
     const options = {
         method,
         headers: {
             'Content-Type': 'application/json',
         },
     };
-
     if (token) {
         options.headers['Authorization'] = `Bearer ${token}`;
     }
-
     if (body) {
         options.body = JSON.stringify(body);
-        console.log('Request body:', body);
     }
-
     try {
         const response = await fetch(fullUrl, options);
-        
-        console.log(`Response status: ${response.status}`);
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'An unknown server error occurred.' }));
-            console.error('API Error:', errorData);
-            throw new Error(errorData.error || errorData.message || `Request failed with status ${response.status}`);
+            throw new Error(errorData.message || `Request failed with status ${response.status}`);
         }
-
-        // Handle cases with no JSON response body (like a 204 No Content on DELETE)
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const data = await response.json();
-            console.log('API Response:', data);
             if (successMessage) {
                 showNotification(successMessage, 'success');
             }
@@ -93,32 +60,24 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
              if (successMessage) {
                 showNotification(successMessage, 'success');
             }
-            return; // Return nothing if no JSON
+            return;
         }
-
     } catch (error) {
-        console.error(`API Call Failed: ${method} ${fullUrl}`, error);
         showNotification(error.message, 'error');
-        throw error; // Re-throw to allow calling function to handle it
+        console.error(`API Call Failed: ${method} ${fullUrl}`, error);
+        throw error;
     }
 }
 
-/**
- * Logs the user out by clearing credentials and redirecting.
- */
 function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
     showNotification('You have been successfully logged out.', 'success');
-    // Redirect to the login page (index.html) after logout
     setTimeout(() => window.location.href = 'index.html', 1000);
 }
 
-// --- LOGIN PAGE LOGIC ---
 
-/**
- * Sets up the event listener for the admin login form.
- */
+// --- LOGIN PAGE LOGIC ---
 function initializeLoginPage() {
     const loginForm = document.getElementById('admin-login-form');
     if (loginForm) {
@@ -126,89 +85,53 @@ function initializeLoginPage() {
     }
 }
 
-/**
- * Handles the submission of the admin login form.
- * @param {Event} event The form submission event.
- */
 async function handleAdminLogin(event) {
-    event.preventDefault(); // Prevent default form submission
-
+    event.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const loginButton = event.target.querySelector('button[type="submit"]');
-    
-    console.log('Attempting admin login for:', email);
-    
-    // Disable button to prevent multiple submissions
     loginButton.disabled = true;
     loginButton.textContent = 'Logging in...';
 
     try {
-        // Updated API Call to use the dedicated admin login endpoint
-        const data = await apiCall('/auth/login/admin', 'POST', { email, password });
-
-        console.log('Login successful:', data);
-
-        // CRITICAL STEP: Store token and user info on successful login
+        // Updated endpoint to use the regular login route for all users
+        const data = await apiCall('/auth/login', 'POST', { email, password });
         localStorage.setItem('jwtToken', data.token);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
-
         showNotification('Login successful! Redirecting...', 'success');
-        
-        // Redirect to the admin panel
         setTimeout(() => {
             window.location.href = 'admin.html';
         }, 1000);
-
     } catch (error) {
-        // Error notification is already handled by apiCall
         console.error('Login failed:', error);
-        loginButton.disabled = false; // Re-enable the button on failure
+        loginButton.disabled = false;
         loginButton.textContent = 'Login';
     }
 }
 
-// --- ADMIN PANEL INITIALIZATION & SETUP ---
 
-/**
- * Main entry point for the admin page logic. Checks for admin credentials.
- */
+// --- ADMIN PANEL INITIALIZATION & SETUP ---
 function initializeAdminPage() {
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
-
-    console.log('Initializing admin page...');
-    console.log('Token exists:', !!token);
-    console.log('User data exists:', !!userJson);
-
     if (token && userJson) {
         try {
             const user = JSON.parse(userJson);
-            console.log('Parsed user:', user);
-            
-            // CRITICAL SECURITY CHECK: Verify the user has the 'admin' role.
-            if (user.type === 'admin') {
+            if (user.role === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
                 setupAdminPanel();
             } else {
-                console.log('Access denied - user type:', user.type);
                 showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
             }
         } catch (error) {
-            console.error('Error parsing user data:', error);
             showAdminLoginPrompt("Invalid user data found. Please log in again.");
         }
     } else {
-        console.log('No valid credentials found');
         showAdminLoginPrompt();
     }
 }
 
-/**
- * Displays the login prompt and hides the admin panel.
- * @param {string|null} message An optional message to display on the prompt.
- */
 function showAdminLoginPrompt(message = null) {
     document.getElementById('admin-login-prompt').style.display = 'flex';
     document.getElementById('admin-panel-container').style.display = 'none';
@@ -220,23 +143,14 @@ function showAdminLoginPrompt(message = null) {
     }
 }
 
-/**
- * Sets up the admin panel UI, event listeners, and loads the initial dashboard view.
- */
 function setupAdminPanel() {
-    console.log('Setting up admin panel...');
-    
     document.getElementById('admin-login-prompt').style.display = 'none';
     document.getElementById('admin-panel-container').style.display = 'flex';
-
-    // Populate user info in the sidebar
     document.getElementById('admin-user-info').innerHTML = `
         <strong>${appState.currentUser.name}</strong>
-        <small>${appState.currentUser.type}</small>
+        <small>${appState.currentUser.role}</small>
     `;
     document.getElementById('admin-logout-btn').addEventListener('click', logout);
-
-    // Setup navigation links
     const navLinks = document.querySelectorAll('.admin-nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -248,23 +162,15 @@ function setupAdminPanel() {
             renderAdminSection(section);
         });
     });
-
-    // Load the default view (Dashboard)
     document.querySelector('.admin-nav-link[data-section="dashboard"]').classList.add('active');
     renderAdminSection('dashboard');
 }
 
-// --- DYNAMIC CONTENT RENDERING ---
 
-/**
- * Renders the content for a specific admin section.
- * @param {string} section The name of the section to render.
- */
+// --- DYNAMIC CONTENT RENDERING ---
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
     contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
-
-    console.log('Rendering section:', section);
 
     switch (section) {
         case 'dashboard':
@@ -274,7 +180,13 @@ function renderAdminSection(section) {
             renderAdminUsers();
             break;
         case 'quotes':
-            contentArea.innerHTML = '<div class="empty-state">Quotes overview section is under construction.</div>';
+            renderAdminQuotes();
+            break;
+        case 'messages':
+            renderAdminMessages();
+            break;
+        case 'jobs':
+            renderAdminJobs();
             break;
         case 'system-stats':
             renderAdminSystemStats();
@@ -289,7 +201,6 @@ async function renderAdminDashboard() {
     try {
         const response = await apiCall('/admin/dashboard');
         const stats = response.stats;
-
         contentArea.innerHTML = `
             <div class="admin-stats-grid">
                 <div class="admin-stat-card">
@@ -300,13 +211,6 @@ async function renderAdminDashboard() {
                     </div>
                 </div>
                 <div class="admin-stat-card">
-                    <i class="fas fa-comments"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.totalMessages}</span>
-                        <span class="stat-label">Total Messages</span>
-                    </div>
-                </div>
-                 <div class="admin-stat-card">
                     <i class="fas fa-file-invoice-dollar"></i>
                     <div class="stat-info">
                         <span class="stat-value">${stats.totalQuotes}</span>
@@ -314,27 +218,17 @@ async function renderAdminDashboard() {
                     </div>
                 </div>
                 <div class="admin-stat-card">
-                    <i class="fas fa-user-shield"></i>
+                    <i class="fas fa-comments"></i>
                     <div class="stat-info">
-                        <span class="stat-value">${stats.activeUsers}</span>
-                        <span class="stat-label">Active Users</span>
+                        <span class="stat-value">${stats.totalMessages}</span>
+                        <span class="stat-label">Total Messages</span>
                     </div>
                 </div>
-            </div>
-            <div class="admin-stats-details">
-                <h3>Recent Activity (Last 7 Days)</h3>
-                <div class="activity-grid">
-                    <div class="activity-item">
-                        <span class="activity-label">New Users:</span>
-                        <span class="activity-value">${stats.recentActivity.newUsers}</span>
-                    </div>
-                    <div class="activity-item">
-                        <span class="activity-label">New Jobs:</span>
-                        <span class="activity-value">${stats.recentActivity.newJobs}</span>
-                    </div>
-                    <div class="activity-item">
-                        <span class="activity-label">New Quotes:</span>
-                        <span class="activity-value">${stats.recentActivity.newQuotes}</span>
+                 <div class="admin-stat-card">
+                    <i class="fas fa-briefcase"></i>
+                    <div class="stat-info">
+                        <span class="stat-value">${stats.totalJobs}</span>
+                        <span class="stat-label">Total Jobs</span>
                     </div>
                 </div>
             </div>
@@ -349,12 +243,10 @@ async function renderAdminUsers() {
     try {
         const response = await apiCall('/admin/users');
         const users = response.users;
-
         if (!users || users.length === 0) {
             contentArea.innerHTML = '<div class="empty-state">No users found in the system.</div>';
             return;
         }
-
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <table class="admin-table">
@@ -369,18 +261,18 @@ async function renderAdminUsers() {
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr data-user-id="${user.id}">
-                                <td>${user.name || 'N/A'}</td>
+                            <tr data-user-id="${user._id}">
+                                <td>${user.name}</td>
                                 <td>${user.email}</td>
-                                <td><span class="user-role-badge ${user.type}">${user.type}</span></td>
+                                <td><span class="user-role-badge">${user.type}</span></td>
                                 <td>
-                                    <select class="status-select" onchange="handleStatusUpdate('${user.id}', this.value)">
-                                        <option value="active" ${(user.status === 'active' || user.isActive === true) ? 'selected' : ''}>Active</option>
-                                        <option value="suspended" ${(user.status === 'suspended' || user.isActive === false) ? 'selected' : ''}>Suspended</option>
+                                    <select class="status-select" onchange="handleStatusUpdate('${user._id}', this.value)">
+                                        <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
+                                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user.id}')">
+                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id}')">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </td>
@@ -395,108 +287,149 @@ async function renderAdminUsers() {
     }
 }
 
-async function renderAdminSystemStats() {
+async function renderAdminQuotes() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const response = await apiCall('/admin/system-stats');
-        const stats = response.stats;
-
+        const response = await apiCall('/admin/quotes');
+        const quotes = response.quotes;
+        if (!quotes || quotes.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No quotes found in the system.</div>';
+            return;
+        }
         contentArea.innerHTML = `
-            <div class="system-stats-container">
-                <h3>System Information</h3>
-                <div class="stats-grid">
-                    <div class="stat-section">
-                        <h4>Server Info</h4>
-                        <ul>
-                            <li><strong>Node.js Version:</strong> ${stats.system.nodeVersion}</li>
-                            <li><strong>Platform:</strong> ${stats.system.platform}</li>
-                            <li><strong>Environment:</strong> ${stats.system.environment}</li>
-                            <li><strong>Server Uptime:</strong> ${stats.performance.uptime}</li>
-                        </ul>
-                    </div>
-                    <div class="stat-section">
-                        <h4>Memory Usage</h4>
-                        <ul>
-                            <li><strong>Heap Used:</strong> ${(stats.system.memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB</li>
-                            <li><strong>Heap Total:</strong> ${(stats.system.memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB</li>
-                            <li><strong>RSS:</strong> ${(stats.system.memoryUsage.rss / 1024 / 1024).toFixed(2)} MB</li>
-                        </ul>
-                    </div>
-                    <div class="stat-section">
-                        <h4>Database Collections</h4>
-                        <ul>
-                            ${Object.entries(stats.database.collections).map(([name, info]) => 
-                                `<li><strong>${name}:</strong> ${info.total} documents</li>`
-                            ).join('')}
-                        </ul>
-                    </div>
-                    <div class="stat-section">
-                        <h4>Performance</h4>
-                        <ul>
-                            <li><strong>Status:</strong> ${stats.performance.status}</li>
-                            <li><strong>Average Response Time:</strong> ${stats.performance.averageResponseTime}</li>
-                            <li><strong>Total Documents:</strong> ${stats.database.totalDocuments}</li>
-                            <li><strong>Estimated Storage:</strong> ${stats.database.estimatedSize}</li>
-                        </ul>
-                    </div>
-                </div>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User Name</th>
+                            <th>Details</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${quotes.map(quote => `
+                            <tr>
+                                <td>${quote.userId.name || 'N/A'}</td>
+                                <td>${quote.details}</td>
+                                <td><span class="status-badge status-${quote.status}">${quote.status}</span></td>
+                                <td>${new Date(quote.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
     } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load system stats.</div>';
+        contentArea.innerHTML = '<div class="error-state">Failed to load quotes data.</div>';
     }
 }
 
-// --- EVENT HANDLERS FOR ADMIN ACTIONS ---
+async function renderAdminMessages() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const response = await apiCall('/admin/messages');
+        const messages = response.messages;
+        if (!messages || messages.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No messages found in the system.</div>';
+            return;
+        }
+        contentArea.innerHTML = `
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Sender</th>
+                            <th>Message</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${messages.map(message => `
+                            <tr>
+                                <td>${message.senderId.name || 'N/A'}</td>
+                                <td>${message.content}</td>
+                                <td>${new Date(message.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = '<div class="error-state">Failed to load messages data.</div>';
+    }
+}
 
+async function renderAdminJobs() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const response = await apiCall('/admin/jobs');
+        const jobs = response.jobs;
+        if (!jobs || jobs.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No jobs found in the system.</div>';
+            return;
+        }
+        contentArea.innerHTML = `
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Company</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Posted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jobs.map(job => `
+                            <tr>
+                                <td>${job.title}</td>
+                                <td>${job.company}</td>
+                                <td>${job.location}</td>
+                                <td><span class="status-badge status-${job.status}">${job.status}</span></td>
+                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = '<div class="error-state">Failed to load jobs data.</div>';
+    }
+}
+
+
+// --- EVENT HANDLERS FOR ADMIN ACTIONS ---
 async function handleStatusUpdate(userId, newStatus) {
-    console.log('Updating user status:', { userId, newStatus });
-    
     if (confirm(`Are you sure you want to change this user's status to "${newStatus}"?`)) {
         try {
             await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.');
-            // Refresh the users list to show updated status
-            setTimeout(() => renderAdminUsers(), 1000);
+            renderAdminUsers(); // Refresh the list after update
         } catch (error) {
-            // If the API call fails, refresh the list to revert the dropdown change
             renderAdminUsers();
         }
     } else {
-       // If the admin cancels, refresh to revert the visual change in the dropdown
        renderAdminUsers();
     }
 }
 
 async function handleUserDelete(userId) {
-    console.log('Attempting to delete user:', userId);
-    
     if (confirm('WARNING: Are you sure you want to permanently delete this user? This action cannot be undone.')) {
-        try {
-            await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.');
-            // Refresh the user list after successful deletion
-            setTimeout(() => renderAdminUsers(), 1000);
-        } catch (error) {
-            // Error is already shown by apiCall, just log it
-            console.error('Failed to delete user:', error);
-        }
+        await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.')
+            .then(() => renderAdminUsers())
+            .catch(() => {});
     }
 }
 
+
 // --- GLOBAL INITIALIZATION TRIGGER ---
-// This one function runs when the page loads and decides which setup to run.
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded - Initializing application...');
-    
-    // If we find the admin panel, we are on admin.html
     if (document.getElementById('admin-panel-container')) {
-        console.log('Detected admin panel page');
         initializeAdminPage();
-    } 
-    // If we find the login form, we are on index.html
-    else if (document.getElementById('admin-login-form')) {
-        console.log('Detected login page');
+    } else if (document.getElementById('admin-login-form')) {
         initializeLoginPage();
-    } else {
-        console.log('Unknown page type');
     }
 });
