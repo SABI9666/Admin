@@ -1,11 +1,24 @@
 // script.js for the Enhanced SteelConnect Admin Panel
-
 // --- CONFIGURATION & GLOBAL STATE ---
 const appState = {
     jwtToken: null,
     currentUser: null,
 };
+
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
+
+// New Subscription plans configuration based on user type and activity, matching the screenshot logic
+const SUBSCRIPTION_PLANS = {
+    Designer: {
+        'submitting-quote': { name: 'Submitting Quote', types: ['PER QUOTE', 'MONTHLY'] },
+        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
+    },
+    Contractor: {
+        'submitting-tender': { name: 'Submitting Tender', types: ['PER TENDER', 'MONTHLY'] },
+        'getting-estimation': { name: 'Getting Estimation', types: ['PER ESTIMATE', 'MONTHLY'] },
+        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
+    }
+};
 
 // --- CORE UTILITY FUNCTIONS ---
 /**
@@ -66,7 +79,6 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         options.body = JSON.stringify(body);
     }
     try {
-        console.log(`Making API call: ${method} ${fullUrl}`);
         const response = await fetch(fullUrl, options);
         
         if (!response.ok) {
@@ -77,7 +89,6 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             const data = await response.json();
-            console.log(`API call successful:`, data);
             if (successMessage) {
                 showNotification(successMessage, 'success');
             }
@@ -132,7 +143,6 @@ async function handleAdminLogin(event) {
             window.location.href = 'admin.html';
         }, 1000);
     } catch (error) {
-        console.error('Login failed:', error);
         loginButton.disabled = false;
         loginButton.textContent = 'Login';
     }
@@ -140,33 +150,23 @@ async function handleAdminLogin(event) {
 
 // --- ADMIN PANEL INITIALIZATION & SETUP ---
 function initializeAdminPage() {
-    console.log('Initializing admin page...');
-    
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
-    
-    console.log('Token exists:', !!token);
-    console.log('User data exists:', !!userJson);
     
     if (token && userJson) {
         try {
             const user = JSON.parse(userJson);
-            console.log('Parsed user:', user);
-            
             if (user.role === 'admin' || user.type === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
                 setupAdminPanel();
             } else {
-                console.log('User is not admin:', user);
                 showAdminLoginPrompt("Access Denied: You do not have admin privileges.");
             }
         } catch (error) {
-            console.error('Error parsing user data:', error);
             showAdminLoginPrompt("Invalid user data found. Please log in again.");
         }
     } else {
-        console.log('No valid credentials found');
         showAdminLoginPrompt();
     }
     
@@ -174,7 +174,6 @@ function initializeAdminPage() {
 }
 
 function showAdminLoginPrompt(message = null) {
-    console.log('Showing admin login prompt:', message);
     hideGlobalLoader();
     document.getElementById('admin-login-prompt').style.display = 'flex';
     document.getElementById('admin-panel-container').style.display = 'none';
@@ -187,9 +186,7 @@ function showAdminLoginPrompt(message = null) {
 }
 
 function setupAdminPanel() {
-    console.log('Setting up admin panel...');
     hideGlobalLoader();
-    
     document.getElementById('admin-login-prompt').style.display = 'none';
     document.getElementById('admin-panel-container').style.display = 'flex';
     
@@ -198,10 +195,7 @@ function setupAdminPanel() {
         <small>${appState.currentUser.role || appState.currentUser.type}</small>
     `;
     
-    const logoutBtn = document.getElementById('admin-logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-    }
+    document.getElementById('admin-logout-btn').addEventListener('click', logout);
     
     const navLinks = document.querySelectorAll('.admin-nav-link');
     navLinks.forEach(link => {
@@ -223,8 +217,6 @@ function setupAdminPanel() {
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
     contentArea.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
-    
-    console.log('Rendering section:', section);
     
     switch (section) {
         case 'dashboard':
@@ -256,73 +248,27 @@ function renderAdminSection(section) {
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        console.log('Fetching dashboard stats...');
         const response = await apiCall('/admin/dashboard');
-        console.log('Dashboard response:', response);
-        
         const stats = response.stats;
         contentArea.innerHTML = `
             <div class="admin-stats-grid">
-                <div class="admin-stat-card">
-                    <i class="fas fa-users"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.totalUsers}</span>
-                        <span class="stat-label">Total Users</span>
-                    </div>
-                </div>
-                <div class="admin-stat-card">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.totalQuotes}</span>
-                        <span class="stat-label">Total Quotes</span>
-                    </div>
-                </div>
-                <div class="admin-stat-card">
-                    <i class="fas fa-comments"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.totalMessages}</span>
-                        <span class="stat-label">Total Messages</span>
-                    </div>
-                </div>
-                <div class="admin-stat-card">
-                    <i class="fas fa-briefcase"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.totalJobs}</span>
-                        <span class="stat-label">Total Jobs</span>
-                    </div>
-                </div>
-                <div class="admin-stat-card">
-                    <i class="fas fa-crown"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">${stats.activeSubscriptions || 0}</span>
-                        <span class="stat-label">Active Subscriptions</span>
-                    </div>
-                </div>
-                <div class="admin-stat-card">
-                    <i class="fas fa-dollar-sign"></i>
-                    <div class="stat-info">
-                        <span class="stat-value">$${stats.totalRevenue || 0}</span>
-                        <span class="stat-label">Total Revenue</span>
-                    </div>
-                </div>
+                <div class="admin-stat-card"><i class="fas fa-users"></i><div class="stat-info"><span class="stat-value">${stats.totalUsers}</span><span class="stat-label">Total Users</span></div></div>
+                <div class="admin-stat-card"><i class="fas fa-file-invoice-dollar"></i><div class="stat-info"><span class="stat-value">${stats.totalQuotes}</span><span class="stat-label">Total Quotes</span></div></div>
+                <div class="admin-stat-card"><i class="fas fa-comments"></i><div class="stat-info"><span class="stat-value">${stats.totalMessages}</span><span class="stat-label">Total Messages</span></div></div>
+                <div class="admin-stat-card"><i class="fas fa-briefcase"></i><div class="stat-info"><span class="stat-value">${stats.totalJobs}</span><span class="stat-label">Total Jobs</span></div></div>
+                <div class="admin-stat-card"><i class="fas fa-crown"></i><div class="stat-info"><span class="stat-value">${stats.activeSubscriptions || 0}</span><span class="stat-label">Active Subscriptions</span></div></div>
+                <div class="admin-stat-card"><i class="fas fa-dollar-sign"></i><div class="stat-info"><span class="stat-value">$${stats.totalRevenue || 0}</span><span class="stat-label">Total Revenue</span></div></div>
             </div>
             <div class="admin-quick-actions">
                 <h3>Quick Actions</h3>
                 <div class="quick-action-buttons">
-                    <button class="btn btn-primary" onclick="renderAdminSection('users')">
-                        <i class="fas fa-users"></i> Manage Users
-                    </button>
-                    <button class="btn btn-success" onclick="renderAdminSection('subscriptions')">
-                        <i class="fas fa-crown"></i> Manage Subscriptions
-                    </button>
-                    <button class="btn btn-info" onclick="renderAdminSection('quotes')">
-                        <i class="fas fa-file-invoice-dollar"></i> Review Quotes
-                    </button>
+                    <button class="btn btn-primary" onclick="renderAdminSection('users')"><i class="fas fa-users"></i> Manage Users</button>
+                    <button class="btn btn-success" onclick="renderAdminSection('subscriptions')"><i class="fas fa-crown"></i> Manage Subscriptions</button>
+                    <button class="btn btn-info" onclick="renderAdminSection('quotes')"><i class="fas fa-file-invoice-dollar"></i> Review Quotes</button>
                 </div>
             </div>
         `;
     } catch (error) {
-        console.error('Dashboard render error:', error);
         contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data. Please try again later.</div>';
     }
 }
@@ -339,9 +285,7 @@ async function renderAdminUsers() {
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <div class="table-actions">
-                    <button class="btn btn-primary" onclick="showAddUserModal()">
-                        <i class="fas fa-plus"></i> Add User
-                    </button>
+                    <button class="btn btn-primary" onclick="showAddUserModal()"><i class="fas fa-plus"></i> Add User</button>
                     <input type="text" placeholder="Search users..." class="search-input" onkeyup="filterTable(this.value, 'users-table')">
                 </div>
                 <table class="admin-table" id="users-table">
@@ -351,16 +295,11 @@ async function renderAdminUsers() {
                             <th>Email</th>
                             <th>Role</th>
                             <th>Status</th>
-                            <th>Subscription</th>
-                            <th>Subscription Required</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${users.map(user => {
-                            const subscriptionStatus = user.subscription ? user.subscription.status : 'inactive';
-                            const subscriptionRequired = user.subscriptionRequired !== false;
-                            return `
+                        ${users.map(user => `
                             <tr data-user-id="${user._id || user.id}">
                                 <td>${user.name}</td>
                                 <td>${user.email}</td>
@@ -372,30 +311,12 @@ async function renderAdminUsers() {
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="status-select" onchange="handleSubscriptionUpdate('${user._id || user.id}', this.value)">
-                                        <option value="active" ${subscriptionStatus === 'active' ? 'selected' : ''}>Active</option>
-                                        <option value="inactive" ${subscriptionStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <select class="status-select" onchange="handleSubscriptionRequiredUpdate('${user._id || user.id}', this.value === 'true')">
-                                        <option value="true" ${subscriptionRequired ? 'selected' : ''}>Required</option>
-                                        <option value="false" ${!subscriptionRequired ? 'selected' : ''}>Optional</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <button class="btn btn-info btn-sm" onclick="showUserDetails('${user._id || user.id}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-warning btn-sm" onclick="showEditUserModal('${user._id || user.id}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id || user.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="showUserDetails('${user._id || user.id}')"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-warning btn-sm" onclick="showEditUserModal('${user._id || user.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-danger btn-sm" onclick="handleUserDelete('${user._id || user.id}')"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
-                        `}).join('')}
+                        `).join('')}
                     </tbody>
                 </table>
             </div>
@@ -429,14 +350,7 @@ async function renderAdminQuotes() {
                 <table class="admin-table" id="quotes-table">
                     <thead>
                         <tr>
-                            <th>User</th>
-                            <th>Details</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Attachments</th>
-                            <th>Subscription Required</th>
-                            <th>Created</th>
-                            <th>Actions</th>
+                            <th>User</th><th>Details</th><th>Amount</th><th>Status</th><th>Attachments</th><th>Created</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -464,20 +378,10 @@ async function renderAdminQuotes() {
                                         : '<span class="text-muted">No attachments</span>'
                                     }
                                 </td>
-                                <td>
-                                    <select class="status-select" onchange="updateQuoteSubscriptionRequired('${quote._id || quote.id}', this.value === 'true')">
-                                        <option value="false" ${!quote.subscriptionRequired ? 'selected' : ''}>No</option>
-                                        <option value="true" ${quote.subscriptionRequired ? 'selected' : ''}>Yes</option>
-                                    </select>
-                                </td>
                                 <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
                                 <td>
-                                    <button class="btn btn-info btn-sm" onclick="viewQuoteDetails('${quote._id || quote.id}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote._id || quote.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="viewQuoteDetails('${quote._id || quote.id}')"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote._id || quote.id}')"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -502,23 +406,13 @@ async function renderAdminJobs() {
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <div class="table-actions">
-                    <button class="btn btn-primary" onclick="showAddJobModal()">
-                        <i class="fas fa-plus"></i> Add Job
-                    </button>
+                    <button class="btn btn-primary" onclick="showAddJobModal()"><i class="fas fa-plus"></i> Add Job</button>
                     <input type="text" placeholder="Search jobs..." class="search-input" onkeyup="filterTable(this.value, 'jobs-table')">
                 </div>
                 <table class="admin-table" id="jobs-table">
                     <thead>
                         <tr>
-                            <th>Title</th>
-                            <th>Company</th>
-                            <th>Location</th>
-                            <th>Salary</th>
-                            <th>Status</th>
-                            <th>Subscription Required</th>
-                            <th>Attachments</th>
-                            <th>Posted</th>
-                            <th>Actions</th>
+                            <th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th>Status</th><th>Attachments</th><th>Posted</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -539,12 +433,6 @@ async function renderAdminJobs() {
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="status-select" onchange="updateJobSubscriptionRequired('${job._id || job.id}', this.value === 'true')">
-                                        <option value="false" ${!job.subscriptionRequired ? 'selected' : ''}>No</option>
-                                        <option value="true" ${job.subscriptionRequired ? 'selected' : ''}>Yes</option>
-                                    </select>
-                                </td>
-                                <td>
                                     ${job.attachments && job.attachments.length > 0 
                                         ? `<button class="btn btn-info btn-sm" onclick="viewJobAttachments('${job._id || job.id}')">
                                              <i class="fas fa-paperclip"></i> ${job.attachments.length} files
@@ -554,15 +442,9 @@ async function renderAdminJobs() {
                                 </td>
                                 <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</td>
                                 <td>
-                                    <button class="btn btn-info btn-sm" onclick="viewJobDetails('${job._id || job.id}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-warning btn-sm" onclick="editJob('${job._id || job.id}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteJob('${job._id || job.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="viewJobDetails('${job._id || job.id}')"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-warning btn-sm" onclick="editJob('${job._id || job.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteJob('${job._id || job.id}')"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -575,430 +457,7 @@ async function renderAdminJobs() {
     }
 }
 
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/subscriptions');
-        const subscriptions = response.subscriptions || [];
-        contentArea.innerHTML = `
-            <div class="subscription-management">
-                <div class="subscription-stats">
-                    <div class="stat-card">
-                        <h3>Active Subscriptions</h3>
-                        <span class="stat-number">${subscriptions.filter(s => s.status === 'active').length}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Revenue</h3>
-                        <span class="stat-number">$${subscriptions.reduce((sum, s) => sum + (s.amount || 0), 0)}</span>
-                    </div>
-                </div>
-                <div class="admin-table-container">
-                    <div class="table-actions">
-                        <button class="btn btn-primary" onclick="showAddSubscriptionModal()">
-                            <i class="fas fa-plus"></i> Add Manual Subscription
-                        </button>
-                        <input type="text" placeholder="Search subscriptions..." class="search-input" onkeyup="filterTable(this.value, 'subscriptions-table')">
-                    </div>
-                    <table class="admin-table" id="subscriptions-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Payment Method</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${subscriptions.map(sub => `
-                                <tr>
-                                    <td>${sub.user ? sub.user.name : 'N/A'}</td>
-                                    <td>${sub.plan || 'Professional'}</td>
-                                    <td>
-                                        <input type="number" class="amount-input" value="${sub.amount || 0}" 
-                                               onchange="updateSubscriptionAmount('${sub._id || sub.id}', this.value)">
-                                    </td>
-                                    <td>
-                                        <select class="status-select" onchange="updateSubscriptionStatus('${sub._id || sub.id}', this.value)">
-                                            <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>
-                                            <option value="inactive" ${sub.status === 'inactive' ? 'selected' : ''}>Inactive</option>
-                                            <option value="cancelled" ${sub.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                                        </select>
-                                    </td>
-                                    <td>${sub.startDate ? new Date(sub.startDate).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <input type="date" class="date-input" value="${sub.endDate ? new Date(sub.endDate).toISOString().split('T')[0] : ''}" 
-                                               onchange="updateSubscriptionEndDate('${sub._id || sub.id}', this.value)">
-                                    </td>
-                                    <td>${sub.paymentMethod || 'Manual'}</td>
-                                    <td>
-                                        <button class="btn btn-warning btn-sm" onclick="extendSubscription('${sub._id || sub.id}')">
-                                            <i class="fas fa-clock"></i> Extend
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick="cancelSubscription('${sub._id || sub.id}')">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load subscription data.</div>';
-    }
-}
-
-// --- EVENT HANDLERS FOR ADMIN ACTIONS ---
-async function handleStatusUpdate(userId, newStatus) {
-    try {
-        await apiCall(`/admin/users/${userId}/status`, 'PUT', { status: newStatus }, 'User status updated successfully.');
-    } catch (error) {
-        renderAdminUsers();
-    }
-}
-
-async function handleSubscriptionUpdate(userId, newStatus) {
-    try {
-        await apiCall(`/admin/users/${userId}/subscription`, 'PUT', { status: newStatus }, 'User subscription updated successfully.');
-    } catch (error) {
-        renderAdminUsers();
-    }
-}
-
-async function handleSubscriptionRequiredUpdate(userId, required) {
-    try {
-        await apiCall(`/admin/users/${userId}/subscription-required`, 'PUT', { required }, 'Subscription requirement updated successfully.');
-    } catch (error) {
-        renderAdminUsers();
-    }
-}
-
-async function updateQuoteAmount(quoteId, amount) {
-    try {
-        await apiCall(`/admin/quotes/${quoteId}/amount`, 'PUT', { amount: parseFloat(amount) || 0 }, 'Quote amount updated successfully.');
-    } catch (error) {
-        console.error('Failed to update quote amount:', error);
-    }
-}
-
-async function updateQuoteStatus(quoteId, status) {
-    try {
-        await apiCall(`/admin/quotes/${quoteId}/status`, 'PUT', { status }, 'Quote status updated successfully.');
-    } catch (error) {
-        renderAdminQuotes();
-    }
-}
-
-async function updateQuoteSubscriptionRequired(quoteId, required) {
-    try {
-        await apiCall(`/admin/quotes/${quoteId}/subscription-required`, 'PUT', { required }, 'Quote subscription requirement updated successfully.');
-    } catch (error) {
-        renderAdminQuotes();
-    }
-}
-
-async function viewAttachments(quoteId) {
-    try {
-        const response = await apiCall(`/admin/quotes/${quoteId}/attachments`);
-        const attachments = response.attachments || [];
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Quote Attachments</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    ${attachments.length > 0 
-                        ? attachments.map(att => `
-                            <div class="attachment-item">
-                                <i class="fas fa-file"></i>
-                                <span>${att.name}</span>
-                                <a href="${att.url}" target="_blank" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-download"></i> Download
-                                </a>
-                            </div>
-                        `).join('')
-                        : '<p>No attachments found.</p>'
-                    }
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    } catch (error) {
-        showNotification('Failed to load attachments', 'error');
-    }
-}
-
-async function viewJobAttachments(jobId) {
-    try {
-        const response = await apiCall(`/admin/jobs/${jobId}/attachments`);
-        const attachments = response.attachments || [];
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Job Attachments</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    ${attachments.length > 0 
-                        ? attachments.map(att => `
-                            <div class="attachment-item">
-                                <i class="fas fa-file"></i>
-                                <span>${att.name}</span>
-                                <a href="${att.url}" target="_blank" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-download"></i> Download
-                                </a>
-                            </div>
-                        `).join('')
-                        : '<p>No attachments found.</p>'
-                    }
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    } catch (error) {
-        showNotification('Failed to load job attachments', 'error');
-    }
-}
-
-async function updateJobSalary(jobId, salary) {
-    try {
-        await apiCall(`/admin/jobs/${jobId}/salary`, 'PUT', { salary }, 'Job salary updated successfully.');
-    } catch (error) {
-        console.error('Failed to update job salary:', error);
-    }
-}
-
-async function updateJobStatus(jobId, status) {
-    try {
-        await apiCall(`/admin/jobs/${jobId}/status`, 'PUT', { status }, 'Job status updated successfully.');
-    } catch (error) {
-        renderAdminJobs();
-    }
-}
-
-async function updateJobSubscriptionRequired(jobId, required) {
-    try {
-        await apiCall(`/admin/jobs/${jobId}/subscription-required`, 'PUT', { required }, 'Job subscription requirement updated successfully.');
-    } catch (error) {
-        renderAdminJobs();
-    }
-}
-
-async function updateSubscriptionAmount(subscriptionId, amount) {
-    try {
-        await apiCall(`/admin/subscriptions/${subscriptionId}/amount`, 'PUT', { amount: parseFloat(amount) || 0 }, 'Subscription amount updated successfully.');
-    } catch (error) {
-        console.error('Failed to update subscription amount:', error);
-    }
-}
-
-async function updateSubscriptionStatus(subscriptionId, status) {
-    try {
-        await apiCall(`/admin/subscriptions/${subscriptionId}/status`, 'PUT', { status }, 'Subscription status updated successfully.');
-    } catch (error) {
-        renderAdminSubscriptions();
-    }
-}
-
-async function updateSubscriptionEndDate(subscriptionId, endDate) {
-    try {
-        await apiCall(`/admin/subscriptions/${subscriptionId}/end-date`, 'PUT', { endDate }, 'Subscription end date updated successfully.');
-    } catch (error) {
-        console.error('Failed to update subscription end date:', error);
-    }
-}
-
-// Modal functions for detailed views
-function showAddSubscriptionModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add Manual Subscription</h3>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="add-subscription-form">
-                    <div class="form-group">
-                        <label>User Email</label>
-                        <input type="email" id="sub-user-email" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Plan</label>
-                        <select id="sub-plan">
-                            <option value="professional">Professional</option>
-                            <option value="premium">Premium</option>
-                            <option value="enterprise">Enterprise</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Amount ($)</label>
-                        <input type="number" id="sub-amount" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Duration (months)</label>
-                        <input type="number" id="sub-duration" value="1" min="1">
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Add Subscription</button>
-                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    document.getElementById('add-subscription-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = {
-            userEmail: document.getElementById('sub-user-email').value,
-            plan: document.getElementById('sub-plan').value,
-            amount: parseFloat(document.getElementById('sub-amount').value),
-            duration: parseInt(document.getElementById('sub-duration').value)
-        };
-        
-        try {
-            await apiCall('/admin/subscriptions', 'POST', formData, 'Subscription added successfully.');
-            modal.remove();
-            renderAdminSubscriptions();
-        } catch (error) {
-            console.error('Failed to add subscription:', error);
-        }
-    });
-}
-
-function viewQuoteDetails(quoteId) {
-    apiCall(`/admin/quotes/${quoteId}`).then(response => {
-        const quote = response.quote;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>Quote Details</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <label>User:</label>
-                            <span>${quote.userId ? quote.userId.name : 'N/A'} (${quote.userId ? quote.userId.email : 'N/A'})</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Status:</label>
-                            <span class="quote-status ${quote.status}">${quote.status}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Amount:</label>
-                            <span>${quote.amount || 0}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Created:</label>
-                            <span>${new Date(quote.createdAt).toLocaleString()}</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <label>Details:</label>
-                            <p>${quote.details}</p>
-                        </div>
-                        ${quote.attachments && quote.attachments.length > 0 ? `
-                            <div class="detail-item full-width">
-                                <label>Attachments:</label>
-                                <div class="attachments-list">
-                                    ${quote.attachments.map(att => `
-                                        <div class="attachment-item">
-                                            <i class="fas fa-file"></i>
-                                            <span>${att.name}</span>
-                                            <a href="${att.url}" target="_blank" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-download"></i> Download
-                                            </a>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }).catch(error => {
-        showNotification('Failed to load quote details', 'error');
-    });
-}
-
-function viewJobDetails(jobId) {
-    apiCall(`/admin/jobs/${jobId}`).then(response => {
-        const job = response.job;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>Job Details</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <label>Title:</label>
-                            <span>${job.title}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Company:</label>
-                            <span>${job.company}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Location:</label>
-                            <span>${job.location}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Salary:</label>
-                            <span>${job.salary || 'Not specified'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Status:</label>
-                            <span class="quote-status ${job.status}">${job.status}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Posted:</label>
-                            <span>${new Date(job.createdAt).toLocaleString()}</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <label>Description:</label>
-                            <p>${job.description || 'No description provided'}</p>
-                        </div>
-                        ${job.requirements ? `
-                            <div class="detail-item full-width">
-                                <label>Requirements:</label>
-                                <p>${job.requirements}</p>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }).catch(error => {
-        showNotification('Failed to load job details', 'error');
-    });
-}
-
-// Message management
+// --- NEW ENHANCED MESSAGES SECTION ---
 async function renderAdminMessages() {
     const contentArea = document.getElementById('admin-content-area');
     try {
@@ -1008,333 +467,174 @@ async function renderAdminMessages() {
             contentArea.innerHTML = '<div class="empty-state">No messages found in the system.</div>';
             return;
         }
+
+        const users = [...new Map(messages.map(m => [m.senderId?._id, m.senderId])).values()];
+
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <div class="table-actions">
-                    <input type="text" placeholder="Search messages..." class="search-input" onkeyup="filterTable(this.value, 'messages-table')">
-                    <select onchange="filterMessagesByType(this.value)" class="filter-select">
-                        <option value="">All Types</option>
-                        <option value="quote">Quote Messages</option>
-                        <option value="job">Job Messages</option>
-                        <option value="support">Support Messages</option>
-                        <option value="general">General Messages</option>
-                    </select>
+                    <div class="search-filter-row">
+                        <input type="text" placeholder="Search messages..." class="search-input" onkeyup="filterMessages(this.value)">
+                        <select onchange="filterMessages()" class="filter-select" id="message-type-filter">
+                            <option value="">All Types</option>
+                            <option value="quote">Quote</option>
+                            <option value="job">Job</option>
+                            <option value="support">Support</option>
+                            <option value="general">General</option>
+                        </select>
+                        <select onchange="filterMessages()" class="filter-select" id="message-user-filter">
+                            <option value="">All Users</option>
+                            ${users.map(user => user ? `<option value="${user._id}">${user.name}</option>` : '').join('')}
+                        </select>
+                    </div>
                 </div>
-                <table class="admin-table" id="messages-table">
-                    <thead>
-                        <tr>
-                            <th>Sender</th>
-                            <th>Type</th>
-                            <th>Message</th>
-                            <th>Amount</th>
-                            <th>Subscription Required</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${messages.map(message => `
-                            <tr data-message-id="${message._id || message.id}">
-                                <td>${message.senderId ? message.senderId.name : 'N/A'}</td>
-                                <td>
-                                    <select class="status-select" onchange="updateMessageType('${message._id || message.id}', this.value)">
-                                        <option value="general" ${message.type === 'general' ? 'selected' : ''}>General</option>
-                                        <option value="quote" ${message.type === 'quote' ? 'selected' : ''}>Quote</option>
-                                        <option value="job" ${message.type === 'job' ? 'selected' : ''}>Job</option>
-                                        <option value="support" ${message.type === 'support' ? 'selected' : ''}>Support</option>
-                                    </select>
-                                </td>
-                                <td class="message-content">${message.content ? message.content.substring(0, 100) : 'N/A'}${message.content && message.content.length > 100 ? '...' : ''}</td>
-                                <td>
-                                    <input type="number" class="amount-input" value="${message.amount || 0}" 
-                                           onchange="updateMessageAmount('${message._id || message.id}', this.value)" placeholder="Amount">
-                                </td>
-                                <td>
-                                    <select class="status-select" onchange="updateMessageSubscriptionRequired('${message._id || message.id}', this.value === 'true')">
-                                        <option value="false" ${!message.subscriptionRequired ? 'selected' : ''}>No</option>
-                                        <option value="true" ${message.subscriptionRequired ? 'selected' : ''}>Yes</option>
-                                    </select>
-                                </td>
-                                <td>${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                <td>
-                                    <button class="btn btn-info btn-sm" onclick="viewMessageDetails('${message._id || message.id}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteMessage('${message._id || message.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
+                <div class="messages-view">
+                    <div class="messages-list" id="messages-list">
+                        ${messages.map((message) => `
+                            <div class="message-item" data-message-id="${message._id || message.id}" data-message-type="${message.type || 'general'}" data-user-id="${message.senderId?._id || 'unknown'}" data-message-content="${encodeURIComponent(JSON.stringify(message))}" onclick="selectMessage(this)">
+                                <div class="message-header">
+                                    <div class="sender-info">
+                                        <strong>${message.senderId ? message.senderId.name : 'Unknown User'}</strong>
+                                        <span class="message-type-badge ${message.type || 'general'}">${message.type || 'General'}</span>
+                                    </div>
+                                    <div class="message-meta">
+                                        <span class="message-date">${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</span>
+                                        ${message.unread ? '<span class="unread-indicator">●</span>' : ''}
+                                    </div>
+                                </div>
+                                <div class="message-preview">
+                                    ${message.content ? message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '') : 'No content'}
+                                </div>
+                            </div>
                         `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load messages data.</div>';
-    }
-}
-
-async function updateMessageType(messageId, type) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/type`, 'PUT', { type }, 'Message type updated successfully.');
-    } catch (error) {
-        renderAdminMessages();
-    }
-}
-
-async function updateMessageAmount(messageId, amount) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/amount`, 'PUT', { amount: parseFloat(amount) || 0 }, 'Message amount updated successfully.');
-    } catch (error) {
-        console.error('Failed to update message amount:', error);
-    }
-}
-
-async function updateMessageSubscriptionRequired(messageId, required) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/subscription-required`, 'PUT', { required }, 'Message subscription requirement updated successfully.');
-    } catch (error) {
-        renderAdminMessages();
-    }
-}
-
-function viewMessageDetails(messageId) {
-    apiCall(`/admin/messages/${messageId}`).then(response => {
-        const message = response.message;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content large">
-                <div class="modal-header">
-                    <h3>Message Details</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <label>Sender:</label>
-                            <span>${message.senderId ? message.senderId.name : 'N/A'} (${message.senderId ? message.senderId.email : 'N/A'})</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Type:</label>
-                            <span>${message.type || 'General'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Amount:</label>
-                            <span>${message.amount || 0}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Subscription Required:</label>
-                            <span>${message.subscriptionRequired ? 'Yes' : 'No'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Date:</label>
-                            <span>${new Date(message.createdAt).toLocaleString()}</span>
-                        </div>
-                        <div class="detail-item full-width">
-                            <label>Message Content:</label>
-                            <p>${message.content}</p>
-                        </div>
+                    </div>
+                    <div class="message-detail" id="message-detail">
+                        <div class="no-message-selected">Select a message to view details</div>
                     </div>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-    }).catch(error => {
-        showNotification('Failed to load message details', 'error');
-    });
-}
-
-async function deleteMessage(messageId) {
-    if (confirm('Are you sure you want to delete this message?')) {
-        await apiCall(`/admin/messages/${messageId}`, 'DELETE', null, 'Message deleted successfully.')
-            .then(() => renderAdminMessages())
-            .catch(() => {});
-    }
-}
-
-function filterMessagesByType(type) {
-    const table = document.getElementById('messages-table');
-    const rows = table.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        if (!type) {
-            row.style.display = '';
-        } else {
-            const typeCell = row.querySelector('select.status-select').value;
-            row.style.display = typeCell === type ? '' : 'none';
-        }
-    });
-}
-
-// System stats
-async function renderAdminSystemStats() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/system-stats');
-        const stats = response.stats;
-        
-        contentArea.innerHTML = `
-            <div class="system-stats">
-                <h3>System Statistics</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h4>Server Status</h4>
-                        <span class="status-indicator online">Online</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Database Status</h4>
-                        <span class="status-indicator online">Connected</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Node Version</h4>
-                        <span>${stats.nodeVersion}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Platform</h4>
-                        <span>${stats.platform}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Uptime</h4>
-                        <span>${Math.floor(stats.uptime / 3600)}h ${Math.floor((stats.uptime % 3600) / 60)}m</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Environment</h4>
-                        <span>${stats.environment}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Memory Usage (RSS)</h4>
-                        <span>${Math.round(stats.memoryUsage.rss / 1024 / 1024)} MB</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Memory Usage (Heap)</h4>
-                        <span>${Math.round(stats.memoryUsage.heapUsed / 1024 / 1024)} MB</span>
-                    </div>
-                </div>
-            </div>
+            <style>
+                .messages-view { display: flex; height: 70vh; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+                .messages-list { width: 40%; border-right: 1px solid #ddd; overflow-y: auto; background: #f8f9fa; }
+                .message-item { display: block; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s; }
+                .message-item:hover { background-color: #e9ecef; }
+                .message-item.active { background-color: #007bff; color: white; }
+                .message-item.active .message-type-badge { background-color: rgba(255,255,255,0.2); color: white; }
+                .message-item.active .message-date, .message-item.active .message-preview { color: #f0f0f0; }
+                .message-item.hidden { display: none; }
+                .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+                .sender-info { display: flex; align-items: center; gap: 8px; }
+                .message-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6c757d; }
+                .message-date {}
+                .unread-indicator { color: #007bff; font-size: 14px; line-height: 1; }
+                .message-preview { font-size: 14px; color: #495057; line-height: 1.4; }
+                .message-type-badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; text-transform: capitalize; background-color: #e9ecef; color: #495057; }
+                .message-type-badge.quote { background-color: #d1ecf1; color: #0c5460; }
+                .message-type-badge.job { background-color: #d4edda; color: #155724; }
+                .message-type-badge.support { background-color: #f8d7da; color: #721c24; }
+                .message-type-badge.general { background-color: #e2e3e5; color: #383d41; }
+                .message-detail { width: 60%; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
+                .no-message-selected { margin: auto; text-align: center; color: #6c757d; font-size: 16px; }
+                .message-detail-header { padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid #eee; }
+                .message-detail-header h4 { margin: 0 0 5px 0; }
+                .message-detail-meta { font-size: 13px; color: #6c757d; }
+                .message-detail-meta span { margin-right: 15px; }
+                .message-detail-body { flex-grow: 1; line-height: 1.6; white-space: pre-wrap; font-size: 15px; }
+                .message-reply-form { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+                .message-reply-form textarea { width: 100%; min-height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; margin-bottom: 10px; }
+                .message-reply-form .btn-container { text-align: right; }
+                .search-filter-row { display: flex; gap: 15px; margin-bottom: 15px; }
+                .search-filter-row .search-input { flex-grow: 1; }
+            </style>
         `;
     } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load system statistics.</div>';
+        contentArea.innerHTML = '<div class="error-state">Failed to load messages. Please try again later.</div>';
     }
 }
 
-// Utility functions
-function filterTable(searchTerm, tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
+function selectMessage(element) {
+    // Highlight active item in the list
+    document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
     
-    const rows = table.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+    // Remove unread indicator if present
+    const unreadIndicator = element.querySelector('.unread-indicator');
+    if (unreadIndicator) {
+        unreadIndicator.remove();
+    }
+
+    const messageData = JSON.parse(decodeURIComponent(element.dataset.messageContent));
+    const detailView = document.getElementById('message-detail');
+
+    detailView.innerHTML = `
+        <div class="message-detail-header">
+            <h4>Conversation with ${messageData.senderId ? messageData.senderId.name : 'Unknown'}</h4>
+            <div class="message-detail-meta">
+                <span><i class="fas fa-calendar-alt"></i> ${new Date(messageData.createdAt).toLocaleString()}</span>
+                <span><i class="fas fa-tag"></i> Type: ${messageData.type || 'General'}</span>
+            </div>
+        </div>
+        <div class="message-detail-body">
+            <p>${messageData.content || 'No content available.'}</p>
+        </div>
+        <div class="message-reply-form">
+            <textarea id="reply-textarea" placeholder="Type your reply here..."></textarea>
+            <div class="btn-container">
+                <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
+                    <i class="fas fa-paper-plane"></i> Send Reply
+                </button>
+            </div>
+        </div>
+    `;
+    // In a real app, you would also mark the message as read via an API call
+    // apiCall(`/admin/messages/${messageData._id}/read`, 'PUT');
+}
+
+async function handleSendMessage(messageId) {
+    const replyContent = document.getElementById('reply-textarea').value;
+    if (!replyContent.trim()) {
+        showNotification('Reply cannot be empty.', 'error');
+        return;
+    }
+
+    try {
+        await apiCall(`/admin/messages/reply/${messageId}`, 'POST', { content: replyContent }, 'Reply sent successfully!');
+        // Optionally, re-render the messages or update the UI to show the reply
+        document.getElementById('reply-textarea').value = '';
+    } catch (error) {
+        // Error notification is handled by apiCall
+    }
+}
+
+function filterMessages() {
+    const searchText = document.querySelector('.search-input').value.toLowerCase();
+    const messageType = document.getElementById('message-type-filter').value;
+    const userId = document.getElementById('message-user-filter').value;
+    const messages = document.querySelectorAll('.message-item');
+
+    messages.forEach(message => {
+        const content = message.textContent.toLowerCase();
+        const type = message.dataset.messageType;
+        const msgUserId = message.dataset.userId;
+
+        const matchesSearch = content.includes(searchText);
+        const matchesType = !messageType || type === messageType;
+        const matchesUser = !userId || msgUserId === userId;
+
+        if (matchesSearch && matchesType && matchesUser) {
+            message.classList.remove('hidden');
+        } else {
+            message.classList.add('hidden');
+        }
     });
 }
 
-function filterQuotesByStatus(status) {
-    const table = document.getElementById('quotes-table');
-    if (!table) return;
-    
-    const rows = table.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        if (!status) {
-            row.style.display = '';
-        } else {
-            const statusCell = row.querySelector('select.status-select').value;
-            row.style.display = statusCell === status ? '' : 'none';
-        }
-    });
+
+// --- PLACEHOLDER FUNCTIONS FOR OTHER SECTIONS ---
+function renderAdminSubscriptions() {
+    document.getElementById('admin-content-area').innerHTML = '<div class="coming-soon">Subscription management is coming soon.</div>';
 }
 
-async function handleUserDelete(userId) {
-    if (confirm('WARNING: Are you sure you want to permanently delete this user? This action cannot be undone.')) {
-        await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted successfully.')
-            .then(() => renderAdminUsers())
-            .catch(() => {});
-    }
+function renderAdminSystemStats() {
+    document.getElementById('admin-content-area').innerHTML = '<div class="coming-soon">System statistics are coming soon.</div>';
 }
-
-async function deleteQuote(quoteId) {
-    if (confirm('Are you sure you want to delete this quote?')) {
-        await apiCall(`/admin/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted successfully.')
-            .then(() => renderAdminQuotes())
-            .catch(() => {});
-    }
-}
-
-async function deleteJob(jobId) {
-    if (confirm('Are you sure you want to delete this job?')) {
-        await apiCall(`/admin/jobs/${jobId}`, 'DELETE', null, 'Job deleted successfully.')
-            .then(() => renderAdminJobs())
-            .catch(() => {});
-    }
-}
-
-async function extendSubscription(subscriptionId) {
-    const months = prompt('Enter number of months to extend:');
-    if (months && parseInt(months) > 0) {
-        try {
-            await apiCall(`/admin/subscriptions/${subscriptionId}/extend`, 'PUT', { months: parseInt(months) }, 'Subscription extended successfully.');
-            renderAdminSubscriptions();
-        } catch (error) {
-            console.error('Failed to extend subscription:', error);
-        }
-    }
-}
-
-async function cancelSubscription(subscriptionId) {
-    if (confirm('Are you sure you want to cancel this subscription?')) {
-        try {
-            await apiCall(`/admin/subscriptions/${subscriptionId}/cancel`, 'PUT', null, 'Subscription cancelled successfully.');
-            renderAdminSubscriptions();
-        } catch (error) {
-            console.error('Failed to cancel subscription:', error);
-        }
-    }
-}
-
-// Placeholder functions for missing functionality
-function showAddUserModal() {
-    showNotification('Add user functionality coming soon!', 'info');
-}
-
-function showUserDetails(userId) {
-    showNotification('User details functionality coming soon!', 'info');
-}
-
-function showEditUserModal(userId) {
-    showNotification('Edit user functionality coming soon!', 'info');
-}
-
-function showAddJobModal() {
-    showNotification('Add job functionality coming soon!', 'info');
-}
-
-function editJob(jobId) {
-    showNotification('Edit job functionality coming soon!', 'info');
-}
-
-// --- GLOBAL INITIALIZATION TRIGGER ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded');
-    
-    if (document.body.classList.contains('admin-body')) {
-        const isAdminPage = window.location.pathname.includes('admin.html');
-        const isLoginPage = !!document.getElementById('admin-login-form');
-
-        console.log('Is admin page:', isAdminPage);
-        console.log('Is login page:', isLoginPage);
-
-        if (isAdminPage) {
-            initializeAdminPage();
-        } else if (isLoginPage) {
-            initializeLoginPage();
-        } else {
-            hideGlobalLoader();
-        }
-    } else {
-        hideGlobalLoader();
-    }
-});
