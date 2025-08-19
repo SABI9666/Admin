@@ -1,5 +1,5 @@
-/ === STEEL CONNECT ADMIN PANEL - PART 1 ===
-// Configuration & Core Functions
+// === STEEL CONNECT ADMIN PANEL - PART 1 (COMPLETE) ===
+// Configuration, Core Functions, Dashboard, Users, Quotes, Messages
 
 const appState = { 
     currentUser: null,
@@ -345,8 +345,6 @@ function getActivityIcon(type) {
     };
     return icons[type] || 'bell';
 }
-/ === STEEL CONNECT ADMIN PANEL - PART 2 ===
-// Users Management & Remaining Functions
 
 // --- USERS MANAGEMENT ---
 async function renderAdminUsers() {
@@ -561,149 +559,2181 @@ async function deleteUser(userId) {
     }
 }
 
-// --- EXPORT FUNCTIONS ---
-async function exportUsers() {
+// --- QUOTES MANAGEMENT ---
+async function renderAdminQuotes() {
+    const contentArea = document.getElementById('admin-content-area');
     try {
-        const data = await apiCall('/admin/export/users');
-        downloadFile(data.downloadUrl, `users-export-${new Date().toISOString().split('T')[0]}.csv`);
-        showNotification('Users exported successfully', 'success');
+        const { quotes } = await apiCall('/admin/quotes');
+        if (!quotes || quotes.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>No quotes found</h3>
+                    <p>Quotes will appear here once users request them.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Quotes Management</h2>
+                    <span class="count-badge">${quotes.length} quotes</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search quotes..." id="quote-search" oninput="filterQuotes(this.value)">
+                    </div>
+                    <select id="quote-status-filter" onchange="filterQuotesByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportQuotes()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="quotes-table">
+                    <thead>
+                        <tr>
+                            <th>Quote #</th>
+                            <th>Client</th>
+                            <th>Project</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${quotes.map(quote => `
+                            <tr data-quote-id="${quote._id}" data-status="${quote.status}" data-client="${quote.clientName}">
+                                <td>
+                                    <strong>#${quote.quoteNumber || quote._id.slice(-6)}</strong>
+                                </td>
+                                <td>
+                                    <div class="client-info">
+                                        <strong>${quote.clientName}</strong>
+                                        <small>${quote.clientEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${quote.projectTitle}</strong>
+                                        <small>${quote.projectType}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="amount-display" id="amount-${quote._id}">
+                                        ${formatCurrency(quote.amount)}
+                                    </span>
+                                    <button class="btn btn-sm btn-link" onclick="editQuoteAmount('${quote._id}', ${quote.amount})" title="Edit Amount">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    <select class="status-select" onchange="updateQuoteStatus('${quote._id}', this.value)" data-current="${quote.status}">
+                                        <option value="pending" ${quote.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="approved" ${quote.status === 'approved' ? 'selected' : ''}>Approved</option>
+                                        <option value="rejected" ${quote.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                        <option value="completed" ${quote.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    </select>
+                                </td>
+                                <td>${formatDate(quote.createdAt)}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteQuote('${quote._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load quotes</h3>
+                <button class="btn btn-primary" onclick="renderAdminQuotes()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function filterQuotes(searchTerm) {
+    const table = document.getElementById('quotes-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const client = row.dataset.client.toLowerCase();
+        const project = row.cells[2].textContent.toLowerCase();
+        const shouldShow = client.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterQuotesByStatus(status) {
+    const table = document.getElementById('quotes-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const quoteStatus = row.dataset.status;
+        const shouldShow = !status || quoteStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateQuoteStatus(quoteId, newStatus) {
+    try {
+        await apiCall(`/admin/quotes/${quoteId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Quote status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-quote-id="${quoteId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${quoteId}"]`);
+        if (select) select.value = select.dataset.current;
+    }
+}
+
+async function editQuoteAmount(quoteId, currentAmount) {
+    const newAmount = prompt('Enter new amount:', currentAmount);
+    if (newAmount !== null && !isNaN(newAmount) && parseFloat(newAmount) >= 0) {
+        try {
+            await apiCall(`/admin/quotes/${quoteId}/amount`, 'PATCH', { amount: parseFloat(newAmount) });
+            document.getElementById(`amount-${quoteId}`).textContent = formatCurrency(parseFloat(newAmount));
+            showNotification('Quote amount updated successfully', 'success');
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function viewQuoteDetails(quoteId) {
+    try {
+        const data = await apiCall(`/admin/quotes/${quoteId}`);
+        const quote = data.quote;
+        
+        showModal('quote-details-modal', `
+            <div class="quote-details-modal">
+                <h3>Quote Details - #${quote.quoteNumber || quote._id.slice(-6)}</h3>
+                <div class="quote-content">
+                    <div class="quote-header">
+                        <div class="client-section">
+                            <h4>Client Information</h4>
+                            <p><strong>Name:</strong> ${quote.clientName}</p>
+                            <p><strong>Email:</strong> ${quote.clientEmail}</p>
+                            <p><strong>Phone:</strong> ${quote.clientPhone || 'Not provided'}</p>
+                        </div>
+                        <div class="project-section">
+                            <h4>Project Information</h4>
+                            <p><strong>Title:</strong> ${quote.projectTitle}</p>
+                            <p><strong>Type:</strong> ${quote.projectType}</p>
+                            <p><strong>Amount:</strong> ${formatCurrency(quote.amount)}</p>
+                            <p><strong>Status:</strong> <span class="status-badge ${quote.status}">${quote.status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="quote-description">
+                        <h4>Project Description</h4>
+                        <p>${quote.description || 'No description provided'}</p>
+                    </div>
+                    
+                    <div class="quote-metadata">
+                        <p><strong>Created:</strong> ${formatDate(quote.createdAt)}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(quote.updatedAt)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    // === STEEL CONNECT ADMIN PANEL - PART 1 (COMPLETE) ===
+// Configuration, Core Functions, Dashboard, Users, Quotes, Messages
+
+const appState = { 
+    currentUser: null,
+    currentFilter: '',
+    currentSection: 'dashboard',
+    uploadProgress: 0
+};
+const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
+
+// --- CORE UTILITY FUNCTIONS ---
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    if (!container) return;
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    container.appendChild(notification);
+    setTimeout(() => { notification.remove(); }, 5000);
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'error': 'exclamation-circle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+function hideGlobalLoader() {
+    const loader = document.getElementById('global-loader');
+    if (loader) loader.style.display = 'none';
+}
+
+function showLoader(container) {
+    container.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    `;
+}
+
+async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
+    const token = localStorage.getItem('jwtToken');
+    const options = {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` },
+    };
+    
+    if (!isFileUpload) {
+        options.headers['Content-Type'] = 'application/json';
+    }
+    
+    if (body) {
+        options.body = isFileUpload ? body : JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        const responseData = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(responseData.message || `HTTP error! Status: ${response.status}`);
+        return responseData;
+    } catch (error) {
+        const errorMessage = error.name === 'TypeError' ? 'Network error: Could not connect to server.' : error.message;
+        showNotification(errorMessage, 'error');
+        throw new Error(errorMessage);
+    }
+}
+
+function logout() {
+    localStorage.clear();
+    showNotification('You have been logged out.', 'success');
+    setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(amount || 0);
+}
+
+// --- MODAL UTILITIES ---
+function showModal(modalId, content) {
+    const existingModal = document.getElementById('dynamic-modal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'dynamic-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            ${content}
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    const modal = document.getElementById('dynamic-modal');
+    if (modal) modal.remove();
+}
+
+// --- LOGIN PAGE LOGIC ---
+function initializeLoginPage() {
+    const loginForm = document.getElementById('admin-login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleAdminLogin);
+    }
+}
+
+async function handleAdminLogin(event) {
+    event.preventDefault();
+    const loginButton = event.target.querySelector('button[type="submit"]');
+    loginButton.disabled = true;
+    loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+    try {
+        const data = await apiCall('/auth/login/admin', 'POST', {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+        });
+        if (!data.token || !data.user) throw new Error('Invalid server response.');
+        
+        localStorage.setItem('jwtToken', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        showNotification('Login successful! Redirecting...', 'success');
+        setTimeout(() => { window.location.href = 'admin.html'; }, 1000);
+    } catch (error) {
+        loginButton.disabled = false;
+        loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+    }
+}
+
+// --- ADMIN PANEL LOGIC ---
+function initializeAdminPage() {
+    try {
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        const token = localStorage.getItem('jwtToken');
+        if (token && user && (user.role?.toLowerCase() === 'admin' || user.type?.toLowerCase() === 'admin')) {
+            appState.currentUser = user;
+            setupAdminPanel();
+        } else {
+            showAdminLoginPrompt("Access Denied: Admin privileges required.");
+        }
+    } catch {
+        showAdminLoginPrompt("Invalid session. Please log in again.");
+    }
+}
+
+function showAdminLoginPrompt(message) {
+    hideGlobalLoader();
+    const panelContainer = document.getElementById('admin-panel-container');
+    const loginPrompt = document.getElementById('admin-login-prompt');
+    
+    if (panelContainer) panelContainer.style.display = 'none';
+    if (loginPrompt) {
+        loginPrompt.style.display = 'flex';
+        const messageP = loginPrompt.querySelector('p');
+        if (messageP && message) messageP.textContent = message;
+    }
+}
+
+function setupAdminPanel() {
+    hideGlobalLoader();
+    const panelContainer = document.getElementById('admin-panel-container');
+    const userInfo = document.getElementById('admin-user-info');
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    
+    if (panelContainer) panelContainer.style.display = 'flex';
+    
+    if (userInfo) {
+        userInfo.innerHTML = `
+            <div class="user-avatar">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="user-details">
+                <strong>${appState.currentUser.name}</strong>
+                <small>${appState.currentUser.role || 'Admin'}</small>
+            </div>
+        `;
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+    
+    const navLinks = document.querySelectorAll('.admin-nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            appState.currentSection = link.dataset.section;
+            const sectionTitle = document.getElementById('admin-section-title');
+            if (sectionTitle) sectionTitle.textContent = link.textContent.trim();
+            renderAdminSection(link.dataset.section);
+        });
+    });
+    
+    const dashboardLink = document.querySelector('.admin-nav-link[data-section="dashboard"]');
+    if (dashboardLink) dashboardLink.click();
+}
+
+function renderAdminSection(section) {
+    const contentArea = document.getElementById('admin-content-area');
+    if (!contentArea) return;
+    
+    showLoader(contentArea);
+    
+    const renderMap = {
+        dashboard: renderAdminDashboard,
+        users: renderAdminUsers,
+        quotes: renderAdminQuotes,
+        estimations: renderAdminEstimations,
+        jobs: renderAdminJobs,
+        messages: renderAdminMessages,
+        subscriptions: renderAdminSubscriptions,
+        analytics: renderAdminAnalytics,
+        'system-stats': renderSystemStats
+    };
+    
+    setTimeout(() => {
+        if (renderMap[section]) {
+            renderMap[section]();
+        } else {
+            renderComingSoon(section);
+        }
+    }, 100);
+}
+
+function renderComingSoon(section) {
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = `
+        <div class="coming-soon">
+            <i class="fas fa-tools"></i>
+            <h3>Coming Soon</h3>
+            <p>The ${section.replace('-', ' ')} section is currently under development.</p>
+        </div>
+    `;
+}
+
+// --- DASHBOARD ---
+async function renderAdminDashboard() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const data = await apiCall('/admin/dashboard');
+        contentArea.innerHTML = `
+            <div class="dashboard-overview">
+                <div class="admin-stats-grid">
+                    ${Object.entries(data.stats || {}).map(([key, value]) => `
+                        <div class="admin-stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-${getStatIcon(key)}"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value">${formatStatValue(key, value)}</span>
+                                <span class="stat-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="recent-activity">
+                    <h3>Recent Activity</h3>
+                    <div class="activity-list">
+                        ${data.recentActivity?.map(activity => `
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-${getActivityIcon(activity.type)}"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p>${activity.description}</p>
+                                    <small>${formatDate(activity.timestamp)}</small>
+                                </div>
+                            </div>
+                        `).join('') || '<p>No recent activity</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load dashboard data</h3>
+                <p>Please try refreshing the page or contact support if the issue persists.</p>
+                <button class="btn btn-primary" onclick="renderAdminDashboard()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function getStatIcon(key) {
+    const icons = {
+        totalUsers: 'users',
+        totalQuotes: 'file-alt',
+        totalJobs: 'briefcase',
+        totalMessages: 'envelope',
+        totalEstimations: 'calculator',
+        activeSubscriptions: 'crown',
+        pendingEstimations: 'clock',
+        unreadMessages: 'envelope-open'
+    };
+    return icons[key] || 'chart-line';
+}
+
+function formatStatValue(key, value) {
+    if (key.includes('revenue') || key.includes('Revenue')) {
+        return formatCurrency(value);
+    }
+    return value?.toLocaleString() || '0';
+}
+
+function getActivityIcon(type) {
+    const icons = {
+        user: 'user-plus',
+        quote: 'file-alt',
+        job: 'briefcase',
+        message: 'envelope',
+        estimation: 'calculator'
+    };
+    return icons[type] || 'bell';
+}
+
+// --- USERS MANAGEMENT ---
+async function renderAdminUsers() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const { users } = await apiCall('/admin/users');
+        if (!users || users.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <h3>No users found</h3>
+                    <p>Registered users will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Users Management</h2>
+                    <span class="count-badge">${users.length} users</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search users..." id="user-search" oninput="filterUsers(this.value)">
+                    </div>
+                    <select id="user-role-filter" onchange="filterUsersByRole(this.value)">
+                        <option value="">All Roles</option>
+                        <option value="admin">Admin</option>
+                        <option value="contractor">Contractor</option>
+                        <option value="client">Client</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportUsers()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr data-user-id="${user._id}" data-role="${user.role}" data-name="${user.name}">
+                                <td>
+                                    <div class="user-info">
+                                        <div class="user-avatar">
+                                            ${user.avatar ? 
+                                                `<img src="${user.avatar}" alt="${user.name}">` :
+                                                `<i class="fas fa-user"></i>`
+                                            }
+                                        </div>
+                                        <div class="user-details">
+                                            <strong>${user.name}</strong>
+                                            <small>${user.company || 'No company'}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${user.email}</td>
+                                <td>
+                                    <span class="role-badge ${user.role}">${user.role}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${user.isActive ? 'active' : 'inactive'}">
+                                        ${user.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td>${formatDate(user.createdAt)}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id}', ${!user.isActive})" title="${user.isActive ? 'Deactivate' : 'Activate'}">
+                                            <i class="fas fa-${user.isActive ? 'ban' : 'check'}"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${user._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load users</h3>
+                <button class="btn btn-primary" onclick="renderAdminUsers()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function filterUsers(searchTerm) {
+    const table = document.getElementById('users-table');
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const name = row.dataset.name.toLowerCase();
+        const email = row.cells[1].textContent.toLowerCase();
+        const shouldShow = name.includes(searchTerm.toLowerCase()) || 
+                          email.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterUsersByRole(role) {
+    const table = document.getElementById('users-table');
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const userRole = row.dataset.role;
+        const shouldShow = !role || userRole === role;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function viewUserDetails(userId) {
+    try {
+        const data = await apiCall(`/admin/users/${userId}`);
+        const user = data.user;
+        
+        showModal('user-details-modal', `
+            <div class="user-details-modal">
+                <h3>User Details</h3>
+                <div class="user-profile">
+                    <div class="profile-avatar">
+                        ${user.avatar ? 
+                            `<img src="${user.avatar}" alt="${user.name}">` :
+                            `<i class="fas fa-user"></i>`
+                        }
+                    </div>
+                    <div class="profile-info">
+                        <h4>${user.name}</h4>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Role:</strong> <span class="role-badge ${user.role}">${user.role}</span></p>
+                        <p><strong>Company:</strong> ${user.company || 'Not specified'}</p>
+                        <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span></p>
+                        <p><strong>Joined:</strong> ${formatDate(user.createdAt)}</p>
+                        <p><strong>Last Login:</strong> ${user.lastLogin ? formatDate(user.lastLogin) : 'Never'}</p>
+                    </div>
+                </div>
+                
+                <div class="user-stats">
+                    <h4>Activity Statistics</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.quotesRequested || 0}</span>
+                            <span class="stat-label">Quotes Requested</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.jobsCompleted || 0}</span>
+                            <span class="stat-label">Jobs Completed</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.messagesSent || 0}</span>
+                            <span class="stat-label">Messages Sent</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load user details', 'error');
+    }
+}
+
+async function toggleUserStatus(userId, newStatus) {
+    try {
+        await apiCall(`/admin/users/${userId}/status`, 'PATCH', { isActive: newStatus });
+        showNotification(`User ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+        renderAdminUsers();
     } catch (error) {
         // Error already handled by apiCall
     }
 }
 
-function downloadFile(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+async function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/users/${userId}`, 'DELETE');
+            showNotification('User deleted successfully', 'success');
+            renderAdminUsers();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
 }
 
-// --- PLACEHOLDER FUNCTIONS FOR REMAINING SECTIONS ---
+// --- QUOTES MANAGEMENT ---
 async function renderAdminQuotes() {
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-file-alt"></i>
-            <h3>Quotes Management</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
+    try {
+        const { quotes } = await apiCall('/admin/quotes');
+        if (!quotes || quotes.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>No quotes found</h3>
+                    <p>Quotes will appear here once users request them.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Quotes Management</h2>
+                    <span class="count-badge">${quotes.length} quotes</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search quotes..." id="quote-search" oninput="filterQuotes(this.value)">
+                    </div>
+                    <select id="quote-status-filter" onchange="filterQuotesByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportQuotes()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="quotes-table">
+                    <thead>
+                        <tr>
+                            <th>Quote #</th>
+                            <th>Client</th>
+                            <th>Project</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${quotes.map(quote => `
+                            <tr data-quote-id="${quote._id}" data-status="${quote.status}" data-client="${quote.clientName}">
+                                <td>
+                                    <strong>#${quote.quoteNumber || quote._id.slice(-6)}</strong>
+                                </td>
+                                <td>
+                                    <div class="client-info">
+                                        <strong>${quote.clientName}</strong>
+                                        <small>${quote.clientEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${quote.projectTitle}</strong>
+                                        <small>${quote.projectType}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="amount-display" id="amount-${quote._id}">
+                                        ${formatCurrency(quote.amount)}
+                                    </span>
+                                    <button class="btn btn-sm btn-link" onclick="editQuoteAmount('${quote._id}', ${quote.amount})" title="Edit Amount">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    <select class="status-select" onchange="updateQuoteStatus('${quote._id}', this.value)" data-current="${quote.status}">
+                                        <option value="pending" ${quote.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="approved" ${quote.status === 'approved' ? 'selected' : ''}>Approved</option>
+                                        <option value="rejected" ${quote.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                        <option value="completed" ${quote.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    </select>
+                                </td>
+                                <td>${formatDate(quote.createdAt)}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteQuote('${quote._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load quotes</h3>
+                <button class="btn btn-primary" onclick="renderAdminQuotes()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
 }
 
+function filterQuotes(searchTerm) {
+    const table = document.getElementById('quotes-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const client = row.dataset.client.toLowerCase();
+        const project = row.cells[2].textContent.toLowerCase();
+        const shouldShow = client.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterQuotesByStatus(status) {
+    const table = document.getElementById('quotes-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const quoteStatus = row.dataset.status;
+        const shouldShow = !status || quoteStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateQuoteStatus(quoteId, newStatus) {
+    try {
+        await apiCall(`/admin/quotes/${quoteId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Quote status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-quote-id="${quoteId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${quoteId}"]`);
+        if (select) select.value = select.dataset.current;
+    }
+}
+
+async function editQuoteAmount(quoteId, currentAmount) {
+    const newAmount = prompt('Enter new amount:', currentAmount);
+    if (newAmount !== null && !isNaN(newAmount) && parseFloat(newAmount) >= 0) {
+        try {
+            await apiCall(`/admin/quotes/${quoteId}/amount`, 'PATCH', { amount: parseFloat(newAmount) });
+            document.getElementById(`amount-${quoteId}`).textContent = formatCurrency(parseFloat(newAmount));
+            showNotification('Quote amount updated successfully', 'success');
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function viewQuoteDetails(quoteId) {
+    try {
+        const data = await apiCall(`/admin/quotes/${quoteId}`);
+        const quote = data.quote;
+        
+        showModal('quote-details-modal', `
+            <div class="quote-details-modal">
+                <h3>Quote Details - #${quote.quoteNumber || quote._id.slice(-6)}</h3>
+                <div class="quote-content">
+                    <div class="quote-header">
+                        <div class="client-section">
+                            <h4>Client Information</h4>
+                            <p><strong>Name:</strong> ${quote.clientName}</p>
+                            <p><strong>Email:</strong> ${quote.clientEmail}</p>
+                            <p><strong>Phone:</strong> ${quote.clientPhone || 'Not provided'}</p>
+                        </div>
+                        <div class="project-section">
+                            <h4>Project Information</h4>
+                            <p><strong>Title:</strong> ${quote.projectTitle}</p>
+                            <p><strong>Type:</strong> ${quote.projectType}</p>
+                            <p><strong>Amount:</strong> ${formatCurrency(quote.amount)}</p>
+                            <p><strong>Status:</strong> <span class="status-badge ${quote.status}">${quote.status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="quote-description">
+                        <h4>Project Description</h4>
+                        <p>${quote.description || 'No description provided'}</p>
+                    </div>
+                    
+                    <div class="quote-metadata">
+                        <p><strong>Created:</strong> ${formatDate(quote.createdAt)}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(quote.updatedAt)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                // === STEEL CONNECT ADMIN PANEL - PART 2 (COMPLETE) ===
+// Estimations, Jobs, Subscriptions, Analytics, System Stats & Initialization
+
+// --- ESTIMATIONS MANAGEMENT ---
 async function renderAdminEstimations() {
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-calculator"></i>
-            <h3>Estimations Management</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
+    try {
+        const { estimations } = await apiCall('/admin/estimations');
+        if (!estimations || estimations.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calculator"></i>
+                    <h3>No estimations found</h3>
+                    <p>Estimation requests will appear here once contractors upload project files.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Estimations Management</h2>
+                    <span class="count-badge">${estimations.length} estimations</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search estimations..." id="estimation-search" oninput="filterEstimations(this.value)">
+                    </div>
+                    <select id="estimation-status-filter" onchange="filterEstimationsByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportEstimations()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="estimations-table">
+                    <thead>
+                        <tr>
+                            <th>Project Title</th>
+                            <th>Contractor</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Created</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estimations.map(est => `
+                            <tr data-estimation-id="${est._id}" data-status="${est.status}" data-contractor="${est.contractorName}">
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${est.projectTitle}</strong>
+                                        <small>${est.projectType || 'General'}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="contractor-info">
+                                        <strong>${est.contractorName}</strong>
+                                        <small>${est.contractorEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <select class="status-select" onchange="updateEstimationStatus('${est._id}', this.value)" data-current="${est.status}">
+                                        <option value="pending" ${est.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="in-progress" ${est.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="completed" ${est.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="cancelled" ${est.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="file-info">
+                                        <span class="file-count">${est.uploadedFiles?.length || 0} files</span>
+                                        ${est.uploadedFiles?.length ? 
+                                            `<button class="btn btn-sm btn-link" onclick="viewEstimationFiles('${est._id}')" title="View Files">
+                                                <i class="fas fa-paperclip"></i>
+                                            </button>` : ''
+                                        }
+                                    </div>
+                                </td>
+                                <td>${formatDate(est.createdAt)}</td>
+                                <td>
+                                    ${est.dueDate ? formatDate(est.dueDate) : 
+                                        `<button class="btn btn-sm btn-outline" onclick="setEstimationDueDate('${est._id}')">
+                                            <i class="fas fa-calendar-plus"></i> Set
+                                        </button>`
+                                    }
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${est._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ${est.status === 'pending' || est.status === 'in-progress' ? `
+                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${est._id}')" title="Upload Result">
+                                                <i class="fas fa-upload"></i>
+                                            </button>
+                                        ` : ''}
+                                        ${est.resultFile ? `
+                                            <button class="btn btn-sm btn-primary" onclick="downloadEstimationResult('${est._id}')" title="Download Result">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load estimations</h3>
+                <button class="btn btn-primary" onclick="renderAdminEstimations()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
 }
 
+function filterEstimations(searchTerm) {
+    const table = document.getElementById('estimations-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const contractor = row.dataset.contractor.toLowerCase();
+        const project = row.cells[0].textContent.toLowerCase();
+        const shouldShow = contractor.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterEstimationsByStatus(status) {
+    const table = document.getElementById('estimations-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const estimationStatus = row.dataset.status;
+        const shouldShow = !status || estimationStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateEstimationStatus(estimationId, newStatus) {
+    try {
+        await apiCall(`/admin/estimations/${estimationId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Estimation status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-estimation-id="${estimationId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${estimationId}"]`);
+        if (select) select.value = select.dataset.current;
+    }
+}
+
+async function viewEstimationDetails(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}`);
+        const estimation = data.estimation;
+        
+        showModal('estimation-details-modal', `
+            <div class="estimation-details-modal">
+                <h3>Estimation Details</h3>
+                <div class="estimation-content">
+                    <div class="estimation-header">
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${estimation.contractorName}</p>
+                            <p><strong>Email:</strong> ${estimation.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${estimation.contractorCompany || 'Not specified'}</p>
+                        </div>
+                        <div class="project-section">
+                            <h4>Project Information</h4>
+                            <p><strong>Title:</strong> ${estimation.projectTitle}</p>
+                            <p><strong>Type:</strong> ${estimation.projectType || 'General'}</p>
+                            <p><strong>Status:</strong> <span class="status-badge ${estimation.status}">${estimation.status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="estimation-description">
+                        <h4>Project Description</h4>
+                        <p>${estimation.description || 'No description provided'}</p>
+                    </div>
+                    
+                    ${estimation.uploadedFiles?.length ? `
+                        <div class="estimation-files">
+                            <h4>Uploaded Files</h4>
+                            <div class="files-list">
+                                ${estimation.uploadedFiles.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas fa-file"></i>
+                                        <span>${file.name}</span>
+                                        <button class="btn btn-sm btn-link" onclick="downloadFile('${file.url}', '${file.name}')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="estimation-metadata">
+                        <p><strong>Created:</strong> ${formatDate(estimation.createdAt)}</p>
+                        <p><strong>Due Date:</strong> ${estimation.dueDate ? formatDate(estimation.dueDate) : 'Not set'}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(estimation.updatedAt)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load estimation details', 'error');
+    }
+}
+
+async function viewEstimationFiles(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}/files`);
+        const files = data.files;
+        
+        showModal('files-modal', `
+            <div class="files-modal">
+                <h3>Uploaded Files</h3>
+                <div class="files-grid">
+                    ${files.map(file => `
+                        <div class="file-card">
+                            <div class="file-icon">
+                                <i class="fas fa-${getFileIcon(file.type)}"></i>
+                            </div>
+                            <div class="file-info">
+                                <h4>${file.name}</h4>
+                                <p>${formatFileSize(file.size)}</p>
+                                <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load files', 'error');
+    }
+}
+
+function getFileIcon(fileType) {
+    const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'xls': 'file-excel',
+        'xlsx': 'file-excel',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'png': 'file-image',
+        'gif': 'file-image',
+        'zip': 'file-archive',
+        'rar': 'file-archive',
+        'txt': 'file-alt'
+    };
+    return icons[fileType?.toLowerCase()] || 'file';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function setEstimationDueDate(estimationId) {
+    const dueDate = prompt('Enter due date (YYYY-MM-DD):');
+    if (dueDate && isValidDate(dueDate)) {
+        try {
+            await apiCall(`/admin/estimations/${estimationId}/due-date`, 'PATCH', { dueDate });
+            showNotification('Due date set successfully', 'success');
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    } else if (dueDate) {
+        showNotification('Invalid date format. Please use YYYY-MM-DD', 'error');
+    }
+}
+
+function isValidDate(dateString) {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date);
+}
+
+async function uploadEstimationResult(estimationId) {
+    showModal('upload-result-modal', `
+        <div class="upload-result-modal">
+            <h3>Upload Estimation Result</h3>
+            <form id="upload-result-form">
+                <div class="form-group">
+                    <label for="result-file">Select Result File:</label>
+                    <input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-notes">Notes (optional):</label>
+                    <textarea id="result-notes" placeholder="Add any notes about the estimation result..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Result
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `);
+    
+    document.getElementById('upload-result-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('result-file');
+        const notes = document.getElementById('result-notes').value;
+        
+        if (!fileInput.files[0]) {
+            showNotification('Please select a file', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('resultFile', fileInput.files[0]);
+        formData.append('notes', notes);
+        
+        try {
+            await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
+            showNotification('Estimation result uploaded successfully', 'success');
+            closeModal();
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    });
+}
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}/result`);
+        downloadFile(data.resultFile.url, data.resultFile.name);
+    } catch (error) {
+        showNotification('Failed to download result file', 'error');
+    }
+}
+
+async function deleteEstimation(estimationId) {
+    if (confirm('Are you sure you want to delete this estimation? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/estimations/${estimationId}`, 'DELETE');
+            showNotification('Estimation deleted successfully', 'success');
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function exportEstimations() {
+    try {
+        const data = await apiCall('/admin/export/estimations');
+        downloadFile(data.downloadUrl, `estimations-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Estimations exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+// --- JOBS MANAGEMENT ---
 async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-briefcase"></i>
-            <h3>Jobs Management</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
-}
-
-async function renderAdminMessages() {
-    const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-envelope"></i>
-            <h3>Messages Management</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
-}
-
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-crown"></i>
-            <h3>Subscriptions Management</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
-}
-
-async function renderAdminAnalytics() {
-    const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-chart-bar"></i>
-            <h3>Analytics Dashboard</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
-}
-
-async function renderSystemStats() {
-    const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = `
-        <div class="coming-soon">
-            <i class="fas fa-server"></i>
-            <h3>System Statistics</h3>
-            <p>This section is under development.</p>
-        </div>
-    `;
-}
-
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on the login page
-    if (document.getElementById('admin-login-form')) {
-        initializeLoginPage();
+    try {
+        const { jobs } = await apiCall('/admin/jobs');
+        if (!jobs || jobs.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-briefcase"></i>
+                    <h3>No jobs found</h3>
+                    <p>Jobs will appear here once projects are initiated.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Jobs Management</h2>
+                    <span class="count-badge">${jobs.length} jobs</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search jobs..." id="job-search" oninput="filterJobs(this.value)">
+                    </div>
+                    <select id="job-status-filter" onchange="filterJobsByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="on-hold">On Hold</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportJobs()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Job #</th>
+                            <th>Project</th>
+                            <th>Client</th>
+                            <th>Contractor</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jobs.map(job => `
+                            <tr data-job-id="${job._id}" data-status="${job.status}" data-client="${job.clientName}">
+                                <td><strong>#${job.jobNumber || job._id.slice(-6)}</strong></td>
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${job.projectTitle}</strong>
+                                        <small>${job.projectType}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="client-info">
+                                        <strong>${job.clientName}</strong>
+                                        <small>${job.clientEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="contractor-info">
+                                        <strong>${job.contractorName}</strong>
+                                        <small>${job.contractorCompany || 'Independent'}</small>
+                                    </div>
+                                </td>
+                                <td>${formatCurrency(job.value)}</td>
+                                <td>
+                                    <select class="status-select" onchange="updateJobStatus('${job._id}', this.value)" data-current="${job.status}">
+                                        <option value="active" ${job.status === 'active' ? 'selected' : ''}>Active</option>
+                                        <option value="completed" ${job.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="cancelled" ${job.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        <option value="on-hold" ${job.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="progress-container">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${job.progress || 0}%"></div>
+                                        </div>
+                                        <span class="progress-text">${job.progress || 0}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewJobDetails('${job._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="updateJobProgress('${job._id}', ${job.progress || 0})" title="Update Progress">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteJob('${job._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load jobs</h3>
+                <button class="btn btn-primary" onclick="renderAdminJobs()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
     }
+}
+
+function filterJobs(searchTerm) {
+    const table = document.getElementById('jobs-table');
+    const rows = table.querySelectorAll('tbody tr');
     
-    // Check if we're on the admin panel page
-    if (document.getElementById('admin-panel-container')) {
-        initializeAdminPage();
+    rows.forEach(row => {
+        const client = row.dataset.client.toLowerCase();
+        const project = row.cells[1].textContent.toLowerCase();
+        const contractor = row.cells[3].textContent.toLowerCase();
+        const shouldShow = client.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase()) ||
+                          contractor.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterJobsByStatus(status) {
+    const table = document.getElementById('jobs-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const jobStatus = row.dataset.status;
+        const shouldShow = !status || jobStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateJobStatus(jobId, newStatus) {
+    try {
+        await apiCall(`/admin/jobs/${jobId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Job status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${jobId}"]`);
+        if (select) select.value = select.dataset.current;
     }
+}
+
+async function updateJobProgress(jobId, currentProgress) {
+    const newProgress = prompt('Enter progress percentage (0-100):', currentProgress);
+    if (newProgress !== null && !isNaN(newProgress)) {
+        const progress = Math.max(0, Math.min(100, parseInt(newProgress)));
+        try {
+            await apiCall(`/admin/jobs/${jobId}/progress`, 'PATCH', { progress });
+            showNotification('Job progress updated successfully', 'success');
+            renderAdminJobs();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function viewJobDetails(jobId) {
+    try {
+        const data = await apiCall(`/admin/jobs/${jobId}`);
+        const job = data.job;
+        
+        showModal('job-details-modal', `
+            <div class="job-details-modal">
+                <h3>Job Details - #${job.jobNumber || job._id.slice(-6)}</h3>
+                <div class="job-content">
+                    <div class="job-header">
+                        <div class="client-section">
+                            <h4>Client Information</h4>
+                            <p><strong>Name:</strong> ${job.clientName}</p>
+                            <p><strong>Email:</strong> ${job.clientEmail}</p>
+                            <p><strong>Phone:</strong> ${job.clientPhone || 'Not provided'}</p>
+                        </div>
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${job.contractorName}</p>
+                            <p><strong>Email:</strong> ${job.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${job.contractorCompany || 'Independent'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="project-section">
+                        <h4>Project Information</h4>
+                        <p><strong>Title:</strong> ${job.projectTitle}</p>
+                        <p><strong>Type:</strong> ${job.projectType}</p>
+                        <p><strong>Value:</strong> ${formatCurrency(job.value)}</p>
+                        <p><strong>Status:</strong>
+                        // === STEEL CONNECT ADMIN PANEL - PART 2 (COMPLETE) ===
+// Estimations, Jobs, Subscriptions, Analytics, System Stats & Initialization
+
+// --- ESTIMATIONS MANAGEMENT ---
+async function renderAdminEstimations() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const { estimations } = await apiCall('/admin/estimations');
+        if (!estimations || estimations.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calculator"></i>
+                    <h3>No estimations found</h3>
+                    <p>Estimation requests will appear here once contractors upload project files.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Estimations Management</h2>
+                    <span class="count-badge">${estimations.length} estimations</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search estimations..." id="estimation-search" oninput="filterEstimations(this.value)">
+                    </div>
+                    <select id="estimation-status-filter" onchange="filterEstimationsByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportEstimations()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="estimations-table">
+                    <thead>
+                        <tr>
+                            <th>Project Title</th>
+                            <th>Contractor</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Created</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estimations.map(est => `
+                            <tr data-estimation-id="${est._id}" data-status="${est.status}" data-contractor="${est.contractorName}">
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${est.projectTitle}</strong>
+                                        <small>${est.projectType || 'General'}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="contractor-info">
+                                        <strong>${est.contractorName}</strong>
+                                        <small>${est.contractorEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <select class="status-select" onchange="updateEstimationStatus('${est._id}', this.value)" data-current="${est.status}">
+                                        <option value="pending" ${est.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="in-progress" ${est.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="completed" ${est.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="cancelled" ${est.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="file-info">
+                                        <span class="file-count">${est.uploadedFiles?.length || 0} files</span>
+                                        ${est.uploadedFiles?.length ? 
+                                            `<button class="btn btn-sm btn-link" onclick="viewEstimationFiles('${est._id}')" title="View Files">
+                                                <i class="fas fa-paperclip"></i>
+                                            </button>` : ''
+                                        }
+                                    </div>
+                                </td>
+                                <td>${formatDate(est.createdAt)}</td>
+                                <td>
+                                    ${est.dueDate ? formatDate(est.dueDate) : 
+                                        `<button class="btn btn-sm btn-outline" onclick="setEstimationDueDate('${est._id}')">
+                                            <i class="fas fa-calendar-plus"></i> Set
+                                        </button>`
+                                    }
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${est._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ${est.status === 'pending' || est.status === 'in-progress' ? `
+                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${est._id}')" title="Upload Result">
+                                                <i class="fas fa-upload"></i>
+                                            </button>
+                                        ` : ''}
+                                        ${est.resultFile ? `
+                                            <button class="btn btn-sm btn-primary" onclick="downloadEstimationResult('${est._id}')" title="Download Result">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load estimations</h3>
+                <button class="btn btn-primary" onclick="renderAdminEstimations()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function filterEstimations(searchTerm) {
+    const table = document.getElementById('estimations-table');
+    const rows = table.querySelectorAll('tbody tr');
     
-    // Add click outside modal to close
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal-overlay')) {
+    rows.forEach(row => {
+        const contractor = row.dataset.contractor.toLowerCase();
+        const project = row.cells[0].textContent.toLowerCase();
+        const shouldShow = contractor.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterEstimationsByStatus(status) {
+    const table = document.getElementById('estimations-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const estimationStatus = row.dataset.status;
+        const shouldShow = !status || estimationStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateEstimationStatus(estimationId, newStatus) {
+    try {
+        await apiCall(`/admin/estimations/${estimationId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Estimation status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-estimation-id="${estimationId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${estimationId}"]`);
+        if (select) select.value = select.dataset.current;
+    }
+}
+
+async function viewEstimationDetails(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}`);
+        const estimation = data.estimation;
+        
+        showModal('estimation-details-modal', `
+            <div class="estimation-details-modal">
+                <h3>Estimation Details</h3>
+                <div class="estimation-content">
+                    <div class="estimation-header">
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${estimation.contractorName}</p>
+                            <p><strong>Email:</strong> ${estimation.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${estimation.contractorCompany || 'Not specified'}</p>
+                        </div>
+                        <div class="project-section">
+                            <h4>Project Information</h4>
+                            <p><strong>Title:</strong> ${estimation.projectTitle}</p>
+                            <p><strong>Type:</strong> ${estimation.projectType || 'General'}</p>
+                            <p><strong>Status:</strong> <span class="status-badge ${estimation.status}">${estimation.status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="estimation-description">
+                        <h4>Project Description</h4>
+                        <p>${estimation.description || 'No description provided'}</p>
+                    </div>
+                    
+                    ${estimation.uploadedFiles?.length ? `
+                        <div class="estimation-files">
+                            <h4>Uploaded Files</h4>
+                            <div class="files-list">
+                                ${estimation.uploadedFiles.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas fa-file"></i>
+                                        <span>${file.name}</span>
+                                        <button class="btn btn-sm btn-link" onclick="downloadFile('${file.url}', '${file.name}')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="estimation-metadata">
+                        <p><strong>Created:</strong> ${formatDate(estimation.createdAt)}</p>
+                        <p><strong>Due Date:</strong> ${estimation.dueDate ? formatDate(estimation.dueDate) : 'Not set'}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(estimation.updatedAt)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load estimation details', 'error');
+    }
+}
+
+async function viewEstimationFiles(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}/files`);
+        const files = data.files;
+        
+        showModal('files-modal', `
+            <div class="files-modal">
+                <h3>Uploaded Files</h3>
+                <div class="files-grid">
+                    ${files.map(file => `
+                        <div class="file-card">
+                            <div class="file-icon">
+                                <i class="fas fa-${getFileIcon(file.type)}"></i>
+                            </div>
+                            <div class="file-info">
+                                <h4>${file.name}</h4>
+                                <p>${formatFileSize(file.size)}</p>
+                                <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load files', 'error');
+    }
+}
+
+function getFileIcon(fileType) {
+    const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'xls': 'file-excel',
+        'xlsx': 'file-excel',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'png': 'file-image',
+        'gif': 'file-image',
+        'zip': 'file-archive',
+        'rar': 'file-archive',
+        'txt': 'file-alt'
+    };
+    return icons[fileType?.toLowerCase()] || 'file';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function setEstimationDueDate(estimationId) {
+    const dueDate = prompt('Enter due date (YYYY-MM-DD):');
+    if (dueDate && isValidDate(dueDate)) {
+        try {
+            await apiCall(`/admin/estimations/${estimationId}/due-date`, 'PATCH', { dueDate });
+            showNotification('Due date set successfully', 'success');
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    } else if (dueDate) {
+        showNotification('Invalid date format. Please use YYYY-MM-DD', 'error');
+    }
+}
+
+function isValidDate(dateString) {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date);
+}
+
+async function uploadEstimationResult(estimationId) {
+    showModal('upload-result-modal', `
+        <div class="upload-result-modal">
+            <h3>Upload Estimation Result</h3>
+            <form id="upload-result-form">
+                <div class="form-group">
+                    <label for="result-file">Select Result File:</label>
+                    <input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-notes">Notes (optional):</label>
+                    <textarea id="result-notes" placeholder="Add any notes about the estimation result..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Result
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `);
+    
+    document.getElementById('upload-result-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('result-file');
+        const notes = document.getElementById('result-notes').value;
+        
+        if (!fileInput.files[0]) {
+            showNotification('Please select a file', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('resultFile', fileInput.files[0]);
+        formData.append('notes', notes);
+        
+        try {
+            await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
+            showNotification('Estimation result uploaded successfully', 'success');
             closeModal();
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
         }
     });
-    
-    // Add escape key to close modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeModal();
+}
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        const data = await apiCall(`/admin/estimations/${estimationId}/result`);
+        downloadFile(data.resultFile.url, data.resultFile.name);
+    } catch (error) {
+        showNotification('Failed to download result file', 'error');
+    }
+}
+
+async function deleteEstimation(estimationId) {
+    if (confirm('Are you sure you want to delete this estimation? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/estimations/${estimationId}`, 'DELETE');
+            showNotification('Estimation deleted successfully', 'success');
+            renderAdminEstimations();
+        } catch (error) {
+            // Error already handled by apiCall
         }
-    });
-});
+    }
+}
 
-// --- ERROR HANDLING ---
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-    console.error('Global error:', { msg, url, lineNo, columnNo, error });
-    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
-    return false;
-};
+async function exportEstimations() {
+    try {
+        const data = await apiCall('/admin/export/estimations');
+        downloadFile(data.downloadUrl, `estimations-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Estimations exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
 
-window.addEventListener('unhandledrejection', function(event) {
-    console.error('Unhandled promise rejection:', event.reason);
-    showNotification('An unexpected error occurred. Please try again.', 'error');
-});
+// --- JOBS MANAGEMENT ---
+async function renderAdminJobs() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const { jobs } = await apiCall('/admin/jobs');
+        if (!jobs || jobs.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-briefcase"></i>
+                    <h3>No jobs found</h3>
+                    <p>Jobs will appear here once projects are initiated.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Jobs Management</h2>
+                    <span class="count-badge">${jobs.length} jobs</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search jobs..." id="job-search" oninput="filterJobs(this.value)">
+                    </div>
+                    <select id="job-status-filter" onchange="filterJobsByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="on-hold">On Hold</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportJobs()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table" id="jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Job #</th>
+                            <th>Project</th>
+                            <th>Client</th>
+                            <th>Contractor</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jobs.map(job => `
+                            <tr data-job-id="${job._id}" data-status="${job.status}" data-client="${job.clientName}">
+                                <td><strong>#${job.jobNumber || job._id.slice(-6)}</strong></td>
+                                <td>
+                                    <div class="project-info">
+                                        <strong>${job.projectTitle}</strong>
+                                        <small>${job.projectType}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="client-info">
+                                        <strong>${job.clientName}</strong>
+                                        <small>${job.clientEmail}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="contractor-info">
+                                        <strong>${job.contractorName}</strong>
+                                        <small>${job.contractorCompany || 'Independent'}</small>
+                                    </div>
+                                </td>
+                                <td>${formatCurrency(job.value)}</td>
+                                <td>
+                                    <select class="status-select" onchange="updateJobStatus('${job._id}', this.value)" data-current="${job.status}">
+                                        <option value="active" ${job.status === 'active' ? 'selected' : ''}>Active</option>
+                                        <option value="completed" ${job.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="cancelled" ${job.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        <option value="on-hold" ${job.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="progress-container">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${job.progress || 0}%"></div>
+                                        </div>
+                                        <span class="progress-text">${job.progress || 0}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info" onclick="viewJobDetails('${job._id}')" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="updateJobProgress('${job._id}', ${job.progress || 0})" title="Update Progress">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteJob('${job._id}')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load jobs</h3>
+                <button class="btn btn-primary" onclick="renderAdminJobs()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
 
-// Export functions for external use
-window.SteelConnectAdmin = {
-    apiCall,
-    showNotification,
-    formatCurrency,
-    formatDate,
-    logout
-};
+function filterJobs(searchTerm) {
+    const table = document.getElementById('jobs-table');
+    const rows = table.querySelectorAll('tbody tr');
     
+    rows.forEach(row => {
+        const client = row.dataset.client.toLowerCase();
+        const project = row.cells[1].textContent.toLowerCase();
+        const contractor = row.cells[3].textContent.toLowerCase();
+        const shouldShow = client.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase()) ||
+                          contractor.includes(searchTerm.toLowerCase());
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterJobsByStatus(status) {
+    const table = document.getElementById('jobs-table');
+    const rows = table.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const jobStatus = row.dataset.status;
+        const shouldShow = !status || jobStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function updateJobStatus(jobId, newStatus) {
+    try {
+        await apiCall(`/admin/jobs/${jobId}/status`, 'PATCH', { status: newStatus });
+        showNotification('Job status updated successfully', 'success');
+        const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
+        if (row) row.dataset.status = newStatus;
+    } catch (error) {
+        const select = document.querySelector(`select[onchange*="${jobId}"]`);
+        if (select) select.value = select.dataset.current;
+    }
+}
+
+async function updateJobProgress(jobId, currentProgress) {
+    const newProgress = prompt('Enter progress percentage (0-100):', currentProgress);
+    if (newProgress !== null && !isNaN(newProgress)) {
+        const progress = Math.max(0, Math.min(100, parseInt(newProgress)));
+        try {
+            await apiCall(`/admin/jobs/${jobId}/progress`, 'PATCH', { progress });
+            showNotification('Job progress updated successfully', 'success');
+            renderAdminJobs();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function viewJobDetails(jobId) {
+    try {
+        const data = await apiCall(`/admin/jobs/${jobId}`);
+        const job = data.job;
+        
+        showModal('job-details-modal', `
+            <div class="job-details-modal">
+                <h3>Job Details - #${job.jobNumber || job._id.slice(-6)}</h3>
+                <div class="job-content">
+                    <div class="job-header">
+                        <div class="client-section">
+                            <h4>Client Information</h4>
+                            <p><strong>Name:</strong> ${job.clientName}</p>
+                            <p><strong>Email:</strong> ${job.clientEmail}</p>
+                            <p><strong>Phone:</strong> ${job.clientPhone || 'Not provided'}</p>
+                        </div>
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${job.contractorName}</p>
+                            <p><strong>Email:</strong> ${job.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${job.contractorCompany || 'Independent'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="project-section">
+                        <h4>Project Information</h4>
+                        <p><strong>Title:</strong> ${job.projectTitle}</p>
+                        <p><strong>Type:</strong> ${job.projectType}</p>
+                        <p><strong>Value:</strong> ${formatCurrency(job.value)}</p>
+                        <p><strong>Status:</strong>
+                    
