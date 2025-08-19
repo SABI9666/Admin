@@ -1,4 +1,6 @@
-// --- CONFIGURATION & GLOBAL STATE ---
+/ === STEEL CONNECT ADMIN PANEL - PART 1 ===
+// Configuration & Core Functions
+
 const appState = { 
     currentUser: null,
     currentFilter: '',
@@ -343,6 +345,8 @@ function getActivityIcon(type) {
     };
     return icons[type] || 'bell';
 }
+/ === STEEL CONNECT ADMIN PANEL - PART 2 ===
+// Users Management & Remaining Functions
 
 // --- USERS MANAGEMENT ---
 async function renderAdminUsers() {
@@ -702,3 +706,4 @@ window.SteelConnectAdmin = {
     formatDate,
     logout
 };
+    
