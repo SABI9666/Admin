@@ -3,41 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - SteelConnect</title>
+    <title>SteelConnect - Admin Panel</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Basic styles for login page elements if main CSS fails */
-        .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; width: 100%; max-width: 400px; }
-        .input-group { position: relative; margin-bottom: 20px; }
-        .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #6c757d; }
-        .input-group input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body class="admin-body">
+<body>
 
-    <div id="notification-container" class="notification-container"></div>
+    <div id="notification-container"></div>
 
-    <div class="login-container">
-        <div class="login-box">
-            <div class="logo" style="font-size: 28px; font-weight: bold; color: #667eea; margin-bottom: 10px;">SteelConnect</div>
-            <span class="admin-tag">Admin Login</span>
-            
-            <form id="admin-login-form" style="margin-top: 30px;">
-                <div class="input-group">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" placeholder="Email" required>
-                </div>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Password" required>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Login</button>
-            </form>
+    <div id="admin-login-prompt" style="display: flex;">
+        <div class="login-prompt-box">
+            <h2>Access Denied</h2>
+            <p>You must be logged in as an administrator to view this page.</p>
+            <a href="index.html" class="btn">Go to Login</a>
         </div>
     </div>
 
+    <div id="admin-panel-container" style="display: none;">
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2>SteelConnect</h2>
+                <span>Admin Panel</span>
+            </div>
+            <div id="admin-user-info">
+                </div>
+            <nav class="admin-nav">
+                <a href="#" class="admin-nav-link" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="#" class="admin-nav-link" data-section="users"><i class="fas fa-users"></i> User Management</a>
+                <a href="#" class="admin-nav-link" data-section="quotes"><i class="fas fa-file-invoice"></i> Quotes</a>
+                <a href="#" class="admin-nav-link" data-section="system-stats"><i class="fas fa-chart-bar"></i> System Stats</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="admin-logout-btn" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </aside>
+
+        <main class="admin-main-content">
+            <header class="admin-header">
+                <h1 id="admin-section-title">Dashboard</h1>
+            </header>
+            <section id="admin-content-area">
+                </section>
+        </main>
+    </div>
+
     <script src="script.js"></script>
+
 </body>
 </html>
