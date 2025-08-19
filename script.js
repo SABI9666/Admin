@@ -1,51 +1,47 @@
 // script.js for the Enhanced SteelConnect Admin Panel - BACKEND COMPATIBLE VERSION
-
 // --- CONFIGURATION & GLOBAL STATE ---
 const appState = {
     jwtToken: null,
     currentUser: null,
 };
-
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
-
 // Enhanced subscription plans configuration
 const SUBSCRIPTION_PLANS = {
     Designer: {
-        'submitting-quote': { 
-            name: 'Submitting Quote', 
-            types: ['PER QUOTE', 'MONTHLY'],
+        'submitting-quote': {
+             name: 'Submitting Quote',
+             types: ['PER QUOTE', 'MONTHLY'],
             amounts: { 'PER QUOTE': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER QUOTE': true, 'MONTHLY': true }
         },
-        'sending-messages': { 
-            name: 'Sending Messages', 
-            types: ['MONTHLY'],
+        'sending-messages': {
+             name: 'Sending Messages',
+             types: ['MONTHLY'],
             amounts: { 'MONTHLY': 'manual entry' },
             active: { 'MONTHLY': true }
         }
     },
     Contractor: {
-        'submitting-tender': { 
-            name: 'Submitting Tender', 
-            types: ['PER TENDER', 'MONTHLY'],
+        'submitting-tender': {
+             name: 'Submitting Tender',
+             types: ['PER TENDER', 'MONTHLY'],
             amounts: { 'PER TENDER': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER TENDER': true, 'MONTHLY': true }
         },
-        'getting-estimation': { 
-            name: 'Getting Estimation', 
-            types: ['PER ESTIMATE', 'MONTHLY'],
+        'getting-estimation': {
+             name: 'Getting Estimation',
+             types: ['PER ESTIMATE', 'MONTHLY'],
             amounts: { 'PER ESTIMATE': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER ESTIMATE': true, 'MONTHLY': true }
         },
-        'sending-messages': { 
-            name: 'Sending Messages', 
-            types: ['MONTHLY'],
+        'sending-messages': {
+             name: 'Sending Messages',
+             types: ['MONTHLY'],
             amounts: { 'MONTHLY': 'manual entry' },
             active: { 'MONTHLY': true }
         }
     }
 };
-
 // --- CORE UTILITY FUNCTIONS ---
 function showNotification(message, type = 'info') {
     let container = document.getElementById('notification-container');
@@ -61,7 +57,6 @@ function showNotification(message, type = 'info') {
         `;
         document.body.appendChild(container);
     }
-
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.style.cssText = `
@@ -78,14 +73,11 @@ function showNotification(message, type = 'info') {
         ${type === 'info' ? 'background-color: #007bff;' : ''}
         ${type === 'warning' ? 'background-color: #ffc107; color: #212529;' : ''}
     `;
-
     notification.innerHTML = `
         <span>${message}</span>
         <button class="notification-close" style="background: none; border: none; color: inherit; float: right; font-size: 18px; line-height: 1; margin-left: 10px; cursor: pointer; opacity: 0.7;" onclick="this.parentElement.remove()">&times;</button>
     `;
-
     container.appendChild(notification);
-
     setTimeout(() => {
         notification.style.opacity = '0';
         setTimeout(() => {
@@ -95,20 +87,16 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 5000);
 }
-
 function hideGlobalLoader() {
     const loader = document.getElementById('global-loader');
     if (loader) {
         loader.style.display = 'none';
     }
 }
-
 async function apiCall(endpoint, method = 'GET', body = null, successMessage = null) {
     const token = localStorage.getItem('jwtToken');
     const fullUrl = `${API_BASE_URL}${endpoint}`;
-
     console.log(`Making ${method} request to: ${fullUrl}`);
-
     const options = {
         method,
         headers: {
@@ -117,20 +105,16 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         mode: 'cors',
         credentials: 'omit',
     };
-
     if (token) {
         options.headers['Authorization'] = `Bearer ${token}`;
     }
-
     if (body) {
         options.body = JSON.stringify(body);
     }
-
     try {
         const response = await fetch(fullUrl, options);
         let responseData = null;
         const contentType = response.headers.get("content-type");
-
         if (contentType && contentType.includes("application/json")) {
             responseData = await response.json();
         } else {
@@ -141,18 +125,14 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
                 responseData = { message: textResponse || 'No response data' };
             }
         }
-
         if (!response.ok) {
             const errorMessage = responseData?.message || responseData?.error || `HTTP ${response.status}: ${response.statusText}`;
             throw new Error(errorMessage);
         }
-
         if (successMessage) {
             showNotification(successMessage, 'success');
         }
-
         return responseData;
-
     } catch (error) {
         let errorMessage = error.message;
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
@@ -162,7 +142,6 @@ async function apiCall(endpoint, method = 'GET', body = null, successMessage = n
         throw error;
     }
 }
-
 function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('currentUser');
@@ -173,7 +152,6 @@ function logout() {
         window.location.href = 'index.html';
     }, 1000);
 }
-
 // --- LOGIN PAGE LOGIC ---
 function initializeLoginPage() {
     hideGlobalLoader();
@@ -182,58 +160,49 @@ function initializeLoginPage() {
         loginForm.addEventListener('submit', handleAdminLogin);
     }
 }
-
 async function handleAdminLogin(event) {
     event.preventDefault();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-
     if (!email || !password) {
         showNotification('Please enter both email and password', 'error');
         return;
     }
-
     const loginButton = event.target.querySelector('button[type="submit"]');
     loginButton.disabled = true;
     loginButton.textContent = 'Logging in...';
-
     try {
         const data = await apiCall('/auth/login/admin', 'POST', { email, password });
-
         if (!data || !data.token || !data.user) {
             throw new Error('Invalid response from server');
         }
-
-        if (data.user.role !== 'admin' && data.user.type !== 'admin') {
+        // CORRECTED LINE: Made the check case-insensitive and safer against missing properties.
+        if (data.user.role?.toLowerCase() !== 'admin' && data.user.type?.toLowerCase() !== 'admin') {
             throw new Error('Access denied: Admin privileges required');
         }
-
         localStorage.setItem('jwtToken', data.token);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         appState.jwtToken = data.token;
         appState.currentUser = data.user;
-
         showNotification('Login successful! Redirecting...', 'success');
         setTimeout(() => {
             window.location.href = 'admin.html';
         }, 1000);
-
     } catch (error) {
         loginButton.disabled = false;
         loginButton.textContent = 'Login';
         document.getElementById('password').value = '';
     }
 }
-
 // --- ADMIN PANEL INITIALIZATION & SETUP ---
 function initializeAdminPage() {
     const token = localStorage.getItem('jwtToken');
     const userJson = localStorage.getItem('currentUser');
-
     if (token && userJson) {
         try {
             const user = JSON.parse(userJson);
-            if (user.role === 'admin' || user.type === 'admin') {
+            // CORRECTED LINE: Made the check case-insensitive and safer against missing properties.
+            if (user.role?.toLowerCase() === 'admin' || user.type?.toLowerCase() === 'admin') {
                 appState.jwtToken = token;
                 appState.currentUser = user;
                 setupAdminPanel();
@@ -248,15 +217,12 @@ function initializeAdminPage() {
     }
     hideGlobalLoader();
 }
-
 function showAdminLoginPrompt(message = null) {
     hideGlobalLoader();
     const loginPrompt = document.getElementById('admin-login-prompt');
     const panelContainer = document.getElementById('admin-panel-container');
-
     if (loginPrompt) loginPrompt.style.display = 'flex';
     if (panelContainer) panelContainer.style.display = 'none';
-
     if (message) {
         const messageElement = document.querySelector('.login-prompt-box p');
         if (messageElement) {
@@ -265,15 +231,12 @@ function showAdminLoginPrompt(message = null) {
         }
     }
 }
-
 function setupAdminPanel() {
     hideGlobalLoader();
     const loginPrompt = document.getElementById('admin-login-prompt');
     const panelContainer = document.getElementById('admin-panel-container');
-
     if (loginPrompt) loginPrompt.style.display = 'none';
     if (panelContainer) panelContainer.style.display = 'flex';
-
     const userInfoElement = document.getElementById('admin-user-info');
     if (userInfoElement && appState.currentUser) {
         userInfoElement.innerHTML = `
@@ -281,9 +244,7 @@ function setupAdminPanel() {
             <small>${appState.currentUser.role || appState.currentUser.type || 'admin'}</small>
         `;
     }
-
     document.getElementById('admin-logout-btn')?.addEventListener('click', logout);
-
     const navLinks = document.querySelectorAll('.admin-nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -298,18 +259,14 @@ function setupAdminPanel() {
             renderAdminSection(section);
         });
     });
-
     // Start on the dashboard
     document.querySelector('.admin-nav-link[data-section="dashboard"]')?.click();
 }
-
 // --- DYNAMIC CONTENT RENDERING ---
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
     if (!contentArea) return;
-
     contentArea.innerHTML = `<div class="loading-spinner" style="text-align: center; padding: 40px;">Loading...</div>`;
-
     switch (section) {
         case 'dashboard':
             renderAdminDashboard();
@@ -336,7 +293,6 @@ function renderAdminSection(section) {
             contentArea.innerHTML = '<div class="error-state">Section not found.</div>';
     }
 }
-
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
@@ -363,7 +319,6 @@ async function renderAdminDashboard() {
         contentArea.innerHTML = '<div class="error-state">Failed to load dashboard data.</div>';
     }
 }
-
 // --- USERS SECTION ---
 async function renderAdminUsers() {
     const contentArea = document.getElementById('admin-content-area');
@@ -374,7 +329,6 @@ async function renderAdminUsers() {
             contentArea.innerHTML = '<div class="empty-state">No users found.</div>';
             return;
         }
-
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <div class="table-actions">
@@ -422,7 +376,6 @@ async function renderAdminUsers() {
         contentArea.innerHTML = '<div class="error-state">Failed to load user data.</div>';
     }
 }
-
 // --- QUOTES SECTION ---
 async function renderAdminQuotes() {
     const contentArea = document.getElementById('admin-content-area');
@@ -433,7 +386,6 @@ async function renderAdminQuotes() {
             contentArea.innerHTML = '<div class="empty-state">No quotes found.</div>';
             return;
         }
-
         contentArea.innerHTML = `
             <div class="admin-table-container">
                 <div class="table-actions">
@@ -494,31 +446,27 @@ async function renderAdminQuotes() {
         contentArea.innerHTML = '<div class="error-state">Failed to load quotes data.</div>';
     }
 }
-
 // --- ENHANCED MESSAGES SECTION ---
 async function renderAdminMessages() {
     const contentArea = document.getElementById('admin-content-area');
     try {
         const response = await apiCall('/admin/messages');
         const messages = response.messages || [];
-        
         if (messages.length === 0) {
             contentArea.innerHTML = '<div class="empty-state">No messages found.</div>';
             return;
         }
-        
         // Deduplicate users for the filter dropdown
         const users = [...new Map(messages.filter(m => m.senderId).map(m => [m.senderId._id, m.senderId])).values()];
-
         contentArea.innerHTML = `
             <div class="messages-container">
                 <div class="messages-header">
                     <h3>Messages Management</h3>
                     <div class="messages-controls">
-                        <input type="text" 
-                               placeholder="Search messages..." 
-                               class="search-input" 
-                               id="message-search"
+                        <input type="text"
+                                placeholder="Search messages..."
+                                class="search-input"
+                                id="message-search"
                                onkeyup="filterMessages()">
                         <select onchange="filterMessages()" class="filter-select" id="message-user-filter">
                             <option value="">All Users</option>
@@ -529,16 +477,15 @@ async function renderAdminMessages() {
                         </button>
                     </div>
                 </div>
-                
-                <div class="messages-layout">
+                                <div class="messages-layout">
                     <div class="messages-list-panel">
                         <div class="messages-list" id="messages-list">
                             ${messages.map((message, index) => `
-                                <div class="message-item" 
-                                     data-message-id="${message._id}" 
-                                     data-user-id="${message.senderId?._id}" 
-                                     data-message-content="${encodeURIComponent(JSON.stringify(message))}" 
-                                     onclick="selectMessage(this, ${index})">
+                                <div class="message-item"
+                                      data-message-id="${message._id}"
+                                      data-user-id="${message.senderId?._id}"
+                                      data-message-content="${encodeURIComponent(JSON.stringify(message))}"
+                                      onclick="selectMessage(this, ${index})">
                                     <div class="message-item-header">
                                         <div class="message-sender">
                                             <i class="fas fa-user"></i>
@@ -558,8 +505,7 @@ async function renderAdminMessages() {
                             `).join('')}
                         </div>
                     </div>
-                    
-                    <div class="message-detail-panel" id="message-detail-panel">
+                                        <div class="message-detail-panel" id="message-detail-panel">
                         <div class="no-message-selected">
                             <i class="fas fa-comments fa-3x"></i>
                             <h4>Select a message to view details</h4>
@@ -568,14 +514,12 @@ async function renderAdminMessages() {
                     </div>
                 </div>
             </div>
-            
             <style>
                 .messages-container {
                     height: 100%;
                     display: flex;
                     flex-direction: column;
                 }
-                
                 .messages-header {
                     display: flex;
                     justify-content: space-between;
@@ -584,56 +528,46 @@ async function renderAdminMessages() {
                     border-bottom: 1px solid #e0e0e0;
                     background: #f8f9fa;
                 }
-                
                 .messages-controls {
                     display: flex;
                     gap: 10px;
                     align-items: center;
                 }
-                
                 .messages-layout {
                     display: flex;
                     flex: 1;
                     min-height: 600px;
                 }
-                
                 .messages-list-panel {
                     width: 40%;
                     border-right: 1px solid #e0e0e0;
                     background: #fff;
                 }
-                
                 .messages-list {
                     height: 100%;
                     overflow-y: auto;
                 }
-                
                 .message-item {
                     padding: 15px;
                     border-bottom: 1px solid #f0f0f0;
                     cursor: pointer;
                     transition: background-color 0.2s;
                 }
-                
                 .message-item:hover {
                     background-color: #f8f9fa;
                 }
-                
                 .message-item.active {
                     background-color: #e3f2fd;
                     border-left: 4px solid #2196f3;
                 }
-                
                 .message-item.hidden {
                     display: none;
                 }
-                
                 .message-item-header {
                     display: flex;
                     justify-content: space-between;
                     margin-bottom: 8px;
                 }
-                
                 .message-sender {
                     display: flex;
                     align-items: center;
@@ -641,30 +575,25 @@ async function renderAdminMessages() {
                     font-weight: 600;
                     color: #333;
                 }
-                
                 .message-date {
                     font-size: 0.85em;
                     color: #666;
                 }
-                
                 .message-preview {
                     color: #555;
                     margin-bottom: 8px;
                     line-height: 1.4;
                 }
-                
                 .message-meta {
                     font-size: 0.85em;
                     color: #777;
                 }
-                
                 .message-detail-panel {
                     flex: 1;
                     display: flex;
                     flex-direction: column;
                     background: #fff;
                 }
-                
                 .no-message-selected {
                     display: flex;
                     flex-direction: column;
@@ -674,26 +603,22 @@ async function renderAdminMessages() {
                     color: #999;
                     text-align: center;
                 }
-                
                 .message-detail-content {
                     flex: 1;
                     display: flex;
                     flex-direction: column;
                     height: 100%;
                 }
-                
                 .message-detail-header {
                     padding: 20px;
                     border-bottom: 1px solid #e0e0e0;
                     background: #f8f9fa;
                 }
-                
                 .message-detail-body {
                     flex: 1;
                     padding: 20px;
                     overflow-y: auto;
                 }
-                
                 .message-bubble {
                     max-width: 80%;
                     padding: 12px 16px;
@@ -701,32 +626,27 @@ async function renderAdminMessages() {
                     margin-bottom: 15px;
                     word-wrap: break-word;
                 }
-                
                 .message-bubble.received {
                     background: #f1f3f4;
                     color: #333;
                     align-self: flex-start;
                 }
-                
                 .message-bubble.sent {
                     background: #2196f3;
                     color: white;
                     align-self: flex-end;
                     margin-left: auto;
                 }
-                
                 .message-timestamp {
                     font-size: 0.8em;
                     opacity: 0.7;
                     margin-top: 5px;
                 }
-                
                 .message-reply-form {
                     padding: 20px;
                     border-top: 1px solid #e0e0e0;
                     background: #f8f9fa;
                 }
-                
                 .message-reply-form textarea {
                     width: 100%;
                     min-height: 100px;
@@ -736,13 +656,11 @@ async function renderAdminMessages() {
                     resize: vertical;
                     font-family: inherit;
                 }
-                
                 .message-actions {
                     display: flex;
                     gap: 10px;
                     margin-top: 15px;
                 }
-                
                 .message-detail-actions {
                     padding: 15px 20px;
                     background: #fff;
@@ -755,14 +673,12 @@ async function renderAdminMessages() {
         contentArea.innerHTML = '<div class="error-state">Failed to load messages.</div>';
     }
 }
-
 // --- ENHANCED SUBSCRIPTION PLANS SECTION ---
 async function renderAdminSubscriptionPlans() {
     const contentArea = document.getElementById('admin-content-area');
     try {
         // Use the enhanced SUBSCRIPTION_PLANS object
         const plansData = await Promise.resolve(SUBSCRIPTION_PLANS);
-
         let html = `
             <div class="subscription-plans-container">
                 <div class="plans-header">
@@ -777,55 +693,7 @@ async function renderAdminSubscriptionPlans() {
                     </div>
                 </div>
         `;
-
         for (const userType in plansData) {
-            
-            const activities = plansData[userType];
-            for (const activityKey in activities) {
-                const activity = activities[activityKey];
-                activity.types.forEach(type => {
-                    const planId = `${userType}-${activityKey}-${type}`.replace(/\s+/g, '-');
-                    const currentAmount = activity.amounts ? activity.amounts[type] : 'manual entry';
-                    const isActive = activity.active ? activity.active[type] : true;
-                    
-                    html += `
-                        <tr data-plan-id="${planId}" data-user-type="${userType}" data-activity="${activityKey}" data-type="${type}">
-                            <td><strong>${activity.name}</strong></td>
-                            <td>
-                                <span class="subscription-type-badge ${type.replace(/\s+/g, '-').toLowerCase()}">
-                                    ${type}
-                                </span>
-                            </td>
-                            <td>
-                                <input type="text" 
-                                       class="amount-input" 
-                                       value="${currentAmount}" 
-                                       placeholder="e.g., 50 or 5% or manual entry"
-                                       onchange="updatePlanAmount('${planId}', this.value)">
-                            </td>
-                            <td>
-                                <label class="switch">
-                                    <input type="checkbox" 
-                                           ${isActive ? 'checked' : ''} 
-                                           onchange="updatePlanStatus('${planId}', this.checked)">
-                                    <span class="slider round"></span>
-                                </label>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-info btn-sm" onclick="editPlanDetails('${planId}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deletePlan('${planId}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-
             html += `
                 <div class="admin-table-container plan-group">
                     <div class="table-actions">
@@ -844,7 +712,50 @@ async function renderAdminSubscriptionPlans() {
                                 </tr>
                             </thead>
                             <tbody>`
-
+            const activities = plansData[userType];
+            for (const activityKey in activities) {
+                const activity = activities[activityKey];
+                activity.types.forEach(type => {
+                    const planId = `${userType}-${activityKey}-${type}`.replace(/\s+/g, '-');
+                    const currentAmount = activity.amounts ? activity.amounts[type] : 'manual entry';
+                    const isActive = activity.active ? activity.active[type] : true;
+                    html += `
+                        <tr data-plan-id="${planId}" data-user-type="${userType}" data-activity="${activityKey}" data-type="${type}">
+                            <td><strong>${activity.name}</strong></td>
+                            <td>
+                                <span class="subscription-type-badge ${type.replace(/\s+/g, '-').toLowerCase()}">
+                                    ${type}
+                                </span>
+                            </td>
+                            <td>
+                                <input type="text"
+                                        class="amount-input"
+                                        value="${currentAmount}"
+                                        placeholder="e.g., 50 or 5% or manual entry"
+                                       onchange="updatePlanAmount('${planId}', this.value)">
+                            </td>
+                            <td>
+                                <label class="switch">
+                                    <input type="checkbox"
+                                            ${isActive ? 'checked' : ''}
+                                            onchange="updatePlanStatus('${planId}', this.checked)">
+                                    <span class="slider round"></span>
+                                </label>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm" onclick="editPlanDetails('${planId}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deletePlan('${planId}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
             html += `
                             </tbody>
                         </table>
@@ -856,15 +767,12 @@ async function renderAdminSubscriptionPlans() {
                     </div>
                 </div>`;
         }
-
         html += `
             </div>
-            
             <style>
                 .subscription-plans-container {
                     padding: 20px;
                 }
-                
                 .plans-header {
                     display: flex;
                     justify-content: space-between;
@@ -874,19 +782,16 @@ async function renderAdminSubscriptionPlans() {
                     background: #f8f9fa;
                     border-radius: 8px;
                 }
-                
                 .plans-actions {
                     display: flex;
                     gap: 10px;
                 }
-                
                 .plan-group {
                     margin-bottom: 30px;
                     border: 1px solid #e0e0e0;
                     border-radius: 8px;
                     overflow: hidden;
                 }
-                
                 .plan-group .table-actions {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
@@ -895,18 +800,15 @@ async function renderAdminSubscriptionPlans() {
                     justify-content: space-between;
                     align-items: center;
                 }
-                
                 .plan-count {
                     background: rgba(255,255,255,0.2);
                     padding: 4px 12px;
                     border-radius: 20px;
                     font-size: 0.9em;
                 }
-                
                 .subscription-plans-table {
                     margin: 0;
                 }
-                
                 .subscription-type-badge {
                     display: inline-block;
                     padding: 4px 12px;
@@ -915,19 +817,16 @@ async function renderAdminSubscriptionPlans() {
                     font-weight: 600;
                     text-transform: uppercase;
                 }
-                
                 .subscription-type-badge.per-quote,
                 .subscription-type-badge.per-tender,
                 .subscription-type-badge.per-estimate {
                     background: #fff3cd;
                     color: #856404;
                 }
-                
                 .subscription-type-badge.monthly {
                     background: #d1ecf1;
                     color: #0c5460;
                 }
-                
                 .amount-input {
                     width: 100%;
                     max-width: 200px;
@@ -936,20 +835,17 @@ async function renderAdminSubscriptionPlans() {
                     border-radius: 4px;
                     font-size: 0.9em;
                 }
-                
                 .switch {
                     position: relative;
                     display: inline-block;
                     width: 60px;
                     height: 34px;
                 }
-                
                 .switch input {
                     opacity: 0;
                     width: 0;
                     height: 0;
                 }
-                
                 .slider {
                     position: absolute;
                     cursor: pointer;
@@ -960,7 +856,6 @@ async function renderAdminSubscriptionPlans() {
                     background-color: #ccc;
                     transition: .4s;
                 }
-                
                 .slider:before {
                     position: absolute;
                     content: "";
@@ -971,27 +866,21 @@ async function renderAdminSubscriptionPlans() {
                     background-color: white;
                     transition: .4s;
                 }
-                
                 input:checked + .slider {
                     background-color: #2196F3;
                 }
-                
                 input:focus + .slider {
                     box-shadow: 0 0 1px #2196F3;
                 }
-                
                 input:checked + .slider:before {
                     transform: translateX(26px);
                 }
-                
                 .slider.round {
                     border-radius: 34px;
                 }
-                
                 .slider.round:before {
                     border-radius: 50%;
                 }
-                
                 .add-plan-row {
                     padding: 15px 20px;
                     background: #f8f9fa;
@@ -1000,14 +889,11 @@ async function renderAdminSubscriptionPlans() {
                 }
             </style>
         `;
-        
         contentArea.innerHTML = html;
-
     } catch (error) {
         contentArea.innerHTML = '<div class="error-state">Failed to load subscription plans.</div>';
     }
 }
-
 // --- JOBS SECTION (PLACEHOLDER) ---
 async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
@@ -1027,7 +913,6 @@ async function renderAdminJobs() {
         contentArea.innerHTML = '<div class="error-state">Failed to load jobs data.</div>';
     }
 }
-
 // --- SYSTEM STATS SECTION (PLACEHOLDER) ---
 function renderAdminSystemStats() {
     const contentArea = document.getElementById('admin-content-area');
@@ -1039,16 +924,13 @@ function renderAdminSystemStats() {
         </div>
     `;
 }
-
 // --- ENHANCED MESSAGE HANDLING FUNCTIONS ---
 function selectMessage(element, messageIndex) {
     // Remove active class from all message items
     document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
-
     const messageData = JSON.parse(decodeURIComponent(element.dataset.messageContent));
     const detailPanel = document.getElementById('message-detail-panel');
-    
     detailPanel.innerHTML = `
         <div class="message-detail-content">
             <div class="message-detail-header">
@@ -1068,7 +950,6 @@ function selectMessage(element, messageIndex) {
                     </button>
                 </div>
             </div>
-            
             <div class="message-detail-body">
                 <div class="message-thread">
                     <div class="message-bubble received">
@@ -1079,11 +960,10 @@ function selectMessage(element, messageIndex) {
                     </div>
                 </div>
             </div>
-            
             <div class="message-reply-form">
-                <textarea id="reply-textarea-${messageData._id}" 
-                          placeholder="Type your reply here..." 
-                          rows="4"></textarea>
+                <textarea id="reply-textarea-${messageData._id}"
+                           placeholder="Type your reply here..."
+                           rows="4"></textarea>
                 <div class="message-actions">
                     <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
                         <i class="fas fa-paper-plane"></i> Send Reply
@@ -1096,20 +976,16 @@ function selectMessage(element, messageIndex) {
         </div>
     `;
 }
-
 async function handleSendMessage(messageId) {
     const replyTextarea = document.getElementById(`reply-textarea-${messageId}`);
     const replyContent = replyTextarea.value.trim();
-    
     if (!replyContent) {
         showNotification('Reply cannot be empty.', 'error');
         return;
     }
-    
     try {
         await apiCall(`/admin/messages/reply/${messageId}`, 'POST', { content: replyContent }, 'Reply sent successfully!');
         replyTextarea.value = '';
-        
         // Add the reply to the message thread
         const messageThread = document.querySelector('.message-thread');
         if (messageThread) {
@@ -1123,30 +999,25 @@ async function handleSendMessage(messageId) {
             `;
             messageThread.appendChild(replyBubble);
         }
-        
     } catch (error) {
         // Error is handled by apiCall
     }
 }
-
 function clearReply(messageId) {
     const replyTextarea = document.getElementById(`reply-textarea-${messageId}`);
     if (replyTextarea) {
         replyTextarea.value = '';
     }
 }
-
 async function deleteMessage(messageId) {
     if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
         try {
             await apiCall(`/admin/messages/${messageId}`, 'DELETE', null, 'Message deleted successfully!');
-            
             // Remove the message from the list
             const messageItem = document.querySelector(`[data-message-id="${messageId}"]`);
             if (messageItem) {
                 messageItem.remove();
             }
-            
             // Clear the detail panel
             const detailPanel = document.getElementById('message-detail-panel');
             if (detailPanel) {
@@ -1158,30 +1029,24 @@ async function deleteMessage(messageId) {
                     </div>
                 `;
             }
-            
         } catch (error) {
             // Error is handled by apiCall
         }
     }
 }
-
 function refreshMessages() {
     renderAdminMessages();
     showNotification('Messages refreshed!', 'success');
 }
-
 function filterMessages() {
     const searchText = document.getElementById('message-search').value.toLowerCase();
     const userId = document.getElementById('message-user-filter').value;
     const messages = document.querySelectorAll('.message-item');
-
     messages.forEach(message => {
         const content = message.textContent.toLowerCase();
         const msgUserId = message.dataset.userId;
-        
         const matchesSearch = !searchText || content.includes(searchText);
         const matchesUser = !userId || msgUserId === userId;
-
         if (matchesSearch && matchesUser) {
             message.classList.remove('hidden');
         } else {
@@ -1189,28 +1054,23 @@ function filterMessages() {
         }
     });
 }
-
 // --- SUBSCRIPTION PLANS MANAGEMENT FUNCTIONS ---
 function updatePlanAmount(planId, amount) {
     // Store the change in memory or prepare for API call
     console.log(`Plan ${planId} amount updated to: ${amount}`);
     // In a real implementation, you might want to debounce this and batch updates
 }
-
 function updatePlanStatus(planId, isActive) {
     console.log(`Plan ${planId} status updated to: ${isActive ? 'Active' : 'Inactive'}`);
     // In a real implementation, this would make an API call
 }
-
 function editPlanDetails(planId) {
     const row = document.querySelector(`[data-plan-id="${planId}"]`);
     if (!row) return;
-    
     const userType = row.dataset.userType;
     const activity = row.dataset.activity;
     const type = row.dataset.type;
     const currentAmount = row.querySelector('.amount-input').value;
-    
     const modalContent = `
         <div class="plan-edit-form">
             <div class="form-group">
@@ -1236,10 +1096,8 @@ function editPlanDetails(planId) {
             </div>
         </div>
     `;
-    
     createModal('Edit Plan Details', modalContent);
 }
-
 function savePlanEdit(planId) {
     const newAmount = document.getElementById(`edit-amount-${planId}`).value;
     const row = document.querySelector(`[data-plan-id="${planId}"]`);
@@ -1249,7 +1107,6 @@ function savePlanEdit(planId) {
     document.querySelector('.modal').remove();
     showNotification('Plan updated successfully!', 'success');
 }
-
 function deletePlan(planId) {
     if (confirm('Are you sure you want to delete this subscription plan?')) {
         const row = document.querySelector(`[data-plan-id="${planId}"]`);
@@ -1259,7 +1116,6 @@ function deletePlan(planId) {
         }
     }
 }
-
 function addNewPlan(userType) {
     const modalContent = `
         <div class="add-plan-form">
@@ -1286,30 +1142,24 @@ function addNewPlan(userType) {
             </div>
         </div>
     `;
-    
     createModal(`Add New Plan for ${userType}`, modalContent);
 }
-
 function saveNewPlan(userType) {
     const activityName = document.getElementById('new-activity-name').value.trim();
     const subscriptionType = document.getElementById('new-subscription-type').value;
     const amount = document.getElementById('new-plan-amount').value.trim();
-    
     if (!activityName || !amount) {
         showNotification('Please fill in all required fields.', 'error');
         return;
     }
-    
     // Add new row to the table
     const table = document.getElementById(`${userType}-plans-table`).querySelector('tbody');
     const planId = `${userType}-${activityName.replace(/\s+/g, '-')}-${subscriptionType}`.replace(/\s+/g, '-');
-    
     const newRow = document.createElement('tr');
     newRow.setAttribute('data-plan-id', planId);
     newRow.setAttribute('data-user-type', userType);
     newRow.setAttribute('data-activity', activityName.replace(/\s+/g, '-'));
     newRow.setAttribute('data-type', subscriptionType);
-    
     newRow.innerHTML = `
         <td><strong>${activityName}</strong></td>
         <td>
@@ -1318,10 +1168,10 @@ function saveNewPlan(userType) {
             </span>
         </td>
         <td>
-            <input type="text" 
-                   class="amount-input" 
-                   value="${amount}" 
-                   placeholder="e.g., 50 or 5% or manual entry"
+            <input type="text"
+                    class="amount-input"
+                    value="${amount}"
+                    placeholder="e.g., 50 or 5% or manual entry"
                    onchange="updatePlanAmount('${planId}', this.value)">
         </td>
         <td>
@@ -1341,24 +1191,20 @@ function saveNewPlan(userType) {
             </div>
         </td>
     `;
-    
     table.appendChild(newRow);
     document.querySelector('.modal').remove();
     showNotification('New plan added successfully!', 'success');
 }
-
 function saveAllPlans() {
     // In a real implementation, this would collect all plan data and send to API
     showNotification('All subscription plans have been saved!', 'success');
 }
-
 function resetPlans() {
     if (confirm('Are you sure you want to reset all plans to default values? This will lose any unsaved changes.')) {
         renderAdminSubscriptionPlans();
         showNotification('Plans reset to default values.', 'info');
     }
 }
-
 // --- UTILITY FUNCTIONS FOR ACTIONS ---
 function filterTable(searchValue, tableId) {
     const table = document.getElementById(tableId);
@@ -1368,7 +1214,6 @@ function filterTable(searchValue, tableId) {
         row.style.display = row.textContent.toLowerCase().includes(searchValue.toLowerCase()) ? '' : 'none';
     });
 }
-
 function filterTableByStatus(status, tableId) {
     const rows = document.querySelectorAll(`#${tableId} tbody tr`);
     rows.forEach(row => {
@@ -1380,7 +1225,6 @@ function filterTableByStatus(status, tableId) {
         }
     });
 }
-
 // --- MODAL & DETAIL VIEW FUNCTIONS ---
 function createModal(title, contentHtml) {
     const modal = document.createElement('div');
@@ -1433,19 +1277,16 @@ function createModal(title, contentHtml) {
         if (e.target === modal) modal.remove();
     });
 }
-
 // --- ACTION HANDLERS ---
 async function handleStatusUpdate(userId, status) {
     await apiCall(`/admin/users/${userId}/status`, 'PUT', { status }, 'User status updated.');
 }
-
 async function handleUserDelete(userId) {
     if (confirm('Are you sure you want to delete this user? This cannot be undone.')) {
         await apiCall(`/admin/users/${userId}`, 'DELETE', null, 'User deleted.');
         renderAdminUsers(); // Refresh list
     }
 }
-
 async function showUserDetails(userId) {
     try {
         const response = await apiCall(`/admin/users/${userId}`);
@@ -1462,22 +1303,18 @@ async function showUserDetails(userId) {
         showNotification('Failed to load user details.', 'error');
     }
 }
-
 async function updateQuoteAmount(quoteId, amount) {
     await apiCall(`/admin/quotes/${quoteId}/amount`, 'PUT', { amount }, 'Quote amount updated.');
 }
-
 async function updateQuoteStatus(quoteId, status) {
     await apiCall(`/admin/quotes/${quoteId}/status`, 'PUT', { status }, 'Quote status updated.');
 }
-
 async function deleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote?')) {
         await apiCall(`/admin/quotes/${quoteId}`, 'DELETE', null, 'Quote deleted.');
         renderAdminQuotes();
     }
 }
-
 async function viewQuoteDetails(quoteId) {
     try {
         const response = await apiCall(`/admin/quotes/${quoteId}`);
@@ -1500,7 +1337,6 @@ async function viewQuoteDetails(quoteId) {
         showNotification('Failed to load quote details.', 'error');
     }
 }
-
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('admin-panel-container')) {
@@ -1509,14 +1345,12 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeLoginPage();
     }
 });
-
 // --- GLOBAL ERROR HANDLING ---
 window.addEventListener('error', (event) => {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred. Please refresh.', 'error');
 });
-
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     showNotification('A network or server error occurred. Please try again.', 'error');
-});`
+});
