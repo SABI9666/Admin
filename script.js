@@ -779,24 +779,6 @@ async function renderAdminSubscriptionPlans() {
         `;
 
         for (const userType in plansData) {
-            html += `
-                <div class="admin-table-container plan-group">
-                    <div class="table-actions">
-                        <h4>${userType} Plans</h4>
-                        <span class="plan-count">${Object.keys(plansData[userType]).length} activities</span>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="admin-table subscription-plans-table" id="${userType}-plans-table">
-                            <thead>
-                                <tr>
-                                    <th>Activity</th>
-                                    <th>Subscription Type</th>
-                                    <th>Amount</th>
-                                    <th>Active/Inactive</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
             
             const activities = plansData[userType];
             for (const activityKey in activities) {
@@ -843,6 +825,25 @@ async function renderAdminSubscriptionPlans() {
                     `;
                 });
             }
+
+            html += `
+                <div class="admin-table-container plan-group">
+                    <div class="table-actions">
+                        <h4>${userType} Plans</h4>
+                        <span class="plan-count">${Object.keys(plansData[userType]).length} activities</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table subscription-plans-table" id="${userType}-plans-table">
+                            <thead>
+                                <tr>
+                                    <th>Activity</th>
+                                    <th>Subscription Type</th>
+                                    <th>Amount</th>
+                                    <th>Active/Inactive</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>`
 
             html += `
                             </tbody>
