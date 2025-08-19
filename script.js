@@ -96,16 +96,30 @@ function formatCurrency(amount) {
     }).format(amount || 0);
 }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+// --- MODAL UTILITIES ---
+function showModal(modalId, content) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('dynamic-modal');
+    if (existingModal) existingModal.remove();
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'dynamic-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            ${content}
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    const modal = document.getElementById('dynamic-modal');
+    if (modal) modal.remove();
 }
 
 // --- LOGIN PAGE LOGIC ---
@@ -200,10 +214,23 @@ function renderAdminSection(section) {
         estimations: renderAdminEstimations,
         jobs: renderAdminJobs,
         messages: renderAdminMessages,
-        subscriptions: renderAdminSubscriptions
+        subscriptions: renderAdminSubscriptions,
+        analytics: renderAdminAnalytics,
+        'system-stats': renderSystemStats
     };
     
-    setTimeout(() => renderMap[section](), 100);
+    setTimeout(() => renderMap[section] ? renderMap[section]() : renderComingSoon(section), 100);
+}
+
+function renderComingSoon(section) {
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = `
+        <div class="coming-soon">
+            <i class="fas fa-tools"></i>
+            <h3>Coming Soon</h3>
+            <p>The ${section.replace('-', ' ')} section is currently under development.</p>
+        </div>
+    `;
 }
 
 // --- DASHBOARD ---
@@ -227,17 +254,6 @@ async function renderAdminDashboard() {
                     `).join('')}
                 </div>
                 
-                <div class="dashboard-charts">
-                    <div class="chart-container">
-                        <h3>Growth Metrics</h3>
-                        <canvas id="growthChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <h3>User Distribution</h3>
-                        <canvas id="userChart"></canvas>
-                    </div>
-                </div>
-                
                 <div class="recent-activity">
                     <h3>Recent Activity</h3>
                     <div class="activity-list">
@@ -256,12 +272,6 @@ async function renderAdminDashboard() {
                 </div>
             </div>
         `;
-        
-        // Initialize charts
-        setTimeout(() => {
-            initializeCharts(data.chartData);
-        }, 100);
-        
     } catch (error) {
         contentArea.innerHTML = `
             <div class="error-state">
@@ -281,9 +291,11 @@ function getStatIcon(key) {
         totalUsers: 'users',
         totalQuotes: 'file-alt',
         totalJobs: 'briefcase',
-        totalRevenue: 'dollar-sign',
-        activeEstimations: 'calculator',
-        pendingMessages: 'envelope'
+        totalMessages: 'envelope',
+        totalEstimations: 'calculator',
+        activeSubscriptions: 'crown',
+        pendingEstimations: 'clock',
+        unreadMessages: 'envelope-open'
     };
     return icons[key] || 'chart-line';
 }
@@ -316,7 +328,7 @@ async function renderAdminUsers() {
                 <div class="empty-state">
                     <i class="fas fa-users"></i>
                     <h3>No users found</h3>
-                    <p>Users will appear here once they register on the platform.</p>
+                    <p>Registered users will appear here.</p>
                 </div>
             `;
             return;
@@ -333,10 +345,11 @@ async function renderAdminUsers() {
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Search users..." id="user-search" oninput="filterUsers(this.value)">
                     </div>
-                    <select id="user-type-filter" onchange="filterUsersByType(this.value)">
-                        <option value="">All Types</option>
-                        <option value="contractor">Contractors</option>
-                        <option value="designer">Designers</option>
+                    <select id="user-role-filter" onchange="filterUsersByRole(this.value)">
+                        <option value="">All Roles</option>
+                        <option value="admin">Admin</option>
+                        <option value="contractor">Contractor</option>
+                        <option value="client">Client</option>
                     </select>
                     <button class="btn btn-primary" onclick="exportUsers()">
                         <i class="fas fa-download"></i> Export CSV
@@ -350,49 +363,48 @@ async function renderAdminUsers() {
                         <tr>
                             <th>User</th>
                             <th>Email</th>
-                            <th>Type</th>
+                            <th>Role</th>
                             <th>Status</th>
                             <th>Joined</th>
-                            <th>Last Active</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr data-user-id="${user.id || user._id}" data-user-type="${user.type}" data-user-name="${user.name}">
+                            <tr data-user-id="${user._id}" data-role="${user.role}" data-name="${user.name}">
                                 <td>
                                     <div class="user-info">
                                         <div class="user-avatar">
-                                            ${user.profilePicture ? 
-                                                `<img src="${user.profilePicture}" alt="${user.name}">` :
+                                            ${user.avatar ? 
+                                                `<img src="${user.avatar}" alt="${user.name}">` :
                                                 `<i class="fas fa-user"></i>`
                                             }
                                         </div>
                                         <div class="user-details">
                                             <strong>${user.name}</strong>
-                                            <small>${user.company || 'Individual'}</small>
+                                            <small>${user.company || 'No company'}</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>${user.email}</td>
                                 <td>
-                                    <span class="type-badge type-${user.type}">
-                                        <i class="fas fa-${user.type === 'contractor' ? 'hard-hat' : 'paint-brush'}"></i>
-                                        ${user.type || 'N/A'}
+                                    <span class="role-badge ${user.role}">${user.role}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${user.isActive ? 'active' : 'inactive'}">
+                                        ${user.isActive ? 'Active' : 'Inactive'}
                                     </span>
                                 </td>
-                                <td><span class="status-badge ${user.status}">${user.status}</span></td>
                                 <td>${formatDate(user.createdAt)}</td>
-                                <td>${user.lastActive ? formatDate(user.lastActive) : 'Never'}</td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user.id || user._id}')" title="View Details">
+                                        <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id}')" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user.id || user._id}', '${user.status}')" title="Toggle Status">
-                                            <i class="fas fa-toggle-${user.status === 'active' ? 'on' : 'off'}"></i>
+                                        <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id}', ${!user.isActive})" title="${user.isActive ? 'Deactivate' : 'Activate'}">
+                                            <i class="fas fa-${user.isActive ? 'ban' : 'check'}"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-danger" onclick="handleUserDelete('${user.id || user._id}')" title="Delete User">
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${user._id}')" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -421,7 +433,7 @@ function filterUsers(searchTerm) {
     const rows = table.querySelectorAll('tbody tr');
     
     rows.forEach(row => {
-        const name = row.dataset.userName.toLowerCase();
+        const name = row.dataset.name.toLowerCase();
         const email = row.cells[1].textContent.toLowerCase();
         const shouldShow = name.includes(searchTerm.toLowerCase()) || 
                           email.includes(searchTerm.toLowerCase());
@@ -429,68 +441,64 @@ function filterUsers(searchTerm) {
     });
 }
 
-function filterUsersByType(type) {
+function filterUsersByRole(role) {
     const table = document.getElementById('users-table');
     const rows = table.querySelectorAll('tbody tr');
     
     rows.forEach(row => {
-        const userType = row.dataset.userType;
-        const shouldShow = !type || userType === type;
+        const userRole = row.dataset.role;
+        const shouldShow = !role || userRole === role;
         row.style.display = shouldShow ? '' : 'none';
     });
 }
 
 async function viewUserDetails(userId) {
     try {
-        const user = await apiCall(`/admin/users/${userId}`);
+        const data = await apiCall(`/admin/users/${userId}`);
+        const user = data.user;
+        
         showModal('user-details-modal', `
             <div class="user-details-modal">
                 <h3>User Details</h3>
                 <div class="user-profile">
-                    <div class="profile-header">
-                        <div class="profile-avatar">
-                            ${user.profilePicture ? 
-                                `<img src="${user.profilePicture}" alt="${user.name}">` :
-                                `<i class="fas fa-user"></i>`
-                            }
+                    <div class="profile-avatar">
+                        ${user.avatar ? 
+                            `<img src="${user.avatar}" alt="${user.name}">` :
+                            `<i class="fas fa-user"></i>`
+                        }
+                    </div>
+                    <div class="profile-info">
+                        <h4>${user.name}</h4>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Role:</strong> <span class="role-badge ${user.role}">${user.role}</span></p>
+                        <p><strong>Company:</strong> ${user.company || 'Not specified'}</p>
+                        <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span></p>
+                        <p><strong>Joined:</strong> ${formatDate(user.createdAt)}</p>
+                        <p><strong>Last Login:</strong> ${user.lastLogin ? formatDate(user.lastLogin) : 'Never'}</p>
+                    </div>
+                </div>
+                
+                <div class="user-stats">
+                    <h4>Activity Statistics</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.quotesRequested || 0}</span>
+                            <span class="stat-label">Quotes Requested</span>
                         </div>
-                        <div class="profile-info">
-                            <h4>${user.name}</h4>
-                            <p>${user.email}</p>
-                            <span class="type-badge type-${user.type}">${user.type}</span>
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.jobsCompleted || 0}</span>
+                            <span class="stat-label">Jobs Completed</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${user.stats?.messagesSent || 0}</span>
+                            <span class="stat-label">Messages Sent</span>
                         </div>
                     </div>
-                    
-                    <div class="profile-details">
-                        <div class="detail-row">
-                            <label>Company:</label>
-                            <span>${user.company || 'Not specified'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Phone:</label>
-                            <span>${user.phone || 'Not specified'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Location:</label>
-                            <span>${user.location || 'Not specified'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Joined:</label>
-                            <span>${formatDate(user.createdAt)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Last Active:</label>
-                            <span>${user.lastActive ? formatDate(user.lastActive) : 'Never'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Total Quotes:</label>
-                            <span>${user.stats?.totalQuotes || 0}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Total Jobs:</label>
-                            <span>${user.stats?.totalJobs || 0}</span>
-                        </div>
-                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
                 </div>
             </div>
         `);
@@ -499,22 +507,21 @@ async function viewUserDetails(userId) {
     }
 }
 
-async function toggleUserStatus(userId, currentStatus) {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+async function toggleUserStatus(userId, newStatus) {
     try {
-        await apiCall(`/admin/users/${userId}/status`, 'PATCH', { status: newStatus });
-        showNotification(`User status updated to ${newStatus}`, 'success');
+        await apiCall(`/admin/users/${userId}/status`, 'PATCH', { isActive: newStatus });
+        showNotification(`User ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
         renderAdminUsers();
     } catch (error) {
         // Error already handled by apiCall
     }
 }
 
-async function handleUserDelete(userId) {
-    if (confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+async function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
         try {
             await apiCall(`/admin/users/${userId}`, 'DELETE');
-            showNotification('User deleted successfully.', 'success');
+            showNotification('User deleted successfully', 'success');
             renderAdminUsers();
         } catch (error) {
             // Error already handled by apiCall
@@ -522,27 +529,691 @@ async function handleUserDelete(userId) {
     }
 }
 
-async function exportUsers() {
+// --- SUBSCRIPTION MANAGEMENT ---
+async function renderAdminSubscriptions() {
+    const contentArea = document.getElementById('admin-content-area');
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users/export`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
+        const [subscriptionsData, plansData] = await Promise.all([
+            apiCall('/admin/subscriptions'),
+            apiCall('/admin/subscription-plans')
+        ]);
         
-        if (!response.ok) throw new Error('Export failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Users exported successfully', 'success');
+        contentArea.innerHTML = `
+            <div class="subscriptions-management">
+                <div class="subscription-tabs">
+                    <button class="tab-button active" onclick="switchSubscriptionTab('plans')">
+                        <i class="fas fa-layer-group"></i> Subscription Plans
+                    </button>
+                    <button class="tab-button" onclick="switchSubscriptionTab('users')">
+                        <i class="fas fa-users"></i> User Subscriptions
+                    </button>
+                    <button class="tab-button" onclick="switchSubscriptionTab('analytics')">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </button>
+                </div>
+                
+                <!-- Subscription Plans Tab -->
+                <div id="plans-tab" class="tab-content active">
+                    <div class="admin-section-header">
+                        <div class="section-title">
+                            <h2>Subscription Plans</h2>
+                            <span class="count-badge">${plansData.plans?.length || 0} plans</span>
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="createSubscriptionPlan()">
+                                <i class="fas fa-plus"></i> Create New Plan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="plans-grid">
+                        ${plansData.plans?.length ? plansData.plans.map(plan => `
+                            <div class="plan-card">
+                                <div class="plan-header">
+                                    <h4>${plan.name}</h4>
+                                    <div class="plan-price">
+                                        ${formatCurrency(plan.price)}
+                                        <small>/${plan.interval}</small>
+                                    </div>
+                                </div>
+                                <div class="plan-body">
+                                    <div class="plan-description">
+                                        ${plan.description || 'No description available'}
+                                    </div>
+                                    <div class="plan-features">
+                                        <h5>Features:</h5>
+                                        <ul>
+                                            ${plan.features?.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('') || '<li>No features listed</li>'}
+                                        </ul>
+                                    </div>
+                                    <div class="plan-stats">
+                                        <div class="stat-item">
+                                            <i class="fas fa-users"></i>
+                                            <span>${plan.subscriberCount || 0} subscribers</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="plan-actions">
+                                    <button class="btn btn-sm btn-info" onclick="editSubscriptionPlan('${plan._id}')">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriptionPlan('${plan._id}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No subscription plans</h3><p>Create your first subscription plan to get started.</p></div>'}
+                    </div>
+                </div>
+                
+                <!-- User Subscriptions Tab -->
+                <div id="users-tab" class="tab-content">
+                    <div class="admin-section-header">
+                        <div class="section-title">
+                            <h2>User Subscriptions</h2>
+                            <span class="count-badge">${subscriptionsData.subscriptions?.length || 0} subscriptions</span>
+                        </div>
+                        <div class="section-actions">
+                            <select id="subscription-status-filter" onchange="filterSubscriptionsByStatus(this.value)">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    ${subscriptionsData.subscriptions?.length ? `
+                        <div class="admin-table-container">
+                            <table class="admin-table" id="subscriptions-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Plan</th>
+                                        <th>Status</th>
+                                        <th>Started</th>
+                                        <th>Next Billing</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${subscriptionsData.subscriptions.map(sub => `
+                                        <tr data-subscription-id="${sub._id}" data-status="${sub.status}">
+                                            <td>
+                                                <div class="user-info">
+                                                    <div class="user-avatar">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div class="user-details">
+                                                        <strong>${sub.userName}</strong>
+                                                        <small>${sub.userEmail}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="plan-info">
+                                                    <strong>${sub.planName}</strong>
+                                                    <small>${formatCurrency(sub.planPrice)}/${sub.planInterval}</small>
+                                                </div>
+                                            </td>
+                                            <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
+                                            <td>${formatDate(sub.startDate)}</td>
+                                            <td>${sub.nextBillingDate ? formatDate(sub.nextBillingDate) : 'N/A'}</td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id}')" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    ${sub.status === 'active' ? `
+                                                        <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id}')" title="Cancel">
+                                                            <i class="fas fa-ban"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<div class="empty-state"><i class="fas fa-users"></i><h3>No subscriptions found</h3><p>User subscriptions will appear here when they subscribe to plans.</p></div>'}
+                </div>
+                
+                <!-- Analytics Tab -->
+                <div id="analytics-tab" class="tab-content">
+                    <div class="subscription-analytics">
+                        <h3>Subscription Analytics</h3>
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h4>Revenue Overview</h4>
+                                <div class="metrics-grid">
+                                    <div class="metric">
+                                        <span class="metric-value">${formatCurrency(calculateTotalRevenue(subscriptionsData.subscriptions))}</span>
+                                        <span class="metric-label">Total Revenue</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-value">${formatCurrency(calculateMonthlyRevenue(subscriptionsData.subscriptions))}</span>
+                                        <span class="metric-label">Monthly Revenue</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h4>Plan Performance</h4>
+                                <div class="plan-performance">
+                                    ${generatePlanPerformanceChart(plansData.plans)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     } catch (error) {
-        showNotification('Failed to export users', 'error');
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load subscriptions</h3>
+                <button class="btn btn-primary" onclick="renderAdminSubscriptions()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function switchSubscriptionTab(tabName) {
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Add active class to selected tab
+    document.querySelector(`[onclick="switchSubscriptionTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+}
+
+function createSubscriptionPlan() {
+    showModal('create-plan-modal', `
+        <div class="create-plan-modal">
+            <h3>Create Subscription Plan</h3>
+            <form id="create-plan-form">
+                <div class="form-group">
+                    <label for="plan-name">Plan Name:</label>
+                    <input type="text" id="plan-name" required placeholder="e.g., Premium Plan">
+                </div>
+                <div class="form-group">
+                    <label for="plan-price">Price:</label>
+                    <input type="number" id="plan-price" step="0.01" required placeholder="29.99">
+                </div>
+                <div class="form-group">
+                    <label for="plan-interval">Billing Interval:</label>
+                    <select id="plan-interval" required>
+                        <option value="month">Monthly</option>
+                        <option value="year">Yearly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="plan-description">Description:</label>
+                    <textarea id="plan-description" placeholder="Plan description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Features:</label>
+                    <div id="features-container">
+                        <div class="feature-input">
+                            <input type="text" placeholder="Feature 1">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
+                        <i class="fas fa-plus"></i> Add Feature
+                    </button>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Plan
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `);
+    
+    document.getElementById('create-plan-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const features = Array.from(document.querySelectorAll('#features-container input'))
+            .map(input => input.value.trim())
+            .filter(value => value);
+        
+        const planData = {
+            name: document.getElementById('plan-name').value,
+            price: parseFloat(document.getElementById('plan-price').value),
+            interval: document.getElementById('plan-interval').value,
+            description: document.getElementById('plan-description').value,
+            features
+        };
+        
+        try {
+            await apiCall('/admin/subscription-plans', 'POST', planData);
+            showNotification('Subscription plan created successfully', 'success');
+            closeModal();
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    });
+}
+
+function addFeature() {
+    const container = document.getElementById('features-container');
+    const featureDiv = document.createElement('div');
+    featureDiv.className = 'feature-input';
+    featureDiv.innerHTML = `
+        <input type="text" placeholder="New feature">
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(featureDiv);
+}
+
+function removeFeature(button) {
+    button.parentElement.remove();
+}
+
+async function editSubscriptionPlan(planId) {
+    try {
+        const plan = await apiCall(`/admin/subscription-plans/${planId}`);
+        // Implementation for editing plan - similar to create but with pre-filled data
+        showNotification('Edit plan functionality to be implemented', 'info');
+    } catch (error) {
+        showNotification('Failed to load plan details', 'error');
+    }
+}
+
+async function deleteSubscriptionPlan(planId) {
+    if (confirm('Are you sure you want to delete this subscription plan? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/subscription-plans/${planId}`, 'DELETE');
+            showNotification('Subscription plan deleted successfully', 'success');
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function cancelSubscription(subscriptionId) {
+    if (confirm('Are you sure you want to cancel this subscription?')) {
+        try {
+            await apiCall(`/admin/subscriptions/${subscriptionId}/cancel`, 'PATCH');
+            showNotification('Subscription cancelled successfully', 'success');
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function viewSubscriptionDetails(subscriptionId) {
+    try {
+        const data = await apiCall(`/admin/subscriptions/${subscriptionId}`);
+        const subscription = data.subscription;
+        
+        showModal('subscription-details-modal', `
+            <div class="subscription-details-modal">
+                <h3>Subscription Details</h3>
+                <div class="subscription-info">
+                    <div class="info-section">
+                        <h4>User Information</h4>
+                        <p><strong>Name:</strong> ${subscription.userName}</p>
+                        <p><strong>Email:</strong> ${subscription.userEmail}</p>
+                    </div>
+                    <div class="info-section">
+                        <h4>Plan Information</h4>
+                        <p><strong>Plan:</strong> ${subscription.planName}</p>
+                        <p><strong>Price:</strong> ${formatCurrency(subscription.planPrice)}/${subscription.planInterval}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${subscription.status}">${subscription.status}</span></p>
+                    </div>
+                    <div class="info-section">
+                        <h4>Billing Information</h4>
+                        <p><strong>Start Date:</strong> ${formatDate(subscription.startDate)}</p>
+                        <p><strong>Next Billing:</strong> ${subscription.nextBillingDate ? formatDate(subscription.nextBillingDate) : 'N/A'}</p>
+                        <p><strong>Total Paid:</strong> ${formatCurrency(subscription.totalPaid || 0)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load subscription details', 'error');
+    }
+}
+
+function filterSubscriptionsByStatus(status) {
+    const table = document.getElementById('subscriptions-table');
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const subscriptionStatus = row.dataset.status;
+        const shouldShow = !status || subscriptionStatus === status;
+        row.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function calculateTotalRevenue(subscriptions) {
+    if (!subscriptions) return 0;
+    return subscriptions
+        .filter(sub => sub.status === 'active')
+        .reduce((total, sub) => total + (sub.planPrice || 0), 0);
+}
+
+function calculateMonthlyRevenue(subscriptions) {
+    if (!subscriptions) return 0;
+    return subscriptions
+        .filter(sub => sub.status === 'active' && sub.planInterval === 'month')
+        .reduce((total, sub) => total + (sub.planPrice || 0), 0);
+}
+
+function generatePlanPerformanceChart(plans) {
+    if (!plans || plans.length === 0) {
+        return '<p>No plan data available</p>';
+    }
+    
+    return plans.map(plan => `
+        <div class="plan-performance-item">
+            <div class="plan-name">${plan.name}</div>
+            <div class="plan-subscribers">
+                <div class="subscriber-bar">
+                    <div class="subscriber-fill" style="width: ${(plan.subscriberCount / Math.max(...plans.map(p => p.subscriberCount))) * 100}%"></div>
+                </div>
+                <span class="subscriber-count">${plan.subscriberCount || 0}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- MESSAGES MANAGEMENT ---
+async function renderAdminMessages() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const { messages } = await apiCall('/admin/messages');
+        if (!messages || messages.length === 0) {
+            contentArea.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-envelope"></i>
+                    <h3>No messages found</h3>
+                    <p>User messages and inquiries will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                    <h2>Messages Management</h2>
+                    <span class="count-badge">${messages.length} messages</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search messages..." id="message-search" oninput="filterMessages(this.value)">
+                    </div>
+                    <select id="message-status-filter" onchange="filterMessagesByStatus(this.value)">
+                        <option value="">All Status</option>
+                        <option value="unread">Unread</option>
+                        <option value="read">Read</option>
+                        <option value="replied">Replied</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="exportMessages()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="messages-container">
+                ${messages.map(message => `
+                    <div class="message-card ${message.status}" data-message-id="${message._id}" data-sender="${message.senderName}" data-status="${message.status}">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <div class="sender-avatar">
+                                    ${message.senderAvatar ? 
+                                        `<img src="${message.senderAvatar}" alt="${message.senderName}">` :
+                                        `<i class="fas fa-user"></i>`
+                                    }
+                                </div>
+                                <div class="sender-details">
+                                    <strong>${message.senderName}</strong>
+                                    <small>${message.senderEmail}</small>
+                                </div>
+                            </div>
+                            <div class="message-meta">
+                                <span class="message-time">${formatDate(message.createdAt)}</span>
+                                <span class="message-status-badge ${message.status}">${message.status}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="message-content">
+                            <h4>${message.subject}</h4>
+                            <p class="message-preview">${message.content.substring(0, 150)}${message.content.length > 150 ? '...' : ''}</p>
+                        </div>
+                        
+                        <div class="message-actions">
+                            <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id}')" title="View Full Message">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            ${message.status !== 'replied' ? `
+                                <button class="btn btn-sm btn-primary" onclick="replyToMessage('${message._id}')" title="Reply">
+                                    <i class="fas fa-reply"></i> Reply
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm btn-warning" onclick="updateMessageStatus('${message._id}', 'archived')" title="Archive">
+                                <i class="fas fa-archive"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteMessage('${message._id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        ${message.thread && message.thread.length > 0 ? `
+                            <div class="message-thread">
+                                <button class="btn btn-link" onclick="toggleMessageThread('${message._id}')">
+                                    <i class="fas fa-comments"></i> View Thread (${message.thread.length})
+                                </button>
+                                <div class="thread-messages" id="thread-${message._id}" style="display: none;">
+                                    ${message.thread.map(reply => `
+                                        <div class="thread-message">
+                                            <div class="thread-header">
+                                                <strong>${reply.senderName}</strong>
+                                                <small>${formatDate(reply.sentAt)}</small>
+                                            </div>
+                                            <p>${reply.content}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load messages</h3>
+                <button class="btn btn-primary" onclick="renderAdminMessages()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function filterMessages(searchTerm) {
+    const messages = document.querySelectorAll('.message-card');
+    messages.forEach(message => {
+        const sender = message.dataset.sender.toLowerCase();
+        const subject = message.querySelector('h4').textContent.toLowerCase();
+        const content = message.querySelector('.message-preview').textContent.toLowerCase();
+        const shouldShow = sender.includes(searchTerm.toLowerCase()) || 
+                          subject.includes(searchTerm.toLowerCase()) ||
+                          content.includes(searchTerm.toLowerCase());
+        message.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function filterMessagesByStatus(status) {
+    const messages = document.querySelectorAll('.message-card');
+    messages.forEach(message => {
+        const messageStatus = message.dataset.status;
+        const shouldShow = !status || messageStatus === status;
+        message.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function viewMessageDetails(messageId) {
+    try {
+        const data = await apiCall(`/admin/messages/${messageId}`);
+        const message = data.message;
+        
+        // Mark as read
+        if (message.status === 'unread') {
+            await updateMessageStatus(messageId, 'read', false);
+        }
+        
+        showModal('message-details-modal', `
+            <div class="message-details-modal">
+                <div class="message-full-header">
+                    <div class="sender-section">
+                        <div class="sender-avatar">
+                            ${message.senderAvatar ? 
+                                `<img src="${message.senderAvatar}" alt="${message.senderName}">` :
+                                `<i class="fas fa-user"></i>`
+                            }
+                        </div>
+                        <div class="sender-info">
+                            <h3>${message.senderName}</h3>
+                            <p>${message.senderEmail}</p>
+                            <small>Sent: ${formatDate(message.createdAt)}</small>
+                        </div>
+                    </div>
+                    <div class="message-meta-section">
+                        <span class="status-badge ${message.status}">${message.status}</span>
+                    </div>
+                </div>
+                
+                <div class="message-subject">
+                    <h4>${message.subject}</h4>
+                </div>
+                
+                <div class="message-full-content">
+                    <p>${message.content.replace(/\n/g, '<br>')}</p>
+                </div>
+                
+                ${message.attachments && message.attachments.length > 0 ? `
+                    <div class="message-attachments">
+                        <h4>Attachments</h4>
+                        ${message.attachments.map(attachment => `
+                            <div class="attachment-item">
+                                <i class="fas fa-paperclip"></i>
+                                <a href="${attachment.url}" target="_blank">${attachment.name}</a>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                <div class="message-actions-full">
+                    <button class="btn btn-primary" onclick="replyToMessage('${messageId}')">
+                        <i class="fas fa-reply"></i> Reply
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load message details', 'error');
+    }
+}
+
+async function replyToMessage(messageId) {
+    try {
+        const data = await apiCall(`/admin/messages/${messageId}`);
+        const message = data.message;
+        
+        showModal('reply-message-modal', `
+            <div class="reply-message-modal">
+                <h3>Reply to: ${message.subject}</h3>
+                <form id="reply-form">
+                    <div class="form-group">
+                        <label>To:</label>
+                        <input type="text" value="${message.senderName} <${message.senderEmail}>" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="reply-content">Message:</label>
+                        <textarea id="reply-content" placeholder="Type your reply..." required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Reply
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        `);
+        
+        document.getElementById('reply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('reply-content').value;
+            
+            try {
+                await apiCall(`/admin/messages/${messageId}/reply`, 'POST', { content });
+                showNotification('Reply sent successfully', 'success');
+                closeModal();
+                renderAdminMessages();
+            } catch (error) {
+                // Error already handled by apiCall
+            }
+        });
+    } catch (error) {
+        showNotification('Failed to load message for reply', 'error');
+    }
+}
+
+function toggleMessageThread(messageId) {
+    const thread = document.getElementById(`thread-${messageId}`);
+    const isVisible = thread.style.display !== 'none';
+    thread.style.display = isVisible ? 'none' : 'block';
+}
+
+async function updateMessageStatus(messageId, newStatus, showNotif = true) {
+    try {
+        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: newStatus });
+        if (showNotif) {
+            showNotification('Message status updated successfully', 'success');
+            renderAdminMessages();
+        }
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/messages/${messageId}`, 'DELETE');
+            showNotification('Message deleted successfully', 'success');
+            renderAdminMessages();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
     }
 }
 
@@ -639,9 +1310,6 @@ async function renderAdminQuotes() {
                                         <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id}')" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-success" onclick="downloadQuotePDF('${quote._id}')" title="Download PDF">
-                                            <i class="fas fa-download"></i>
-                                        </button>
                                         <button class="btn btn-sm btn-danger" onclick="deleteQuote('${quote._id}')" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -719,7 +1387,9 @@ async function editQuoteAmount(quoteId, currentAmount) {
 
 async function viewQuoteDetails(quoteId) {
     try {
-        const quote = await apiCall(`/admin/quotes/${quoteId}`);
+        const data = await apiCall(`/admin/quotes/${quoteId}`);
+        const quote = data.quote;
+        
         showModal('quote-details-modal', `
             <div class="quote-details-modal">
                 <h3>Quote Details - #${quote.quoteNumber || quote._id.slice(-6)}</h3>
@@ -750,34 +1420,13 @@ async function viewQuoteDetails(quoteId) {
                         <p><strong>Last Updated:</strong> ${formatDate(quote.updatedAt)}</p>
                     </div>
                 </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
             </div>
         `);
     } catch (error) {
         showNotification('Failed to load quote details', 'error');
-    }
-}
-
-async function downloadQuotePDF(quoteId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/quotes/${quoteId}/pdf`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('PDF download failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `quote_${quoteId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Quote PDF downloaded successfully', 'success');
-    } catch (error) {
-        showNotification('Failed to download quote PDF', 'error');
     }
 }
 
@@ -793,31 +1442,7 @@ async function deleteQuote(quoteId) {
     }
 }
 
-async function exportQuotes() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/quotes/export`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('Export failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `quotes_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Quotes exported successfully', 'success');
-    } catch (error) {
-        showNotification('Failed to export quotes', 'error');
-    }
-}
-
-// --- ESTIMATIONS MANAGEMENT ---
+// --- ENHANCED ESTIMATION MANAGEMENT ---
 async function renderAdminEstimations() {
     const contentArea = document.getElementById('admin-content-area');
     try {
@@ -978,83 +1603,142 @@ async function updateEstimationStatus(estimationId, newStatus) {
     try {
         await apiCall(`/admin/estimations/${estimationId}/status`, 'PATCH', { status: newStatus });
         showNotification('Estimation status updated successfully', 'success');
-        // Update the row's data attribute
         const row = document.querySelector(`tr[data-estimation-id="${estimationId}"]`);
         if (row) row.dataset.status = newStatus;
     } catch (error) {
-        // Revert the select value
         const select = document.querySelector(`select[onchange*="${estimationId}"]`);
         if (select) select.value = select.dataset.current;
     }
 }
 
-async function viewEstimationFiles(estimationId) {
+async function viewEstimationDetails(estimationId) {
     try {
-        const estimation = await apiCall(`/admin/estimations/${estimationId}`);
-        const filesHtml = estimation.uploadedFiles?.map(file => `
-            <div class="file-item">
-                <div class="file-icon">
-                    <i class="fas fa-file-pdf"></i>
-                </div>
-                <div class="file-details">
-                    <strong>${file.originalName}</strong>
-                    <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
-                </div>
-                <div class="file-actions">
-                    <button class="btn btn-sm btn-primary" onclick="downloadEstimationFile('${estimationId}', '${file.fileName}')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="previewEstimationFile('${file.url}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('') || '<p>No files uploaded</p>';
+        const data = await apiCall(`/admin/estimations/${estimationId}`);
+        const estimation = data.estimation;
         
-        showModal('estimation-files-modal', `
-            <div class="estimation-files-modal">
-                <h3>Project Files</h3>
-                <div class="files-container">
-                    ${filesHtml}
+        showModal('estimation-details-modal', `
+            <div class="estimation-details-modal">
+                <h3>Estimation Details</h3>
+                <div class="estimation-content">
+                    <div class="estimation-header">
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${estimation.contractorName}</p>
+                            <p><strong>Email:</strong> ${estimation.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${estimation.contractorCompany || 'Not specified'}</p>
+                        </div>
+                        <div class="project-section">
+                            <h4>Project Information</h4>
+                            <p><strong>Title:</strong> ${estimation.projectTitle}</p>
+                            <p><strong>Type:</strong> ${estimation.projectType || 'General'}</p>
+                            <p><strong>Status:</strong> <span class="status-badge ${estimation.status}">${estimation.status}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="estimation-description">
+                        <h4>Project Description</h4>
+                        <p>${estimation.description || 'No description provided'}</p>
+                    </div>
+                    
+                    ${estimation.uploadedFiles?.length ? `
+                        <div class="estimation-files">
+                            <h4>Uploaded Files</h4>
+                            <div class="files-list">
+                                ${estimation.uploadedFiles.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas fa-file"></i>
+                                        <span>${file.name}</span>
+                                        <button class="btn btn-sm btn-link" onclick="downloadFile('${file.url}', '${file.name}')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="estimation-metadata">
+                        <p><strong>Created:</strong> ${formatDate(estimation.createdAt)}</p>
+                        <p><strong>Due Date:</strong> ${estimation.dueDate ? formatDate(estimation.dueDate) : 'Not set'}</p>
+                        <p><strong>Last Updated:</strong> ${formatDate(estimation.updatedAt)}</p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
                 </div>
             </div>
         `);
     } catch (error) {
-        showNotification('Failed to load estimation files', 'error');
+        showNotification('Failed to load estimation details', 'error');
     }
 }
 
-async function downloadEstimationFile(estimationId, fileName) {
+async function viewEstimationFiles(estimationId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/estimations/${estimationId}/files/${fileName}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
+        const data = await apiCall(`/admin/estimations/${estimationId}/files`);
+        const files = data.files;
         
-        if (!response.ok) throw new Error('File download failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('File downloaded successfully', 'success');
+        showModal('files-modal', `
+            <div class="files-modal">
+                <h3>Uploaded Files</h3>
+                <div class="files-grid">
+                    ${files.map(file => `
+                        <div class="file-card">
+                            <div class="file-icon">
+                                <i class="fas fa-${getFileIcon(file.type)}"></i>
+                            </div>
+                            <div class="file-info">
+                                <h4>${file.name}</h4>
+                                <p>${formatFileSize(file.size)}</p>
+                                <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
     } catch (error) {
-        showNotification('Failed to download file', 'error');
+        showNotification('Failed to load files', 'error');
     }
 }
 
-function previewEstimationFile(fileUrl) {
-    window.open(fileUrl, '_blank');
+function getFileIcon(fileType) {
+    const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'xls': 'file-excel',
+        'xlsx': 'file-excel',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'png': 'file-image',
+        'gif': 'file-image',
+        'zip': 'file-archive',
+        'rar': 'file-archive',
+        'txt': 'file-alt'
+    };
+    return icons[fileType?.toLowerCase()] || 'file';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 async function setEstimationDueDate(estimationId) {
     const dueDate = prompt('Enter due date (YYYY-MM-DD):');
-    if (dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    if (dueDate && isValidDate(dueDate)) {
         try {
             await apiCall(`/admin/estimations/${estimationId}/due-date`, 'PATCH', { dueDate });
             showNotification('Due date set successfully', 'success');
@@ -1067,178 +1751,82 @@ async function setEstimationDueDate(estimationId) {
     }
 }
 
+function isValidDate(dateString) {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date);
+}
+
 async function uploadEstimationResult(estimationId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Upload Estimation Result</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="estimation-result-form">
-                    <div class="form-group">
-                        <label for="result-file">Select PDF File:</label>
-                        <input type="file" id="result-file" accept=".pdf" required>
-                        <small>Only PDF files are allowed</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="result-notes">Notes (optional):</label>
-                        <textarea id="result-notes" placeholder="Add any notes about the estimation..."></textarea>
-                    </div>
-                    <div class="upload-progress" id="upload-progress" style="display: none;">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progress-fill"></div>
-                        </div>
-                        <span id="progress-text">0%</span>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload"></i> Upload Result
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    </div>
-                </form>
-            </div>
+    showModal('upload-result-modal', `
+        <div class="upload-result-modal">
+            <h3>Upload Estimation Result</h3>
+            <form id="upload-result-form">
+                <div class="form-group">
+                    <label for="result-file">Select Result File:</label>
+                    <input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-notes">Notes (optional):</label>
+                    <textarea id="result-notes" placeholder="Add any notes about the estimation result..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Result
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
         </div>
-    `;
+    `);
     
-    document.body.appendChild(modal);
-    modal.style.display = 'flex';
-    
-    document.getElementById('estimation-result-form').addEventListener('submit', async (e) => {
+    document.getElementById('upload-result-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const fileInput = document.getElementById('result-file');
         const notes = document.getElementById('result-notes').value;
-        const file = fileInput.files[0];
         
-        if (!file) {
+        if (!fileInput.files[0]) {
             showNotification('Please select a file', 'error');
             return;
         }
         
-        if (file.type !== 'application/pdf') {
-            showNotification('Only PDF files are allowed', 'error');
-            return;
-        }
-        
         const formData = new FormData();
-        formData.append('resultFile', file);
+        formData.append('resultFile', fileInput.files[0]);
         formData.append('notes', notes);
         
         try {
-            showUploadProgress();
             await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
             showNotification('Estimation result uploaded successfully', 'success');
             closeModal();
             renderAdminEstimations();
         } catch (error) {
-            hideUploadProgress();
+            // Error already handled by apiCall
         }
     });
 }
 
-function showUploadProgress() {
-    document.getElementById('upload-progress').style.display = 'block';
-    // Simulate progress - in real implementation, you'd track actual upload progress
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += 10;
-        document.getElementById('progress-fill').style.width = `${progress}%`;
-        document.getElementById('progress-text').textContent = `${progress}%`;
-        if (progress >= 100) {
-            clearInterval(interval);
-            hideUploadProgress();
-        }
-    }, 200);
-}
-
-function hideUploadProgress() {
-    document.getElementById('upload-progress').style.display = 'none';
-    document.getElementById('progress-fill').style.width = '0%';
-    document.getElementById('progress-text').textContent = '0%';
-}
-
 async function downloadEstimationResult(estimationId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/estimations/${estimationId}/result`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('Result download failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `estimation_result_${estimationId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Estimation result downloaded successfully', 'success');
+        const data = await apiCall(`/admin/estimations/${estimationId}/result`);
+        downloadFile(data.resultFile.url, data.resultFile.name);
     } catch (error) {
-        showNotification('Failed to download estimation result', 'error');
+        showNotification('Failed to download result file', 'error');
     }
 }
 
-async function viewEstimationDetails(estimationId) {
-    try {
-        const estimation = await apiCall(`/admin/estimations/${estimationId}`);
-        showModal('estimation-details-modal', `
-            <div class="estimation-details-modal">
-                <h3>Estimation Details</h3>
-                <div class="estimation-content">
-                    <div class="estimation-header">
-                        <div class="contractor-section">
-                            <h4>Contractor Information</h4>
-                            <p><strong>Name:</strong> ${estimation.contractorName}</p>
-                            <p><strong>Email:</strong> ${estimation.contractorEmail}</p>
-                            <p><strong>Phone:</strong> ${estimation.contractorPhone || 'Not provided'}</p>
-                        </div>
-                        <div class="project-section">
-                            <h4>Project Information</h4>
-                            <p><strong>Title:</strong> ${estimation.projectTitle}</p>
-                            <p><strong>Type:</strong> ${estimation.projectType}</p>
-                            <p><strong>Status:</strong> <span class="status-badge ${estimation.status}">${estimation.status}</span></p>
-                            <p><strong>Due Date:</strong> ${estimation.dueDate ? formatDate(estimation.dueDate) : 'Not set'}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="estimation-description">
-                        <h4>Project Description</h4>
-                        <p>${estimation.description || 'No description provided'}</p>
-                    </div>
-                    
-                    <div class="estimation-files">
-                        <h4>Uploaded Files</h4>
-                        <p>${estimation.uploadedFiles?.length || 0} files uploaded</p>
-                    </div>
-                    
-                    ${estimation.notes ? `
-                        <div class="estimation-notes">
-                            <h4>Admin Notes</h4>
-                            <p>${estimation.notes}</p>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="estimation-metadata">
-                        <p><strong>Created:</strong> ${formatDate(estimation.createdAt)}</p>
-                        <p><strong>Last Updated:</strong> ${formatDate(estimation.updatedAt)}</p>
-                    </div>
-                </div>
-            </div>
-        `);
-    } catch (error) {
-        showNotification('Failed to load estimation details', 'error');
-    }
+function downloadFile(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function deleteEstimation(estimationId) {
-    if (confirm('Are you sure you want to delete this estimation? This will also delete all associated files.')) {
+    if (confirm('Are you sure you want to delete this estimation? This action cannot be undone.')) {
         try {
             await apiCall(`/admin/estimations/${estimationId}`, 'DELETE');
             showNotification('Estimation deleted successfully', 'success');
@@ -1246,30 +1834,6 @@ async function deleteEstimation(estimationId) {
         } catch (error) {
             // Error already handled by apiCall
         }
-    }
-}
-
-async function exportEstimations() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/estimations/export`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('Export failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `estimations_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Estimations exported successfully', 'success');
-    } catch (error) {
-        showNotification('Failed to export estimations', 'error');
     }
 }
 
@@ -1283,7 +1847,7 @@ async function renderAdminJobs() {
                 <div class="empty-state">
                     <i class="fas fa-briefcase"></i>
                     <h3>No jobs found</h3>
-                    <p>Job postings will appear here once users create them.</p>
+                    <p>Jobs will appear here once projects are initiated.</p>
                 </div>
             `;
             return;
@@ -1303,9 +1867,9 @@ async function renderAdminJobs() {
                     <select id="job-status-filter" onchange="filterJobsByStatus(this.value)">
                         <option value="">All Status</option>
                         <option value="active">Active</option>
-                        <option value="paused">Paused</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
+                        <option value="on-hold">On Hold</option>
                     </select>
                     <button class="btn btn-primary" onclick="exportJobs()">
                         <i class="fas fa-download"></i> Export CSV
@@ -1317,64 +1881,62 @@ async function renderAdminJobs() {
                 <table class="admin-table" id="jobs-table">
                     <thead>
                         <tr>
-                            <th>Job Title</th>
-                            <th>Employer</th>
-                            <th>Category</th>
-                            <th>Budget</th>
-                            <th>Applications</th>
+                            <th>Job #</th>
+                            <th>Project</th>
+                            <th>Client</th>
+                            <th>Contractor</th>
+                            <th>Value</th>
                             <th>Status</th>
-                            <th>Posted</th>
+                            <th>Progress</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${jobs.map(job => `
-                            <tr data-job-id="${job._id}" data-status="${job.status}" data-employer="${job.employerName}">
+                            <tr data-job-id="${job._id}" data-status="${job.status}" data-client="${job.clientName}">
+                                <td><strong>#${job.jobNumber || job._id.slice(-6)}</strong></td>
                                 <td>
-                                    <div class="job-info">
-                                        <strong>${job.title}</strong>
-                                        <small>${job.location || 'Remote'}</small>
+                                    <div class="project-info">
+                                        <strong>${job.projectTitle}</strong>
+                                        <small>${job.projectType}</small>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="employer-info">
-                                        <strong>${job.employerName}</strong>
-                                        <small>${job.employerEmail}</small>
+                                    <div class="client-info">
+                                        <strong>${job.clientName}</strong>
+                                        <small>${job.clientEmail}</small>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="category-badge">${job.category}</span>
-                                </td>
-                                <td>
-                                    <div class="budget-info">
-                                        ${formatCurrency(job.budgetMin)} - ${formatCurrency(job.budgetMax)}
-                                        <small>${job.budgetType || 'Fixed'}</small>
+                                    <div class="contractor-info">
+                                        <strong>${job.contractorName}</strong>
+                                        <small>${job.contractorCompany || 'Independent'}</small>
                                     </div>
                                 </td>
-                                <td>
-                                    <span class="application-count">${job.applicationCount || 0}</span>
-                                    ${job.applicationCount > 0 ? `
-                                        <button class="btn btn-sm btn-link" onclick="viewJobApplications('${job._id}')" title="View Applications">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    ` : ''}
-                                </td>
+                                <td>${formatCurrency(job.value)}</td>
                                 <td>
                                     <select class="status-select" onchange="updateJobStatus('${job._id}', this.value)" data-current="${job.status}">
                                         <option value="active" ${job.status === 'active' ? 'selected' : ''}>Active</option>
-                                        <option value="paused" ${job.status === 'paused' ? 'selected' : ''}>Paused</option>
                                         <option value="completed" ${job.status === 'completed' ? 'selected' : ''}>Completed</option>
                                         <option value="cancelled" ${job.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                        <option value="on-hold" ${job.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
                                     </select>
                                 </td>
-                                <td>${formatDate(job.createdAt)}</td>
+                                <td>
+                                    <div class="progress-container">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${job.progress || 0}%"></div>
+                                        </div>
+                                        <span class="progress-text">${job.progress || 0}%</span>
+                                    </div>
+                                </td>
                                 <td>
                                     <div class="action-buttons">
                                         <button class="btn btn-sm btn-info" onclick="viewJobDetails('${job._id}')" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-warning" onclick="toggleJobFeatured('${job._id}', ${job.featured || false})" title="Toggle Featured">
-                                            <i class="fas fa-star${job.featured ? '' : '-o'}"></i>
+                                        <button class="btn btn-sm btn-warning" onclick="updateJobProgress('${job._id}', ${job.progress || 0})" title="Update Progress">
+                                            <i class="fas fa-chart-line"></i>
                                         </button>
                                         <button class="btn btn-sm btn-danger" onclick="deleteJob('${job._id}')" title="Delete">
                                             <i class="fas fa-trash"></i>
@@ -1405,10 +1967,12 @@ function filterJobs(searchTerm) {
     const rows = table.querySelectorAll('tbody tr');
     
     rows.forEach(row => {
-        const employer = row.dataset.employer.toLowerCase();
-        const title = row.cells[0].textContent.toLowerCase();
-        const shouldShow = employer.includes(searchTerm.toLowerCase()) || 
-                          title.includes(searchTerm.toLowerCase());
+        const client = row.dataset.client.toLowerCase();
+        const project = row.cells[1].textContent.toLowerCase();
+        const contractor = row.cells[3].textContent.toLowerCase();
+        const shouldShow = client.includes(searchTerm.toLowerCase()) || 
+                          project.includes(searchTerm.toLowerCase()) ||
+                          contractor.includes(searchTerm.toLowerCase());
         row.style.display = shouldShow ? '' : 'none';
     });
 }
@@ -1428,116 +1992,75 @@ async function updateJobStatus(jobId, newStatus) {
     try {
         await apiCall(`/admin/jobs/${jobId}/status`, 'PATCH', { status: newStatus });
         showNotification('Job status updated successfully', 'success');
-        // Update the row's data attribute
         const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
         if (row) row.dataset.status = newStatus;
     } catch (error) {
-        // Revert the select value
         const select = document.querySelector(`select[onchange*="${jobId}"]`);
         if (select) select.value = select.dataset.current;
     }
 }
 
-async function toggleJobFeatured(jobId, currentFeatured) {
-    try {
-        await apiCall(`/admin/jobs/${jobId}/featured`, 'PATCH', { featured: !currentFeatured });
-        showNotification(`Job ${!currentFeatured ? 'featured' : 'unfeatured'} successfully`, 'success');
-        renderAdminJobs();
-    } catch (error) {
-        // Error already handled by apiCall
-    }
-}
-
-async function viewJobApplications(jobId) {
-    try {
-        const applications = await apiCall(`/admin/jobs/${jobId}/applications`);
-        const applicationsHtml = applications.map(app => `
-            <div class="application-item">
-                <div class="applicant-info">
-                    <div class="applicant-avatar">
-                        ${app.applicantAvatar ? 
-                            `<img src="${app.applicantAvatar}" alt="${app.applicantName}">` :
-                            `<i class="fas fa-user"></i>`
-                        }
-                    </div>
-                    <div class="applicant-details">
-                        <strong>${app.applicantName}</strong>
-                        <small>${app.applicantEmail}</small>
-                        <p class="proposal-text">${app.proposalText}</p>
-                        <div class="application-meta">
-                            <span>Budget: ${formatCurrency(app.proposedBudget)}</span>
-                            <span>Applied: ${formatDate(app.appliedAt)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="application-actions">
-                    <button class="btn btn-sm btn-success" onclick="approveApplication('${app._id}')">
-                        <i class="fas fa-check"></i> Approve
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="rejectApplication('${app._id}')">
-                        <i class="fas fa-times"></i> Reject
-                    </button>
-                </div>
-            </div>
-        `).join('') || '<p>No applications yet</p>';
-        
-        showModal('job-applications-modal', `
-            <div class="job-applications-modal">
-                <h3>Job Applications</h3>
-                <div class="applications-container">
-                    ${applicationsHtml}
-                </div>
-            </div>
-        `);
-    } catch (error) {
-        showNotification('Failed to load job applications', 'error');
+async function updateJobProgress(jobId, currentProgress) {
+    const newProgress = prompt('Enter progress percentage (0-100):', currentProgress);
+    if (newProgress !== null && !isNaN(newProgress)) {
+        const progress = Math.max(0, Math.min(100, parseInt(newProgress)));
+        try {
+            await apiCall(`/admin/jobs/${jobId}/progress`, 'PATCH', { progress });
+            showNotification('Job progress updated successfully', 'success');
+            renderAdminJobs();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
     }
 }
 
 async function viewJobDetails(jobId) {
     try {
-        const job = await apiCall(`/admin/jobs/${jobId}`);
+        const data = await apiCall(`/admin/jobs/${jobId}`);
+        const job = data.job;
+        
         showModal('job-details-modal', `
             <div class="job-details-modal">
-                <h3>Job Details</h3>
+                <h3>Job Details - #${job.jobNumber || job._id.slice(-6)}</h3>
                 <div class="job-content">
                     <div class="job-header">
-                        <div class="employer-section">
-                            <h4>Employer Information</h4>
-                            <p><strong>Name:</strong> ${job.employerName}</p>
-                            <p><strong>Email:</strong> ${job.employerEmail}</p>
-                            <p><strong>Company:</strong> ${job.companyName || 'Not specified'}</p>
+                        <div class="client-section">
+                            <h4>Client Information</h4>
+                            <p><strong>Name:</strong> ${job.clientName}</p>
+                            <p><strong>Email:</strong> ${job.clientEmail}</p>
+                            <p><strong>Phone:</strong> ${job.clientPhone || 'Not provided'}</p>
                         </div>
-                        <div class="job-info-section">
-                            <h4>Job Information</h4>
-                            <p><strong>Title:</strong> ${job.title}</p>
-                            <p><strong>Category:</strong> ${job.category}</p>
-                            <p><strong>Location:</strong> ${job.location || 'Remote'}</p>
-                            <p><strong>Status:</strong> <span class="status-badge ${job.status}">${job.status}</span></p>
+                        <div class="contractor-section">
+                            <h4>Contractor Information</h4>
+                            <p><strong>Name:</strong> ${job.contractorName}</p>
+                            <p><strong>Email:</strong> ${job.contractorEmail}</p>
+                            <p><strong>Company:</strong> ${job.contractorCompany || 'Independent'}</p>
                         </div>
+                    </div>
+                    
+                    <div class="project-section">
+                        <h4>Project Information</h4>
+                        <p><strong>Title:</strong> ${job.projectTitle}</p>
+                        <p><strong>Type:</strong> ${job.projectType}</p>
+                        <p><strong>Value:</strong> ${formatCurrency(job.value)}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${job.status}">${job.status}</span></p>
+                        <p><strong>Progress:</strong> ${job.progress || 0}%</p>
                     </div>
                     
                     <div class="job-description">
-                        <h4>Job Description</h4>
+                        <h4>Project Description</h4>
                         <p>${job.description || 'No description provided'}</p>
                     </div>
                     
-                    <div class="job-requirements">
-                        <h4>Requirements</h4>
-                        <p>${job.requirements || 'No specific requirements listed'}</p>
+                    <div class="job-timeline">
+                        <h4>Timeline</h4>
+                        <p><strong>Start Date:</strong> ${job.startDate ? formatDate(job.startDate) : 'Not set'}</p>
+                        <p><strong>Expected Completion:</strong> ${job.expectedCompletion ? formatDate(job.expectedCompletion) : 'Not set'}</p>
+                        <p><strong>Created:</strong> ${formatDate(job.createdAt)}</p>
                     </div>
-                    
-                    <div class="job-budget">
-                        <h4>Budget Information</h4>
-                        <p><strong>Range:</strong> ${formatCurrency(job.budgetMin)} - ${formatCurrency(job.budgetMax)}</p>
-                        <p><strong>Type:</strong> ${job.budgetType || 'Fixed'}</p>
-                    </div>
-                    
-                    <div class="job-metadata">
-                        <p><strong>Posted:</strong> ${formatDate(job.createdAt)}</p>
-                        <p><strong>Applications:</strong> ${job.applicationCount || 0}</p>
-                        <p><strong>Featured:</strong> ${job.featured ? 'Yes' : 'No'}</p>
-                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
                 </div>
             </div>
         `);
@@ -1558,142 +2081,100 @@ async function deleteJob(jobId) {
     }
 }
 
-async function exportJobs() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/jobs/export`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('Export failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `jobs_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Jobs exported successfully', 'success');
-    } catch (error) {
-        showNotification('Failed to export jobs', 'error');
-    }
-}
-
-// --- MESSAGES MANAGEMENT ---
-async function renderAdminMessages() {
+// --- ANALYTICS ---
+async function renderAdminAnalytics() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const { messages } = await apiCall('/admin/messages');
-        if (!messages || messages.length === 0) {
-            contentArea.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-envelope"></i>
-                    <h3>No messages found</h3>
-                    <p>User messages and inquiries will appear here.</p>
-                </div>
-            `;
-            return;
-        }
+        const data = await apiCall('/admin/analytics');
         
         contentArea.innerHTML = `
-            <div class="admin-section-header">
-                <div class="section-title">
-                    <h2>Messages Management</h2>
-                    <span class="count-badge">${messages.length} messages</span>
-                </div>
-                <div class="section-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search messages..." id="message-search" oninput="filterMessages(this.value)">
+            <div class="analytics-dashboard">
+                <div class="analytics-header">
+                    <h2>Analytics Dashboard</h2>
+                    <div class="date-range-selector">
+                        <select id="analytics-period" onchange="updateAnalyticsPeriod(this.value)">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                        </select>
                     </div>
-                    <select id="message-status-filter" onchange="filterMessagesByStatus(this.value)">
-                        <option value="">All Status</option>
-                        <option value="unread">Unread</option>
-                        <option value="read">Read</option>
-                        <option value="replied">Replied</option>
-                        <option value="archived">Archived</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="exportMessages()">
-                        <i class="fas fa-download"></i> Export CSV
-                    </button>
                 </div>
-            </div>
-            
-            <div class="messages-container">
-                ${messages.map(message => `
-                    <div class="message-card ${message.status}" data-message-id="${message._id}" data-sender="${message.senderName}" data-status="${message.status}">
-                        <div class="message-header">
-                            <div class="sender-info">
-                                <div class="sender-avatar">
-                                    ${message.senderAvatar ? 
-                                        `<img src="${message.senderAvatar}" alt="${message.senderName}">` :
-                                        `<i class="fas fa-user"></i>`
-                                    }
-                                </div>
-                                <div class="sender-details">
-                                    <strong>${message.senderName}</strong>
-                                    <small>${message.senderEmail}</small>
-                                </div>
+                
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Revenue Overview</h3>
+                        <div class="revenue-stats">
+                            <div class="stat-item">
+                                <span class="stat-value">${formatCurrency(data.revenue?.total || 0)}</span>
+                                <span class="stat-label">Total Revenue</span>
+                            </div>.revenue?.monthly || 0)}</span>
+                                <span class="stat-label">Monthly Average</span>
                             </div>
-                            <div class="message-meta">
-                                <span class="message-time">${formatDate(message.createdAt)}</span>
-                                <span class="message-status-badge ${message.status}">${message.status}</span>
+                            <div class="stat-item">
+                                <span class="stat-value">${data.revenue?.growth || 0}%</span>
+                                <span class="stat-label">Growth Rate</span>
                             </div>
                         </div>
-                        
-                        <div class="message-content">
-                            <h4>${message.subject}</h4>
-                            <p class="message-preview">${message.content.substring(0, 150)}${message.content.length > 150 ? '...' : ''}</p>
-                        </div>
-                        
-                        <div class="message-actions">
-                            <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id}')" title="View Full Message">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            ${message.status !== 'replied' ? `
-                                <button class="btn btn-sm btn-primary" onclick="replyToMessage('${message._id}')" title="Reply">
-                                    <i class="fas fa-reply"></i> Reply
-                                </button>
-                            ` : ''}
-                            <button class="btn btn-sm btn-warning" onclick="updateMessageStatus('${message._id}', 'archived')" title="Archive">
-                                <i class="fas fa-archive"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteMessage('${message._id}')" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                        
-                        ${message.thread && message.thread.length > 0 ? `
-                            <div class="message-thread">
-                                <button class="btn btn-link" onclick="toggleMessageThread('${message._id}')">
-                                    <i class="fas fa-comments"></i> View Thread (${message.thread.length})
-                                </button>
-                                <div class="thread-messages" id="thread-${message._id}" style="display: none;">
-                                    ${message.thread.map(reply => `
-                                        <div class="thread-message">
-                                            <div class="thread-header">
-                                                <strong>${reply.senderName}</strong>
-                                                <small>${formatDate(reply.sentAt)}</small>
-                                            </div>
-                                            <p>${reply.content}</p>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
                     </div>
-                `).join('')}
+                    
+                    <div class="analytics-card">
+                        <h3>User Activity</h3>
+                        <div class="activity-stats">
+                            <div class="stat-item">
+                                <span class="stat-value">${data.users?.active || 0}</span>
+                                <span class="stat-label">Active Users</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${data.users?.new || 0}</span>
+                                <span class="stat-label">New Registrations</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${data.users?.retention || 0}%</span>
+                                <span class="stat-label">Retention Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3>Project Statistics</h3>
+                        <div class="project-stats">
+                            <div class="stat-item">
+                                <span class="stat-value">${data.projects?.total || 0}</span>
+                                <span class="stat-label">Total Projects</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${data.projects?.completed || 0}</span>
+                                <span class="stat-label">Completed</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${data.projects?.active || 0}</span>
+                                <span class="stat-label">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card full-width">
+                        <h3>Performance Trends</h3>
+                        <div class="chart-container">
+                            <canvas id="performance-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Initialize chart if Chart.js is available
+        if (typeof Chart !== 'undefined') {
+            initializePerformanceChart(data.trends);
+        }
+        
     } catch (error) {
         contentArea.innerHTML = `
             <div class="error-state">
                 <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to load messages</h3>
-                <button class="btn btn-primary" onclick="renderAdminMessages()">
+                <h3>Failed to load analytics</h3>
+                <button class="btn btn-primary" onclick="renderAdminAnalytics()">
                     <i class="fas fa-redo"></i> Retry
                 </button>
             </div>
@@ -1701,512 +2182,535 @@ async function renderAdminMessages() {
     }
 }
 
-function filterMessages(searchTerm) {
-    const messages = document.querySelectorAll('.message-card');
-    messages.forEach(message => {
-        const sender = message.dataset.sender.toLowerCase();
-        const subject = message.querySelector('h4').textContent.toLowerCase();
-        const content = message.querySelector('.message-preview').textContent.toLowerCase();
-        const shouldShow = sender.includes(searchTerm.toLowerCase()) || 
-                          subject.includes(searchTerm.toLowerCase()) ||
-                          content.includes(searchTerm.toLowerCase());
-        message.style.display = shouldShow ? '' : 'none';
-    });
-}
-
-function filterMessagesByStatus(status) {
-    const messages = document.querySelectorAll('.message-card');
-    messages.forEach(message => {
-        const messageStatus = message.dataset.status;
-        const shouldShow = !status || messageStatus === status;
-        message.style.display = shouldShow ? '' : 'none';
-    });
-}
-
-async function viewMessageDetails(messageId) {
-    try {
-        const message = await apiCall(`/admin/messages/${messageId}`);
-        // Mark as read
-        if (message.status === 'unread') {
-            await updateMessageStatus(messageId, 'read', false);
-        }
-        
-        showModal('message-details-modal', `
-            <div class="message-details-modal">
-                <div class="message-full-header">
-                    <div class="sender-section">
-                        <div class="sender-avatar">
-                            ${message.senderAvatar ? 
-                                `<img src="${message.senderAvatar}" alt="${message.senderName}">` :
-                                `<i class="fas fa-user"></i>`
-                            }
-                        </div>
-                        <div class="sender-info">
-                            <h3>${message.senderName}</h3>
-                            <p>${message.senderEmail}</p>
-                            <small>Sent: ${formatDate(message.createdAt)}</small>
-                        </div>
-                    </div>
-                    <div class="message-meta-section">
-                        <span class="status-badge ${message.status}">${message.status}</span>
-                    </div>
-                </div>
-                
-                <div class="message-subject">
-                    <h4>${message.subject}</h4>
-                </div>
-                
-                <div class="message-full-content">
-                    <p>${message.content.replace(/\n/g, '<br>')}</p>
-                </div>
-                
-                ${message.attachments && message.attachments.length > 0 ? `
-                    <div class="message-attachments">
-                        <h4>Attachments</h4>
-                        ${message.attachments.map(attachment => `
-                            <div class="attachment-item">
-                                <i class="fas fa-paperclip"></i>
-                                <a href="${attachment.url}" target="_blank">${attachment.name}</a>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                
-                <div class="message-actions-full">
-                    <button class="btn btn-primary" onclick="replyToMessage('${messageId}')">
-                        <i class="fas fa-reply"></i> Reply
-                    </button>
-                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                </div>
-            </div>
-        `);
-    } catch (error) {
-        showNotification('Failed to load message details', 'error');
-    }
-}
-
-async function replyToMessage(messageId) {
-    try {
-        const message = await apiCall(`/admin/messages/${messageId}`);
-        showModal('reply-message-modal', `
-            <div class="reply-message-modal">
-                <h3>Reply to: ${message.subject}</h3>
-                <form id="reply-form">
-                    <div class="form-group">
-                        <label>To:</label>
-                        <input type="text" value="${message.senderName} <${message.senderEmail}>" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="reply-content">Message:</label>
-                        <textarea id="reply-content" placeholder="Type your reply..." required></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Send Reply
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        `);
-        
-        document.getElementById('reply-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const content = document.getElementById('reply-content').value;
-            
-            try {
-                await apiCall(`/admin/messages/${messageId}/reply`, 'POST', { content });
-                showNotification('Reply sent successfully', 'success');
-                closeModal();
-                renderAdminMessages();
-            } catch (error) {
-                // Error already handled by apiCall
+function initializePerformanceChart(trendsData) {
+    const ctx = document.getElementById('performance-chart');
+    if (!ctx || !trendsData) return;
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendsData.labels || [],
+            datasets: [{
+                label: 'Revenue',
+                data: trendsData.revenue || [],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Projects',
+                data: trendsData.projects || [],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
             }
-        });
+        }
+    });
+}
+
+async function updateAnalyticsPeriod(period) {
+    try {
+        const data = await apiCall(`/admin/analytics?period=${period}`);
+        renderAdminAnalytics();
     } catch (error) {
-        showNotification('Failed to load message for reply', 'error');
+        showNotification('Failed to update analytics period', 'error');
     }
 }
 
-function toggleMessageThread(messageId) {
-    const thread = document.getElementById(`thread-${messageId}`);
-    const isVisible = thread.style.display !== 'none';
-    thread.style.display = isVisible ? 'none' : 'block';
+// --- SYSTEM STATS ---
+async function renderSystemStats() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const data = await apiCall('/admin/system-stats');
+        
+        contentArea.innerHTML = `
+            <div class="system-stats">
+                <h2>System Statistics</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Server Performance</h3>
+                        <div class="performance-metrics">
+                            <div class="metric">
+                                <span class="metric-label">CPU Usage</span>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.server?.cpu || 0}%"></div>
+                                </div>
+                                <span class="metric-value">${data.server?.cpu || 0}%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Memory Usage</span>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.server?.memory || 0}%"></div>
+                                </div>
+                                <span class="metric-value">${data.server?.memory || 0}%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Disk Usage</span>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.server?.disk || 0}%"></div>
+                                </div>
+                                <span class="metric-value">${data.server?.disk || 0}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3>Database Statistics</h3>
+                        <div class="db-stats">
+                            <div class="db-metric">
+                                <span class="db-label">Total Records</span>
+                                <span class="db-value">${(data.database?.totalRecords || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="db-metric">
+                                <span class="db-label">Database Size</span>
+                                <span class="db-value">${formatFileSize(data.database?.size || 0)}</span>
+                            </div>
+                            <div class="db-metric">
+                                <span class="db-label">Active Connections</span>
+                                <span class="db-value">${data.database?.connections || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3>API Usage</h3>
+                        <div class="api-stats">
+                            <div class="api-metric">
+                                <span class="api-label">Requests Today</span>
+                                <span class="api-value">${(data.api?.requestsToday || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="api-metric">
+                                <span class="api-label">Average Response Time</span>
+                                <span class="api-value">${data.api?.avgResponseTime || 0}ms</span>
+                            </div>
+                            <div class="api-metric">
+                                <span class="api-label">Error Rate</span>
+                                <span class="api-value">${data.api?.errorRate || 0}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3>System Health</h3>
+                        <div class="health-indicators">
+                            <div class="health-item ${data.health?.server ? 'healthy' : 'unhealthy'}">
+                                <i class="fas fa-${data.health?.server ? 'check-circle' : 'exclamation-circle'}"></i>
+                                <span>Server Status</span>
+                            </div>
+                            <div class="health-item ${data.health?.database ? 'healthy' : 'unhealthy'}">
+                                <i class="fas fa-${data.health?.database ? 'check-circle' : 'exclamation-circle'}"></i>
+                                <span>Database</span>
+                            </div>
+                            <div class="health-item ${data.health?.storage ? 'healthy' : 'unhealthy'}">
+                                <i class="fas fa-${data.health?.storage ? 'check-circle' : 'exclamation-circle'}"></i>
+                                <span>File Storage</span>
+                            </div>
+                            <div class="health-item ${data.health?.email ? 'healthy' : 'unhealthy'}">
+                                <i class="fas fa-${data.health?.email ? 'check-circle' : 'exclamation-circle'}"></i>
+                                <span>Email Service</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-actions">
+                    <h3>System Actions</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-warning" onclick="clearCache()">
+                            <i class="fas fa-trash-alt"></i> Clear Cache
+                        </button>
+                        <button class="btn btn-info" onclick="generateBackup()">
+                            <i class="fas fa-download"></i> Generate Backup
+                        </button>
+                        <button class="btn btn-success" onclick="runHealthCheck()">
+                            <i class="fas fa-stethoscope"></i> Run Health Check
+                        </button>
+                        <button class="btn btn-secondary" onclick="viewSystemLogs()">
+                            <i class="fas fa-file-alt"></i> View Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        contentArea.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Failed to load system statistics</h3>
+                <button class="btn btn-primary" onclick="renderSystemStats()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
+    }
 }
 
-async function updateMessageStatus(messageId, newStatus, showNotif = true) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: newStatus });
-        if (showNotif) {
-            showNotification('Message status updated successfully', 'success');
-            renderAdminMessages();
+async function clearCache() {
+    if (confirm('Are you sure you want to clear the system cache?')) {
+        try {
+            await apiCall('/admin/system/clear-cache', 'POST');
+            showNotification('Cache cleared successfully', 'success');
+        } catch (error) {
+            // Error already handled by apiCall
         }
+    }
+}
+
+async function generateBackup() {
+    try {
+        showNotification('Backup generation started...', 'info');
+        const data = await apiCall('/admin/system/backup', 'POST');
+        showNotification('Backup generated successfully', 'success');
+        downloadFile(data.backupUrl, `backup-${new Date().toISOString().split('T')[0]}.zip`);
     } catch (error) {
         // Error already handled by apiCall
     }
 }
 
-async function deleteMessage(messageId) {
-    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
-        try {
-            await apiCall(`/admin/messages/${messageId}`, 'DELETE');
-            showNotification('Message deleted successfully', 'success');
-            renderAdminMessages();
-        } catch (error) {
-            // Error already handled by apiCall
-        }
+async function runHealthCheck() {
+    try {
+        showNotification('Running health check...', 'info');
+        const data = await apiCall('/admin/system/health-check', 'POST');
+        showNotification('Health check completed', 'success');
+        renderSystemStats(); // Refresh the stats
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function viewSystemLogs() {
+    try {
+        const data = await apiCall('/admin/system/logs');
+        showModal('system-logs-modal', `
+            <div class="system-logs-modal">
+                <h3>System Logs</h3>
+                <div class="logs-container">
+                    <div class="logs-header">
+                        <select id="log-level-filter" onchange="filterLogs(this.value)">
+                            <option value="">All Levels</option>
+                            <option value="error">Errors</option>
+                            <option value="warning">Warnings</option>
+                            <option value="info">Info</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                        <button class="btn btn-sm btn-secondary" onclick="refreshLogs()">
+                            <i class="fas fa-redo"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="logs-list" id="logs-list">
+                        ${data.logs?.map(log => `
+                            <div class="log-entry ${log.level}" data-level="${log.level}">
+                                <span class="log-timestamp">${formatDate(log.timestamp)}</span>
+                                <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+                                <span class="log-message">${log.message}</span>
+                            </div>
+                        `).join('') || '<p>No logs available</p>'}
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load system logs', 'error');
+    }
+}
+
+function filterLogs(level) {
+    const logs = document.querySelectorAll('.log-entry');
+    logs.forEach(log => {
+        const shouldShow = !level || log.dataset.level === level;
+        log.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+async function refreshLogs() {
+    try {
+        const data = await apiCall('/admin/system/logs');
+        const logsList = document.getElementById('logs-list');
+        logsList.innerHTML = data.logs?.map(log => `
+            <div class="log-entry ${log.level}" data-level="${log.level}">
+                <span class="log-timestamp">${formatDate(log.timestamp)}</span>
+                <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+                <span class="log-message">${log.message}</span>
+            </div>
+        `).join('') || '<p>No logs available</p>';
+    } catch (error) {
+        showNotification('Failed to refresh logs', 'error');
+    }
+}
+
+// --- EXPORT FUNCTIONS ---
+async function exportUsers() {
+    try {
+        const data = await apiCall('/admin/export/users');
+        downloadFile(data.downloadUrl, `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Users exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function exportQuotes() {
+    try {
+        const data = await apiCall('/admin/export/quotes');
+        downloadFile(data.downloadUrl, `quotes-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Quotes exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function exportEstimations() {
+    try {
+        const data = await apiCall('/admin/export/estimations');
+        downloadFile(data.downloadUrl, `estimations-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Estimations exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function exportJobs() {
+    try {
+        const data = await apiCall('/admin/export/jobs');
+        downloadFile(data.downloadUrl, `jobs-export-${new Date().toISOString().split('T')[0]}.csv`);
+        showNotification('Jobs exported successfully', 'success');
+    } catch (error) {
+        // Error already handled by apiCall
     }
 }
 
 async function exportMessages() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/messages/export`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('jwtToken')}` }
-        });
-        
-        if (!response.ok) throw new Error('Export failed');
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `messages_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
+        const data = await apiCall('/admin/export/messages');
+        downloadFile(data.downloadUrl, `messages-export-${new Date().toISOString().split('T')[0]}.csv`);
         showNotification('Messages exported successfully', 'success');
     } catch (error) {
-        showNotification('Failed to export messages', 'error');
-    }
-}
-
-// --- SUBSCRIPTIONS MANAGEMENT ---
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const { subscriptions, plans } = await apiCall('/admin/subscriptions');
-        
-        contentArea.innerHTML = `
-            <div class="subscriptions-management">
-                <div class="admin-section-header">
-                    <div class="section-title">
-                        <h2>Subscriptions Management</h2>
-                    </div>
-                    <div class="section-actions">
-                        <button class="btn btn-primary" onclick="createSubscriptionPlan()">
-                            <i class="fas fa-plus"></i> Create Plan
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Subscription Plans -->
-                <div class="subscription-plans-section">
-                    <h3>Subscription Plans</h3>
-                    <div class="plans-grid">
-                        ${plans?.map(plan => `
-                            <div class="plan-card">
-                                <div class="plan-header">
-                                    <h4>${plan.name}</h4>
-                                    <div class="plan-price">
-                                        ${formatCurrency(plan.price)}
-                                        <small>/${plan.interval}</small>
-                                    </div>
-                                </div>
-                                <div class="plan-features">
-                                    <ul>
-                                        ${plan.features?.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('') || ''}
-                                    </ul>
-                                </div>
-                                <div class="plan-stats">
-                                    <small>${plan.subscriberCount || 0} subscribers</small>
-                                </div>
-                                <div class="plan-actions">
-                                    <button class="btn btn-sm btn-info" onclick="editSubscriptionPlan('${plan._id}')">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriptionPlan('${plan._id}')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('') || '<p>No subscription plans created yet.</p>'}
-                    </div>
-                </div>
-                
-                <!-- Active Subscriptions -->
-                <div class="active-subscriptions-section">
-                    <h3>Active Subscriptions</h3>
-                    ${subscriptions?.length ? `
-                        <div class="admin-table-container">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>User</th>
-                                        <th>Plan</th>
-                                        <th>Status</th>
-                                        <th>Started</th>
-                                        <th>Next Billing</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${subscriptions.map(sub => `
-                                        <tr>
-                                            <td>
-                                                <div class="user-info">
-                                                    <strong>${sub.userName}</strong>
-                                                    <small>${sub.userEmail}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="plan-info">
-                                                    <strong>${sub.planName}</strong>
-                                                    <small>${formatCurrency(sub.planPrice)}/${sub.planInterval}</small>
-                                                </div>
-                                            </td>
-                                            <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
-                                            <td>${formatDate(sub.startDate)}</td>
-                                            <td>${sub.nextBillingDate ? formatDate(sub.nextBillingDate) : 'N/A'}</td>
-                                            <td>
-                                                <div class="action-buttons">
-                                                    <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id}')">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id}')">
-                                                        <i class="fas fa-ban"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : '<p>No active subscriptions found.</p>'}
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to load subscriptions</h3>
-                <button class="btn btn-primary" onclick="renderAdminSubscriptions()">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-function createSubscriptionPlan() {
-    showModal('create-plan-modal', `
-        <div class="create-plan-modal">
-            <h3>Create Subscription Plan</h3>
-            <form id="create-plan-form">
-                <div class="form-group">
-                    <label for="plan-name">Plan Name:</label>
-                    <input type="text" id="plan-name" required placeholder="e.g., Premium Plan">
-                </div>
-                <div class="form-group">
-                    <label for="plan-price">Price:</label>
-                    <input type="number" id="plan-price" step="0.01" required placeholder="29.99">
-                </div>
-                <div class="form-group">
-                    <label for="plan-interval">Billing Interval:</label>
-                    <select id="plan-interval" required>
-                        <option value="month">Monthly</option>
-                        <option value="year">Yearly</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="plan-description">Description:</label>
-                    <textarea id="plan-description" placeholder="Plan description..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Features:</label>
-                    <div id="features-container">
-                        <div class="feature-input">
-                            <input type="text" placeholder="Feature 1">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
-                        <i class="fas fa-plus"></i> Add Feature
-                    </button>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Create Plan
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    `);
-    
-    document.getElementById('create-plan-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const features = Array.from(document.querySelectorAll('#features-container input'))
-            .map(input => input.value.trim())
-            .filter(value => value);
-        
-        const planData = {
-            name: document.getElementById('plan-name').value,
-            price: parseFloat(document.getElementById('plan-price').value),
-            interval: document.getElementById('plan-interval').value,
-            description: document.getElementById('plan-description').value,
-            features
-        };
-        
-        try {
-            await apiCall('/admin/subscription-plans', 'POST', planData);
-            showNotification('Subscription plan created successfully', 'success');
-            closeModal();
-            renderAdminSubscriptions();
-        } catch (error) {
-            // Error already handled by apiCall
-        }
-    });
-}
-
-function addFeature() {
-    const container = document.getElementById('features-container');
-    const featureDiv = document.createElement('div');
-    featureDiv.className = 'feature-input';
-    featureDiv.innerHTML = `
-        <input type="text" placeholder="New feature">
-        <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
-            <i class="fas fa-minus"></i>
-        </button>
-    `;
-    container.appendChild(featureDiv);
-}
-
-function removeFeature(button) {
-    button.parentElement.remove();
-}
-
-// --- MODAL FUNCTIONS ---
-function showModal(id, content) {
-    let modal = document.getElementById(id);
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = id;
-        modal.className = 'modal';
-        document.body.appendChild(modal);
-    }
-    
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <button class="modal-close" onclick="closeModal('${id}')">&times;</button>
-            </div>
-            <div class="modal-body">
-                ${content}
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
-}
-
-function closeModal(id) {
-    if (id) {
-        const modal = document.getElementById(id);
-        if (modal) modal.remove();
-    } else {
-        // Close all modals
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => modal.remove());
-    }
-}
-
-// --- CHART INITIALIZATION ---
-function initializeCharts(chartData) {
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded');
-        return;
-    }
-    
-    // Growth Chart
-    const growthCtx = document.getElementById('growthChart');
-    if (growthCtx && chartData?.growth) {
-        new Chart(growthCtx, {
-            type: 'line',
-            data: {
-                labels: chartData.growth.labels,
-                datasets: [
-                    {
-                        label: 'Users',
-                        data: chartData.growth.users,
-                        borderColor: '#007bff',
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Quotes',
-                        data: chartData.growth.quotes,
-                        borderColor: '#28a745',
-                        tension: 0.1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-    
-    // User Distribution Chart
-    const userCtx = document.getElementById('userChart');
-    if (userCtx && chartData?.userDistribution) {
-        new Chart(userCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Contractors', 'Designers'],
-                datasets: [{
-                    data: [
-                        chartData.userDistribution.contractors,
-                        chartData.userDistribution.designers
-                    ],
-                    backgroundColor: ['#007bff', '#28a745']
-                }]
-            },
-            options: {
-                responsive: true
-            }
-        });
+        // Error already handled by apiCall
     }
 }
 
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on the login page
     if (document.getElementById('admin-login-form')) {
         initializeLoginPage();
-    } else if (document.getElementById('admin-panel-container')) {
+    }
+    
+    // Check if we're on the admin panel page
+    if (document.getElementById('admin-panel-container')) {
         initializeAdminPage();
     }
     
-    // Close modal when clicking outside
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
+    // Add click outside modal to close
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
             closeModal();
         }
     });
     
-    // Handle keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
+    // Add escape key to close modal
+    document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeModal();
         }
     });
 });
+
+// --- UTILITY FUNCTIONS FOR MISSING IMPLEMENTATIONS ---
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.error('Global error:', { msg, url, lineNo, columnNo, error });
+    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
+    return false;
+};
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    showNotification('An unexpected error occurred. Please try again.', 'error');
+});
+
+// Add progress tracking for file uploads
+function trackUploadProgress(xhr, progressCallback) {
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            if (progressCallback) progressCallback(percentComplete);
+        }
+    });
+}
+
+// Add retry mechanism for failed API calls
+async function retryApiCall(apiFunction, maxRetries = 3, delay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await apiFunction();
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        }
+    }
+}
+
+// Add debounce function for search inputs
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Update search functions to use debounce
+const debouncedFilterUsers = debounce(filterUsers, 300);
+const debouncedFilterQuotes = debounce(filterQuotes, 300);
+const debouncedFilterEstimations = debounce(filterEstimations, 300);
+const debouncedFilterJobs = debounce(filterJobs, 300);
+const debouncedFilterMessages = debounce(filterMessages, 300);
+
+// Add loading states for buttons
+function setButtonLoading(button, isLoading) {
+    if (isLoading) {
+        button.disabled = true;
+        button.dataset.originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    } else {
+        button.disabled = false;
+        button.innerHTML = button.dataset.originalText;
+    }
+}
+
+// Add confirmation dialogs for critical actions
+function confirmAction(message, callback) {
+    if (confirm(message)) {
+        callback();
+    }
+}
+
+// Add notification queuing system
+const notificationQueue = [];
+let isShowingNotification = false;
+
+function queueNotification(message, type) {
+    notificationQueue.push({ message, type });
+    processNotificationQueue();
+}
+
+function processNotificationQueue() {
+    if (isShowingNotification || notificationQueue.length === 0) return;
+    
+    isShowingNotification = true;
+    const { message, type } = notificationQueue.shift();
+    showNotification(message, type);
+    
+    setTimeout(() => {
+        isShowingNotification = false;
+        processNotificationQueue();
+    }, 5500);
+}
+
+// Enhanced error handling
+function handleApiError(error, context = '') {
+    console.error(`API Error ${context}:`, error);
+    
+    if (error.message.includes('Unauthorized') || error.message.includes('401')) {
+        showNotification('Session expired. Please log in again.', 'error');
+        setTimeout(() => logout(), 2000);
+    } else if (error.message.includes('Network error')) {
+        showNotification('Network connection error. Please check your internet connection.', 'error');
+    } else {
+        showNotification(error.message || 'An unexpected error occurred.', 'error');
+    }
+}
+
+// Add auto-refresh for dashboard
+let dashboardRefreshInterval;
+
+function startDashboardAutoRefresh() {
+    if (appState.currentSection === 'dashboard') {
+        dashboardRefreshInterval = setInterval(() => {
+            if (appState.currentSection === 'dashboard') {
+                renderAdminDashboard();
+            }
+        }, 30000); // Refresh every 30 seconds
+    }
+}
+
+function stopDashboardAutoRefresh() {
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+        dashboardRefreshInterval = null;
+    }
+}
+
+// Add visibility change handler to pause/resume auto-refresh
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopDashboardAutoRefresh();
+    } else if (appState.currentSection === 'dashboard') {
+        startDashboardAutoRefresh();
+    }
+});
+
+// Add performance monitoring
+const performanceMonitor = {
+    startTime: null,
+    
+    start() {
+        this.startTime = performance.now();
+    },
+    
+    end(operation) {
+        if (this.startTime) {
+            const duration = performance.now() - this.startTime;
+            console.log(`${operation} took ${duration.toFixed(2)}ms`);
+            this.startTime = null;
+        }
+    }
+};
+
+// Add memory cleanup for large data sets
+function cleanupLargeDataSets() {
+    // Remove large data from memory after use
+    if (window.largeDataCache) {
+        delete window.largeDataCache;
+    }
+}
+
+// Add beforeunload handler to warn about unsaved changes
+window.addEventListener('beforeunload', function(e) {
+    if (window.hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Export functions for external use
+window.SteelConnectAdmin = {
+    apiCall,
+    showNotification,
+    formatCurrency,
+    formatDate,
+    logout,
+    performanceMonitor
+};.revenue?.total || 0)}</span>
+                                <span class="stat-label">Total Revenue</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${formatCurrency(data${formatCurrency(data.revenue?.total || 0)}
