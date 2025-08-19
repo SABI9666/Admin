@@ -1,4 +1,4 @@
-// script.js for the Enhanced SteelConnect Admin Panel - BACKEND COMPATIBLE VERSION
+/ script.js for the Enhanced SteelConnect Admin Panel - BACKEND COMPATIBLE VERSION
 // --- CONFIGURATION & GLOBAL STATE ---
 const appState = {
     jwtToken: null,
@@ -9,34 +9,34 @@ const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 const SUBSCRIPTION_PLANS = {
     Designer: {
         'submitting-quote': {
-             name: 'Submitting Quote',
-             types: ['PER QUOTE', 'MONTHLY'],
+            name: 'Submitting Quote',
+            types: ['PER QUOTE', 'MONTHLY'],
             amounts: { 'PER QUOTE': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER QUOTE': true, 'MONTHLY': true }
         },
         'sending-messages': {
-             name: 'Sending Messages',
-             types: ['MONTHLY'],
+            name: 'Sending Messages',
+            types: ['MONTHLY'],
             amounts: { 'MONTHLY': 'manual entry' },
             active: { 'MONTHLY': true }
         }
     },
     Contractor: {
         'submitting-tender': {
-             name: 'Submitting Tender',
-             types: ['PER TENDER', 'MONTHLY'],
+            name: 'Submitting Tender',
+            types: ['PER TENDER', 'MONTHLY'],
             amounts: { 'PER TENDER': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER TENDER': true, 'MONTHLY': true }
         },
         'getting-estimation': {
-             name: 'Getting Estimation',
-             types: ['PER ESTIMATE', 'MONTHLY'],
+            name: 'Getting Estimation',
+            types: ['PER ESTIMATE', 'MONTHLY'],
             amounts: { 'PER ESTIMATE': 'manual entry', 'MONTHLY': 'manual entry' },
             active: { 'PER ESTIMATE': true, 'MONTHLY': true }
         },
         'sending-messages': {
-             name: 'Sending Messages',
-             types: ['MONTHLY'],
+            name: 'Sending Messages',
+            types: ['MONTHLY'],
             amounts: { 'MONTHLY': 'manual entry' },
             active: { 'MONTHLY': true }
         }
@@ -281,10 +281,13 @@ function renderAdminSection(section) {
             renderAdminMessages();
             break;
         case 'jobs':
-            renderAdminJobs();
+            renderAdminJobs(); // Now calls the implemented function
+            break;
+        case 'estimations': // Added new case for estimations
+            renderAdminEstimations();
             break;
         case 'subscriptions':
-            renderAdminSubscriptionPlans(); // Updated to show plans instead of user subscriptions
+            renderAdminSubscriptionPlans();
             break;
         case 'system-stats':
             renderAdminSystemStats();
@@ -477,15 +480,15 @@ async function renderAdminMessages() {
                         </button>
                     </div>
                 </div>
-                                <div class="messages-layout">
+                        <div class="messages-layout">
                     <div class="messages-list-panel">
                         <div class="messages-list" id="messages-list">
                             ${messages.map((message, index) => `
                                 <div class="message-item"
-                                      data-message-id="${message._id}"
-                                      data-user-id="${message.senderId?._id}"
-                                      data-message-content="${encodeURIComponent(JSON.stringify(message))}"
-                                      onclick="selectMessage(this, ${index})">
+                                        data-message-id="${message._id}"
+                                        data-user-id="${message.senderId?._id}"
+                                        data-message-content="${encodeURIComponent(JSON.stringify(message))}"
+                                        onclick="selectMessage(this, ${index})">
                                     <div class="message-item-header">
                                         <div class="message-sender">
                                             <i class="fas fa-user"></i>
@@ -505,7 +508,7 @@ async function renderAdminMessages() {
                             `).join('')}
                         </div>
                     </div>
-                                        <div class="message-detail-panel" id="message-detail-panel">
+                                <div class="message-detail-panel" id="message-detail-panel">
                         <div class="no-message-selected">
                             <i class="fas fa-comments fa-3x"></i>
                             <h4>Select a message to view details</h4>
@@ -894,21 +897,54 @@ async function renderAdminSubscriptionPlans() {
         contentArea.innerHTML = '<div class="error-state">Failed to load subscription plans.</div>';
     }
 }
-// --- JOBS SECTION (PLACEHOLDER) ---
+// --- JOBS SECTION (NOW IMPLEMENTED) ---
 async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // This would typically fetch from an API endpoint
+        const response = await apiCall('/admin/jobs');
+        const jobs = response.jobs || [];
+
+        if (jobs.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No jobs found.</div>';
+            return;
+        }
+
         contentArea.innerHTML = `
-            <div class="coming-soon">
-                <i class="fas fa-briefcase fa-3x"></i>
-                <h3>Jobs Management</h3>
-                <p>Job management features are coming soon.</p>
-                <button class="btn btn-primary" onclick="showNotification('Jobs feature will be implemented soon!', 'info')">
-                    Learn More
-                </button>
-            </div>
-        `;
+            <div class="admin-table-container">
+                <div class="table-actions">
+                    <h3>Jobs Management</h3>
+                    <input type="text" placeholder="Search jobs..." class="search-input" onkeyup="filterTable(this.value, 'jobs-table')">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table" id="jobs-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${jobs.map(job => `
+                                <tr data-job-id="${job._id}">
+                                    <td>${job.title || 'N/A'}</td>
+                                    <td>${job.location || 'N/A'}</td>
+                                    <td>${job.type || 'N/A'}</td>
+                                    <td><span class="status-badge ${job.status || 'open'}">${job.status || 'Open'}</span></td>
+                                    <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                                    <td>
+                                        <button class="btn btn-info btn-sm" onclick="showNotification('Viewing job details functionality is in development.', 'info')"><i class="fas fa-eye"></i></button>
+                                        <button class="btn btn-danger btn-sm" onclick="showNotification('Deleting job functionality is in development.', 'info')"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
     } catch (error) {
         contentArea.innerHTML = '<div class="error-state">Failed to load jobs data.</div>';
     }
@@ -923,6 +959,78 @@ function renderAdminSystemStats() {
             <p>Advanced system statistics and analytics are coming soon.</p>
         </div>
     `;
+}
+// --- ESTIMATIONS SECTION (NEW) ---
+async function renderAdminEstimations() {
+    const contentArea = document.getElementById('admin-content-area');
+    try {
+        const response = await apiCall('/admin/estimations');
+        const estimations = response.estimations || [];
+
+        if (estimations.length === 0) {
+            contentArea.innerHTML = '<div class="empty-state">No estimations found.</div>';
+            return;
+        }
+        
+        contentArea.innerHTML = `
+            <div class="admin-table-container">
+                <div class="table-actions">
+                    <h3>Estimations Management</h3>
+                    <div class="estimation-filters">
+                        <input type="text" placeholder="Search estimations..." class="search-input" onkeyup="filterTable(this.value, 'estimations-table')">
+                        <select class="filter-select" id="status-filter" onchange="filterTableByStatus(this.value, 'estimations-table')">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <table class="admin-table" id="estimations-table">
+                    <thead>
+                        <tr>
+                            <th>Project Title</th>
+                            <th>Contractor</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Files</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    ${estimations.map(est => `
+                        <tr data-estimation-id="${est._id}">
+                            <td>${est.projectTitle || 'N/A'}</td>
+                            <td>${est.contractorId?.name || 'Unknown'}</td>
+                            <td>
+                                <select class="status-select" onchange="showNotification('Status update in development', 'info')">
+                                    <option value="pending" ${est.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="in-progress" ${est.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="completed" ${est.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    <option value="rejected" ${est.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                </select>
+                            </td>
+                            <td>${new Date(est.createdAt).toLocaleDateString()}</td>
+                            <td>${est.uploadedFiles?.length || 0}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showNotification('Viewing details in development', 'info')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="showNotification('Working on estimation in development', 'info')">
+                                    <i class="fas fa-calculator"></i> Work On
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = '<div class="error-state">Failed to load estimations.</div>';
+    }
 }
 // --- ENHANCED MESSAGE HANDLING FUNCTIONS ---
 function selectMessage(element, messageIndex) {
@@ -962,8 +1070,8 @@ function selectMessage(element, messageIndex) {
             </div>
             <div class="message-reply-form">
                 <textarea id="reply-textarea-${messageData._id}"
-                           placeholder="Type your reply here..."
-                           rows="4"></textarea>
+                          placeholder="Type your reply here..."
+                          rows="4"></textarea>
                 <div class="message-actions">
                     <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
                         <i class="fas fa-paper-plane"></i> Send Reply
@@ -1220,7 +1328,7 @@ function filterTableByStatus(status, tableId) {
         if (!status) {
             row.style.display = '';
         } else {
-            const statusSelect = row.querySelector('.status-select');
+            const statusSelect = row.querySelector('.status-select, .estimation-filters .filter-select');
             row.style.display = (statusSelect && statusSelect.value === status) ? '' : 'none';
         }
     });
