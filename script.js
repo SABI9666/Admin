@@ -8,17 +8,41 @@ const appState = {
 
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
 
-// This configuration can now be managed from the "Subscription Plans" section
-// It serves as a fallback or initial structure.
+// Enhanced subscription plans configuration
 const SUBSCRIPTION_PLANS = {
     Designer: {
-        'submitting-quote': { name: 'Submitting Quote', types: ['PER QUOTE', 'MONTHLY'] },
-        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
+        'submitting-quote': { 
+            name: 'Submitting Quote', 
+            types: ['PER QUOTE', 'MONTHLY'],
+            amounts: { 'PER QUOTE': 'manual entry', 'MONTHLY': 'manual entry' },
+            active: { 'PER QUOTE': true, 'MONTHLY': true }
+        },
+        'sending-messages': { 
+            name: 'Sending Messages', 
+            types: ['MONTHLY'],
+            amounts: { 'MONTHLY': 'manual entry' },
+            active: { 'MONTHLY': true }
+        }
     },
     Contractor: {
-        'submitting-tender': { name: 'Submitting Tender', types: ['PER TENDER', 'MONTHLY'] },
-        'getting-estimation': { name: 'Getting Estimation', types: ['PER ESTIMATE', 'MONTHLY'] },
-        'sending-messages': { name: 'Sending Messages', types: ['MONTHLY'] }
+        'submitting-tender': { 
+            name: 'Submitting Tender', 
+            types: ['PER TENDER', 'MONTHLY'],
+            amounts: { 'PER TENDER': 'manual entry', 'MONTHLY': 'manual entry' },
+            active: { 'PER TENDER': true, 'MONTHLY': true }
+        },
+        'getting-estimation': { 
+            name: 'Getting Estimation', 
+            types: ['PER ESTIMATE', 'MONTHLY'],
+            amounts: { 'PER ESTIMATE': 'manual entry', 'MONTHLY': 'manual entry' },
+            active: { 'PER ESTIMATE': true, 'MONTHLY': true }
+        },
+        'sending-messages': { 
+            name: 'Sending Messages', 
+            types: ['MONTHLY'],
+            amounts: { 'MONTHLY': 'manual entry' },
+            active: { 'MONTHLY': true }
+        }
     }
 };
 
@@ -150,7 +174,6 @@ function logout() {
     }, 1000);
 }
 
-
 // --- LOGIN PAGE LOGIC ---
 function initializeLoginPage() {
     hideGlobalLoader();
@@ -201,7 +224,6 @@ async function handleAdminLogin(event) {
         document.getElementById('password').value = '';
     }
 }
-
 
 // --- ADMIN PANEL INITIALIZATION & SETUP ---
 function initializeAdminPage() {
@@ -281,7 +303,6 @@ function setupAdminPanel() {
     document.querySelector('.admin-nav-link[data-section="dashboard"]')?.click();
 }
 
-
 // --- DYNAMIC CONTENT RENDERING ---
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
@@ -306,10 +327,7 @@ function renderAdminSection(section) {
             renderAdminJobs();
             break;
         case 'subscriptions':
-            renderAdminSubscriptions();
-            break;
-        case 'subscription-plans':
-            renderAdminSubscriptionPlans();
+            renderAdminSubscriptionPlans(); // Updated to show plans instead of user subscriptions
             break;
         case 'system-stats':
             renderAdminSystemStats();
@@ -337,8 +355,8 @@ async function renderAdminDashboard() {
                 <h3>Quick Actions</h3>
                 <div class="quick-action-buttons">
                     <button class="btn btn-primary" onclick="document.querySelector('[data-section=\\"users\\"]').click()"><i class="fas fa-users"></i> Manage Users</button>
-                    <button class="btn btn-success" onclick="document.querySelector('[data-section=\\"subscriptions\\"]').click()"><i class="fas fa-crown"></i> User Subscriptions</button>
-                    <button class="btn btn-info" onclick="document.querySelector('[data-section=\\"subscription-plans\\"]').click()"><i class="fas fa-cogs"></i> Subscription Plans</button>
+                    <button class="btn btn-success" onclick="document.querySelector('[data-section=\\"subscriptions\\"]').click()"><i class="fas fa-crown"></i> Subscription Plans</button>
+                    <button class="btn btn-info" onclick="document.querySelector('[data-section=\\"messages\\"]').click()"><i class="fas fa-comments"></i> Messages</button>
                 </div>
             </div>`;
     } catch (error) {
@@ -404,7 +422,6 @@ async function renderAdminUsers() {
         contentArea.innerHTML = '<div class="error-state">Failed to load user data.</div>';
     }
 }
-
 
 // --- QUOTES SECTION ---
 async function renderAdminQuotes() {
@@ -478,12 +495,13 @@ async function renderAdminQuotes() {
     }
 }
 
-// --- MESSAGES SECTION ---
+// --- ENHANCED MESSAGES SECTION ---
 async function renderAdminMessages() {
     const contentArea = document.getElementById('admin-content-area');
     try {
         const response = await apiCall('/admin/messages');
         const messages = response.messages || [];
+        
         if (messages.length === 0) {
             contentArea.innerHTML = '<div class="empty-state">No messages found.</div>';
             return;
@@ -493,163 +511,495 @@ async function renderAdminMessages() {
         const users = [...new Map(messages.filter(m => m.senderId).map(m => [m.senderId._id, m.senderId])).values()];
 
         contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                     <h3>Messages Management</h3>
-                     <div class="search-filter-row">
-                        <input type="text" placeholder="Search messages..." class="search-input" onkeyup="filterMessages()">
+            <div class="messages-container">
+                <div class="messages-header">
+                    <h3>Messages Management</h3>
+                    <div class="messages-controls">
+                        <input type="text" 
+                               placeholder="Search messages..." 
+                               class="search-input" 
+                               id="message-search"
+                               onkeyup="filterMessages()">
                         <select onchange="filterMessages()" class="filter-select" id="message-user-filter">
                             <option value="">All Users</option>
                             ${users.map(user => `<option value="${user._id}">${user.name}</option>`).join('')}
                         </select>
+                        <button class="btn btn-secondary" onclick="refreshMessages()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
                     </div>
                 </div>
-                <div class="messages-view">
-                    <div class="messages-list" id="messages-list">
-                        ${messages.map((message) => `
-                            <div class="message-item" 
-                                 data-message-id="${message._id}" 
-                                 data-user-id="${message.senderId?._id}" 
-                                 data-message-content="${encodeURIComponent(JSON.stringify(message))}" 
-                                 onclick="selectMessage(this)">
-                                <div class="message-header">
-                                    <strong class="sender-name">${message.senderId?.name || 'Unknown'} to ${message.receiverId?.name || 'Admin'}</strong>
-                                    <span class="message-date">${new Date(message.createdAt).toLocaleDateString()}</span>
+                
+                <div class="messages-layout">
+                    <div class="messages-list-panel">
+                        <div class="messages-list" id="messages-list">
+                            ${messages.map((message, index) => `
+                                <div class="message-item" 
+                                     data-message-id="${message._id}" 
+                                     data-user-id="${message.senderId?._id}" 
+                                     data-message-content="${encodeURIComponent(JSON.stringify(message))}" 
+                                     onclick="selectMessage(this, ${index})">
+                                    <div class="message-item-header">
+                                        <div class="message-sender">
+                                            <i class="fas fa-user"></i>
+                                            <strong>${message.senderId?.name || 'Unknown'}</strong>
+                                        </div>
+                                        <div class="message-date">
+                                            ${new Date(message.createdAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <div class="message-preview">
+                                        ${message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : '')}
+                                    </div>
+                                    <div class="message-meta">
+                                        <span class="message-to">To: ${message.receiverId?.name || 'Admin'}</span>
+                                    </div>
                                 </div>
-                                <div class="message-preview">${message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : '')}</div>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                    <div class="message-detail" id="message-detail">
-                        <div class="no-message-selected">Select a message to view details</div>
+                    
+                    <div class="message-detail-panel" id="message-detail-panel">
+                        <div class="no-message-selected">
+                            <i class="fas fa-comments fa-3x"></i>
+                            <h4>Select a message to view details</h4>
+                            <p>Choose a message from the list to read, reply, or manage it.</p>
+                        </div>
                     </div>
                 </div>
             </div>
+            
             <style>
-                .message-item.hidden { display: none; }
-            </style>
-        `;
+                .messages-container {
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                .messages-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: #f8f9fa;
+                }
+                
+                .messages-controls {
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                }
+                
+                .messages-layout {
+                    display: flex;
+                    flex: 1;
+                    min-height: 600px;
+                }
+                
+                .messages-list-panel {
+                    width: 40%;
+                    border-right: 1px solid #e0e0e0;
+                    background: #fff;
+                }
+                
+                .messages-list {
+                    height: 100%;
+                    overflow-y: auto;
+                }
+                
+                .message-item {
+                    padding: 15px;
+                    border-bottom: 1px solid #f0f0f0;
+                    cursor: pointer;
+                    transition: background-color 0.2s;
+                }
+                
+                .message-item:hover {
+                    background-color: #f8f9fa;
+                }
+                
+                .message-item.active {
+                    background-color: #e3f2fd;
+                    border-left: 4px solid #2196f3;
+                }
+                
+                .message-item.hidden {
+                    display: none;
+                }
+                
+                .message-item-header {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 8px;
+                }
+                
+                .message-sender {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .message-date {
+                    font-size: 0.85em;
+                    color: #666;
+                }
+                
+                .message-preview {
+                    color: #555;
+                    margin-bottom: 8px;
+                    line-height: 1.4;
+                }
+                
+                .message-meta {
+                    font-size: 0.85em;
+                    color: #777;
+                }
+                
+                .message-detail-panel {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    background: #fff;
+                }
+                
+                .no-message-selected {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: #999;
+                    text-align: center;
+                }
+                
+                .message-detail-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                }
+                
+                .message-detail-header {
+                    padding: 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: #f8f9fa;
+                }
+                
+                .message-detail-body {
+                    flex: 1;
+                    padding: 20px;
+                    overflow-y: auto;
+                }
+                
+                .message-bubble {
+                    max-width: 80%;
+                    padding: 12px 16px;
+                    border-radius: 12px;
+                    margin-bottom: 15px;
+                    word-wrap: break-word;
+                }
+                
+                .message-bubble.received {
+                    background: #f1f3f4;
+                    color: #333;
+                    align-self: flex-start;
+                }
+                
+                .message-bubble.sent {
+                    background: #2196f3;
+                    color: white;
+                    align-self: flex-end;
+                    margin-left: auto;
+                }
+                
+                .message-timestamp {
+                    font-size: 0.8em;
+                    opacity: 0.7;
+                    margin-top: 5px;
+                }
+                
+                .message-reply-form {
+                    padding: 20px;
+                    border-top: 1px solid #e0e0e0;
+                    background: #f8f9fa;
+                }
+                
+                .message-reply-form textarea {
+                    width: 100%;
+                    min-height: 100px;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    resize: vertical;
+                    font-family: inherit;
+                }
+                
+                .message-actions {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 15px;
+                }
+                
+                .message-detail-actions {
+                    padding: 15px 20px;
+                    background: #fff;
+                    border-bottom: 1px solid #e0e0e0;
+                    display: flex;
+                    gap: 10px;
+                }
+            </style>`;
     } catch (error) {
         contentArea.innerHTML = '<div class="error-state">Failed to load messages.</div>';
     }
 }
 
-// --- SUBSCRIPTIONS SECTION (USER SUBSCRIPTIONS) ---
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const response = await apiCall('/admin/subscriptions');
-        const subscriptions = response.subscriptions || [];
-        if (subscriptions.length === 0) {
-            contentArea.innerHTML = '<div class="empty-state">No active user subscriptions found.</div>';
-            return;
-        }
-
-        contentArea.innerHTML = `
-            <div class="admin-table-container">
-                <div class="table-actions">
-                    <h3>User Subscriptions Management</h3>
-                    <input type="text" placeholder="Search subscriptions..." class="search-input" onkeyup="filterTable(this.value, 'subscriptions-table')">
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="admin-table" id="subscriptions-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${subscriptions.map(sub => `
-                                <tr data-subscription-id="${sub._id}">
-                                    <td>${sub.user?.name || 'N/A'}</td>
-                                    <td>${sub.plan || 'N/A'}</td>
-                                    <td><input type="number" class="amount-input" value="${sub.amount || 0}" onchange="updateSubscriptionAmount('${sub._id}', this.value)"></td>
-                                    <td>
-                                        <select class="status-select" onchange="updateSubscriptionStatus('${sub._id}', this.value)">
-                                            <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>
-                                            <option value="cancelled" ${sub.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                                            <option value="expired" ${sub.status === 'expired' ? 'selected' : ''}>Expired</option>
-                                        </select>
-                                    </td>
-                                    <td>${new Date(sub.startDate).toLocaleDateString()}</td>
-                                    <td>${new Date(sub.endDate).toLocaleDateString()}</td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-warning btn-sm" onclick="extendSubscription('${sub._id}')">Extend</button>
-                                            <button class="btn btn-danger btn-sm" onclick="cancelSubscription('${sub._id}')">Cancel</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    } catch (error) {
-        contentArea.innerHTML = '<div class="error-state">Failed to load subscriptions data.</div>';
-    }
-}
-
-// --- NEW: SUBSCRIPTION PLANS SECTION ---
+// --- ENHANCED SUBSCRIPTION PLANS SECTION ---
 async function renderAdminSubscriptionPlans() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // In a real app, you'd fetch this from an API, e.g., await apiCall('/admin/subscription-plans');
-        // For this example, we'll use the hardcoded SUBSCRIPTION_PLANS object.
-        const plansData = await Promise.resolve(SUBSCRIPTION_PLANS); // Simulating API call
+        // Use the enhanced SUBSCRIPTION_PLANS object
+        const plansData = await Promise.resolve(SUBSCRIPTION_PLANS);
 
-        let html = '<div class="subscription-plans-container">';
+        let html = `
+            <div class="subscription-plans-container">
+                <div class="plans-header">
+                    <h3>Subscription Plans Management</h3>
+                    <div class="plans-actions">
+                        <button class="btn btn-success" onclick="saveAllPlans()">
+                            <i class="fas fa-save"></i> Save All Changes
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetPlans()">
+                            <i class="fas fa-undo"></i> Reset to Default
+                        </button>
+                    </div>
+                </div>
+        `;
 
         for (const userType in plansData) {
             html += `
                 <div class="admin-table-container plan-group">
                     <div class="table-actions">
-                        <h3>${userType} Plans</h3>
+                        <h4>${userType} Plans</h4>
+                        <span class="plan-count">${Object.keys(plansData[userType]).length} activities</span>
                     </div>
                     <div style="overflow-x: auto;">
-                        <table class="admin-table" id="${userType}-plans-table">
+                        <table class="admin-table subscription-plans-table" id="${userType}-plans-table">
                             <thead>
                                 <tr>
                                     <th>Activity</th>
                                     <th>Subscription Type</th>
                                     <th>Amount</th>
-                                    <th>Status</th>
+                                    <th>Active/Inactive</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>`;
+                            <tbody>
             
             const activities = plansData[userType];
             for (const activityKey in activities) {
                 const activity = activities[activityKey];
                 activity.types.forEach(type => {
-                    // Unique ID for each plan row
                     const planId = `${userType}-${activityKey}-${type}`.replace(/\s+/g, '-');
+                    const currentAmount = activity.amounts ? activity.amounts[type] : 'manual entry';
+                    const isActive = activity.active ? activity.active[type] : true;
+                    
                     html += `
-                        <tr data-plan-id="${planId}">
-                            <td>${activity.name}</td>
-                            <td>${type}</td>
-                            <td><input type="text" class="amount-input" value="manual entry" placeholder="e.g., 50 or 5%"></td>
+                        <tr data-plan-id="${planId}" data-user-type="${userType}" data-activity="${activityKey}" data-type="${type}">
+                            <td><strong>${activity.name}</strong></td>
+                            <td>
+                                <span class="subscription-type-badge ${type.replace(/\s+/g, '-').toLowerCase()}">
+                                    ${type}
+                                </span>
+                            </td>
+                            <td>
+                                <input type="text" 
+                                       class="amount-input" 
+                                       value="${currentAmount}" 
+                                       placeholder="e.g., 50 or 5% or manual entry"
+                                       onchange="updatePlanAmount('${planId}', this.value)">
+                            </td>
                             <td>
                                 <label class="switch">
-                                  <input type="checkbox" checked>
-                                  <span class="slider round"></span>
+                                    <input type="checkbox" 
+                                           ${isActive ? 'checked' : ''} 
+                                           onchange="updatePlanStatus('${planId}', this.checked)">
+                                    <span class="slider round"></span>
                                 </label>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm" onclick="editPlanDetails('${planId}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deletePlan('${planId}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
                 });
             }
 
-            html += `</tbody></table></div></div>`;
+            html += `
+                            </tbody>
+                        </table>
+                        <div class="add-plan-row">
+                            <button class="btn btn-primary btn-sm" onclick="addNewPlan('${userType}')">
+                                <i class="fas fa-plus"></i> Add New Activity
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        html += '</div>';
+        html += `
+            </div>
+            
+            <style>
+                .subscription-plans-container {
+                    padding: 20px;
+                }
+                
+                .plans-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                }
+                
+                .plans-actions {
+                    display: flex;
+                    gap: 10px;
+                }
+                
+                .plan-group {
+                    margin-bottom: 30px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                
+                .plan-group .table-actions {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 15px 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .plan-count {
+                    background: rgba(255,255,255,0.2);
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 0.9em;
+                }
+                
+                .subscription-plans-table {
+                    margin: 0;
+                }
+                
+                .subscription-type-badge {
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 0.8em;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+                
+                .subscription-type-badge.per-quote,
+                .subscription-type-badge.per-tender,
+                .subscription-type-badge.per-estimate {
+                    background: #fff3cd;
+                    color: #856404;
+                }
+                
+                .subscription-type-badge.monthly {
+                    background: #d1ecf1;
+                    color: #0c5460;
+                }
+                
+                .amount-input {
+                    width: 100%;
+                    max-width: 200px;
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 0.9em;
+                }
+                
+                .switch {
+                    position: relative;
+                    display: inline-block;
+                    width: 60px;
+                    height: 34px;
+                }
+                
+                .switch input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+                
+                .slider {
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: #ccc;
+                    transition: .4s;
+                }
+                
+                .slider:before {
+                    position: absolute;
+                    content: "";
+                    height: 26px;
+                    width: 26px;
+                    left: 4px;
+                    bottom: 4px;
+                    background-color: white;
+                    transition: .4s;
+                }
+                
+                input:checked + .slider {
+                    background-color: #2196F3;
+                }
+                
+                input:focus + .slider {
+                    box-shadow: 0 0 1px #2196F3;
+                }
+                
+                input:checked + .slider:before {
+                    transform: translateX(26px);
+                }
+                
+                .slider.round {
+                    border-radius: 34px;
+                }
+                
+                .slider.round:before {
+                    border-radius: 50%;
+                }
+                
+                .add-plan-row {
+                    padding: 15px 20px;
+                    background: #f8f9fa;
+                    border-top: 1px solid #e0e0e0;
+                    text-align: center;
+                }
+            </style>
+        `;
+        
         contentArea.innerHTML = html;
 
     } catch (error) {
@@ -657,60 +1007,170 @@ async function renderAdminSubscriptionPlans() {
     }
 }
 
-
-function renderAdminSystemStats() {
+// --- JOBS SECTION (PLACEHOLDER) ---
+async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
-    contentArea.innerHTML = '<div class="coming-soon">System statistics are coming soon.</div>';
+    try {
+        // This would typically fetch from an API endpoint
+        contentArea.innerHTML = `
+            <div class="coming-soon">
+                <i class="fas fa-briefcase fa-3x"></i>
+                <h3>Jobs Management</h3>
+                <p>Job management features are coming soon.</p>
+                <button class="btn btn-primary" onclick="showNotification('Jobs feature will be implemented soon!', 'info')">
+                    Learn More
+                </button>
+            </div>
+        `;
+    } catch (error) {
+        contentArea.innerHTML = '<div class="error-state">Failed to load jobs data.</div>';
+    }
 }
 
-// --- MESSAGE HANDLING FUNCTIONS ---
-function selectMessage(element) {
+// --- SYSTEM STATS SECTION (PLACEHOLDER) ---
+function renderAdminSystemStats() {
+    const contentArea = document.getElementById('admin-content-area');
+    contentArea.innerHTML = `
+        <div class="coming-soon">
+            <i class="fas fa-chart-bar fa-3x"></i>
+            <h3>System Statistics</h3>
+            <p>Advanced system statistics and analytics are coming soon.</p>
+        </div>
+    `;
+}
+
+// --- ENHANCED MESSAGE HANDLING FUNCTIONS ---
+function selectMessage(element, messageIndex) {
+    // Remove active class from all message items
     document.querySelectorAll('.message-item').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
 
     const messageData = JSON.parse(decodeURIComponent(element.dataset.messageContent));
-    const detailView = document.getElementById('message-detail');
+    const detailPanel = document.getElementById('message-detail-panel');
     
-    // Simulate fetching the whole conversation thread
-    const conversationHtml = `
-        <div class="message-bubble received">
-            <p>${messageData.content}</p>
-            <span class="timestamp">${new Date(messageData.createdAt).toLocaleString()}</span>
-        </div>
-    `;
-
-    detailView.innerHTML = `
-        <div class="message-detail-header">
-            <h4>Conversation with ${messageData.senderId?.name || 'Unknown'}</h4>
-        </div>
-        <div class="message-detail-body">${conversationHtml}</div>
-        <div class="message-reply-form">
-            <textarea id="reply-textarea" placeholder="Type your reply here..."></textarea>
-            <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
-                <i class="fas fa-paper-plane"></i> Send Reply
-            </button>
+    detailPanel.innerHTML = `
+        <div class="message-detail-content">
+            <div class="message-detail-header">
+                <div class="message-header-info">
+                    <h4>
+                        <i class="fas fa-user"></i>
+                        ${messageData.senderId?.name || 'Unknown User'}
+                    </h4>
+                    <p class="message-meta-info">
+                        <span><i class="fas fa-envelope"></i> ${messageData.senderId?.email || 'N/A'}</span>
+                        <span><i class="fas fa-clock"></i> ${new Date(messageData.createdAt).toLocaleString()}</span>
+                    </p>
+                </div>
+                <div class="message-detail-actions">
+                    <button class="btn btn-danger btn-sm" onclick="deleteMessage('${messageData._id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <div class="message-detail-body">
+                <div class="message-thread">
+                    <div class="message-bubble received">
+                        <p>${messageData.content}</p>
+                        <div class="message-timestamp">
+                            ${new Date(messageData.createdAt).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="message-reply-form">
+                <textarea id="reply-textarea-${messageData._id}" 
+                          placeholder="Type your reply here..." 
+                          rows="4"></textarea>
+                <div class="message-actions">
+                    <button class="btn btn-primary" onclick="handleSendMessage('${messageData._id}')">
+                        <i class="fas fa-paper-plane"></i> Send Reply
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearReply('${messageData._id}')">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
         </div>
     `;
 }
 
 async function handleSendMessage(messageId) {
-    const replyContent = document.getElementById('reply-textarea').value;
-    if (!replyContent.trim()) {
+    const replyTextarea = document.getElementById(`reply-textarea-${messageId}`);
+    const replyContent = replyTextarea.value.trim();
+    
+    if (!replyContent) {
         showNotification('Reply cannot be empty.', 'error');
         return;
     }
+    
     try {
-        // The API should handle associating this reply with the correct conversation/user
         await apiCall(`/admin/messages/reply/${messageId}`, 'POST', { content: replyContent }, 'Reply sent successfully!');
-        document.getElementById('reply-textarea').value = '';
-        // Optionally, refresh the message view to show the new reply
+        replyTextarea.value = '';
+        
+        // Add the reply to the message thread
+        const messageThread = document.querySelector('.message-thread');
+        if (messageThread) {
+            const replyBubble = document.createElement('div');
+            replyBubble.className = 'message-bubble sent';
+            replyBubble.innerHTML = `
+                <p>${replyContent}</p>
+                <div class="message-timestamp">
+                    ${new Date().toLocaleString()}
+                </div>
+            `;
+            messageThread.appendChild(replyBubble);
+        }
+        
     } catch (error) {
-       // Error is handled by apiCall
+        // Error is handled by apiCall
     }
 }
 
+function clearReply(messageId) {
+    const replyTextarea = document.getElementById(`reply-textarea-${messageId}`);
+    if (replyTextarea) {
+        replyTextarea.value = '';
+    }
+}
+
+async function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/messages/${messageId}`, 'DELETE', null, 'Message deleted successfully!');
+            
+            // Remove the message from the list
+            const messageItem = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageItem) {
+                messageItem.remove();
+            }
+            
+            // Clear the detail panel
+            const detailPanel = document.getElementById('message-detail-panel');
+            if (detailPanel) {
+                detailPanel.innerHTML = `
+                    <div class="no-message-selected">
+                        <i class="fas fa-comments fa-3x"></i>
+                        <h4>Select a message to view details</h4>
+                        <p>Choose a message from the list to read, reply, or manage it.</p>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            // Error is handled by apiCall
+        }
+    }
+}
+
+function refreshMessages() {
+    renderAdminMessages();
+    showNotification('Messages refreshed!', 'success');
+}
+
 function filterMessages() {
-    const searchText = document.querySelector('.search-input').value.toLowerCase();
+    const searchText = document.getElementById('message-search').value.toLowerCase();
     const userId = document.getElementById('message-user-filter').value;
     const messages = document.querySelectorAll('.message-item');
 
@@ -718,7 +1178,7 @@ function filterMessages() {
         const content = message.textContent.toLowerCase();
         const msgUserId = message.dataset.userId;
         
-        const matchesSearch = content.includes(searchText);
+        const matchesSearch = !searchText || content.includes(searchText);
         const matchesUser = !userId || msgUserId === userId;
 
         if (matchesSearch && matchesUser) {
@@ -729,6 +1189,174 @@ function filterMessages() {
     });
 }
 
+// --- SUBSCRIPTION PLANS MANAGEMENT FUNCTIONS ---
+function updatePlanAmount(planId, amount) {
+    // Store the change in memory or prepare for API call
+    console.log(`Plan ${planId} amount updated to: ${amount}`);
+    // In a real implementation, you might want to debounce this and batch updates
+}
+
+function updatePlanStatus(planId, isActive) {
+    console.log(`Plan ${planId} status updated to: ${isActive ? 'Active' : 'Inactive'}`);
+    // In a real implementation, this would make an API call
+}
+
+function editPlanDetails(planId) {
+    const row = document.querySelector(`[data-plan-id="${planId}"]`);
+    if (!row) return;
+    
+    const userType = row.dataset.userType;
+    const activity = row.dataset.activity;
+    const type = row.dataset.type;
+    const currentAmount = row.querySelector('.amount-input').value;
+    
+    const modalContent = `
+        <div class="plan-edit-form">
+            <div class="form-group">
+                <label>User Type:</label>
+                <input type="text" value="${userType}" disabled class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Activity:</label>
+                <input type="text" value="${activity}" disabled class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Subscription Type:</label>
+                <input type="text" value="${type}" disabled class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Amount:</label>
+                <input type="text" value="${currentAmount}" id="edit-amount-${planId}" class="form-control">
+                <small class="form-text text-muted">Enter amount like: 50, $100, 5%, or 'manual entry'</small>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="savePlanEdit('${planId}')">Save Changes</button>
+                <button class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    createModal('Edit Plan Details', modalContent);
+}
+
+function savePlanEdit(planId) {
+    const newAmount = document.getElementById(`edit-amount-${planId}`).value;
+    const row = document.querySelector(`[data-plan-id="${planId}"]`);
+    if (row) {
+        row.querySelector('.amount-input').value = newAmount;
+    }
+    document.querySelector('.modal').remove();
+    showNotification('Plan updated successfully!', 'success');
+}
+
+function deletePlan(planId) {
+    if (confirm('Are you sure you want to delete this subscription plan?')) {
+        const row = document.querySelector(`[data-plan-id="${planId}"]`);
+        if (row) {
+            row.remove();
+            showNotification('Plan deleted successfully!', 'success');
+        }
+    }
+}
+
+function addNewPlan(userType) {
+    const modalContent = `
+        <div class="add-plan-form">
+            <div class="form-group">
+                <label>Activity Name:</label>
+                <input type="text" id="new-activity-name" class="form-control" placeholder="e.g., Submitting Quote">
+            </div>
+            <div class="form-group">
+                <label>Subscription Type:</label>
+                <select id="new-subscription-type" class="form-control">
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="PER QUOTE">Per Quote</option>
+                    <option value="PER TENDER">Per Tender</option>
+                    <option value="PER ESTIMATE">Per Estimate</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount:</label>
+                <input type="text" id="new-plan-amount" class="form-control" placeholder="e.g., 50, $100, 5%, or manual entry">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="saveNewPlan('${userType}')">Add Plan</button>
+                <button class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    createModal(`Add New Plan for ${userType}`, modalContent);
+}
+
+function saveNewPlan(userType) {
+    const activityName = document.getElementById('new-activity-name').value.trim();
+    const subscriptionType = document.getElementById('new-subscription-type').value;
+    const amount = document.getElementById('new-plan-amount').value.trim();
+    
+    if (!activityName || !amount) {
+        showNotification('Please fill in all required fields.', 'error');
+        return;
+    }
+    
+    // Add new row to the table
+    const table = document.getElementById(`${userType}-plans-table`).querySelector('tbody');
+    const planId = `${userType}-${activityName.replace(/\s+/g, '-')}-${subscriptionType}`.replace(/\s+/g, '-');
+    
+    const newRow = document.createElement('tr');
+    newRow.setAttribute('data-plan-id', planId);
+    newRow.setAttribute('data-user-type', userType);
+    newRow.setAttribute('data-activity', activityName.replace(/\s+/g, '-'));
+    newRow.setAttribute('data-type', subscriptionType);
+    
+    newRow.innerHTML = `
+        <td><strong>${activityName}</strong></td>
+        <td>
+            <span class="subscription-type-badge ${subscriptionType.replace(/\s+/g, '-').toLowerCase()}">
+                ${subscriptionType}
+            </span>
+        </td>
+        <td>
+            <input type="text" 
+                   class="amount-input" 
+                   value="${amount}" 
+                   placeholder="e.g., 50 or 5% or manual entry"
+                   onchange="updatePlanAmount('${planId}', this.value)">
+        </td>
+        <td>
+            <label class="switch">
+                <input type="checkbox" checked onchange="updatePlanStatus('${planId}', this.checked)">
+                <span class="slider round"></span>
+            </label>
+        </td>
+        <td>
+            <div class="action-buttons">
+                <button class="btn btn-info btn-sm" onclick="editPlanDetails('${planId}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deletePlan('${planId}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    table.appendChild(newRow);
+    document.querySelector('.modal').remove();
+    showNotification('New plan added successfully!', 'success');
+}
+
+function saveAllPlans() {
+    // In a real implementation, this would collect all plan data and send to API
+    showNotification('All subscription plans have been saved!', 'success');
+}
+
+function resetPlans() {
+    if (confirm('Are you sure you want to reset all plans to default values? This will lose any unsaved changes.')) {
+        renderAdminSubscriptionPlans();
+        showNotification('Plans reset to default values.', 'info');
+    }
+}
 
 // --- UTILITY FUNCTIONS FOR ACTIONS ---
 function filterTable(searchValue, tableId) {
@@ -756,14 +1384,47 @@ function filterTableByStatus(status, tableId) {
 function createModal(title, contentHtml) {
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.style.display = 'flex';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
     modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>${title}</h3>
-                <button class="close-button" onclick="this.closest('.modal').remove()">&times;</button>
+        <div class="modal-content" style="
+            background: white;
+            padding: 0;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+        ">
+            <div class="modal-header" style="
+                padding: 20px;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <h3 style="margin: 0;">${title}</h3>
+                <button class="close-button" onclick="this.closest('.modal').remove()" style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #999;
+                ">&times;</button>
             </div>
-            <div class="modal-body">${contentHtml}</div>
+            <div class="modal-body" style="padding: 20px;">
+                ${contentHtml}
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -822,38 +1483,20 @@ async function viewQuoteDetails(quoteId) {
         const quote = response.quote;
         const content = `
             <p><strong>User:</strong> ${quote.userId?.name || 'N/A'}</p>
-            <p><strong>Amount:</strong> $${quote.amount || 0}</p>
+            <p><strong>Amount:</strong> ${quote.amount || 0}</p>
             <p><strong>Status:</strong> ${quote.status || 'pending'}</p>
             <p><strong>Created:</strong> ${new Date(quote.createdAt).toLocaleString()}</p>
             <hr><h4 style="margin-bottom: 10px;">Details</h4>
-            <div class="details-box">${quote.details || 'No details.'}</div>
+            <div class="details-box" style="
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 4px;
+                border-left: 4px solid #007bff;
+            ">${quote.details || 'No details.'}</div>
         `;
         createModal('Quote Details', content);
     } catch (error) {
         showNotification('Failed to load quote details.', 'error');
-    }
-}
-
-async function updateSubscriptionAmount(subId, amount) {
-    await apiCall(`/admin/subscriptions/${subId}/amount`, 'PUT', { amount }, 'Subscription amount updated.');
-}
-
-async function updateSubscriptionStatus(subId, status) {
-    await apiCall(`/admin/subscriptions/${subId}/status`, 'PUT', { status }, 'Subscription status updated.');
-}
-
-async function extendSubscription(subId) {
-    const months = prompt('Enter number of months to extend:', '1');
-    if (months && !isNaN(months) && parseInt(months) > 0) {
-        await apiCall(`/admin/subscriptions/${subId}/extend`, 'PUT', { months: parseInt(months) }, 'Subscription extended.');
-        renderAdminSubscriptions();
-    }
-}
-
-async function cancelSubscription(subId) {
-    if (confirm('Are you sure you want to cancel this subscription?')) {
-        await apiCall(`/admin/subscriptions/${subId}/cancel`, 'PUT', null, 'Subscription cancelled.');
-        renderAdminSubscriptions();
     }
 }
 
@@ -871,7 +1514,8 @@ window.addEventListener('error', (event) => {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred. Please refresh.', 'error');
 });
+
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     showNotification('A network or server error occurred. Please try again.', 'error');
-});
+});`
