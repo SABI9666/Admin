@@ -82,6 +82,23 @@
             background: #c82333;
         }
         
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -121,6 +138,8 @@
         .stat-icon.designers { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
         .stat-icon.active { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
         .stat-icon.completed { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; }
+        .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
+        .stat-icon.messages { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #333; }
         
         .stat-number {
             font-size: 36px;
@@ -205,6 +224,22 @@
             background: #f8f9fa;
         }
         
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .status-badge.pending { background: #ffc107; color: #333; }
+        .status-badge.in-progress { background: #17a2b8; }
+        .status-badge.completed { background: #28a745; }
+        .status-badge.rejected { background: #dc3545; }
+        .status-badge.cancelled { background: #6c757d; }
+        .status-badge.open { background: #007bff; }
+        .status-badge.closed { background: #6c757d; }
+        
         .user-type {
             padding: 4px 12px;
             border-radius: 20px;
@@ -264,6 +299,148 @@
             font-style: italic;
         }
         
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .conversation-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .conversation-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .conversation-title {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .conversation-time {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .conversation-preview {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .messages-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #007bff;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .message-text {
+            color: #333;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -282,6 +459,11 @@
             
             table {
                 font-size: 14px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
             }
         }
     </style>
@@ -332,6 +514,12 @@
                 <button class="tab" onclick="showTab('quotes')">
                     <i class="fas fa-file-invoice-dollar"></i> Quotes
                 </button>
+                <button class="tab" onclick="showTab('estimations')">
+                    <i class="fas fa-calculator"></i> Estimations
+                </button>
+                <button class="tab" onclick="showTab('messages')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
             </div>
             
             <!-- Tab Contents -->
@@ -362,6 +550,66 @@
                     <p>Loading quotes data...</p>
                 </div>
             </div>
+            
+            <div id="estimations-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading estimations data...</p>
+                </div>
+            </div>
+            
+            <div id="messages-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading messages data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estimation Status Modal -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Estimation Status</h3>
+                <span class="close" onclick="closeModal('statusModal')">&times;</span>
+            </div>
+            <form id="statusForm">
+                <div class="form-group">
+                    <label for="statusSelect">Status:</label>
+                    <select id="statusSelect" required>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="statusNotes">Notes (Optional):</label>
+                    <textarea id="statusNotes" placeholder="Add any notes about this status change..."></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeModal('statusModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages Modal -->
+    <div id="messagesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Conversation Messages</h3>
+                <span class="close" onclick="closeModal('messagesModal')">&times;</span>
+            </div>
+            <div id="messagesContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -373,6 +621,9 @@
         let usersData = [];
         let jobsData = [];
         let quotesData = [];
+        let estimationsData = [];
+        let messagesData = [];
+        let currentEstimationId = null;
         
         // Get authentication token
         function getToken() {
@@ -382,22 +633,24 @@
         }
         
         // Make authenticated API call
-        async function apiCall(endpoint) {
+        async function apiCall(endpoint, options = {}) {
             const token = getToken();
             
             if (!token) {
                 throw new Error('No authentication token found');
             }
             
-            const response = await fetch(`${API_BASE}${endpoint}`, {
+            const config = {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
-            });
+                },
+                ...options
+            };
+            
+            const response = await fetch(`${API_BASE}${endpoint}`, config);
             
             if (response.status === 401) {
-                // Token expired or invalid
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('token');
                 sessionStorage.removeItem('adminToken');
@@ -480,27 +733,35 @@
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-icon active">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-number">${stats.activeJobs || 0}</div>
-                    <div class="stat-label">Active Jobs</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon completed">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="stat-number">${stats.completedJobs || 0}</div>
-                    <div class="stat-label">Completed Jobs</div>
-                </div>
-                
-                <div class="stat-card">
                     <div class="stat-icon quotes">
                         <i class="fas fa-file-invoice-dollar"></i>
                     </div>
                     <div class="stat-number">${stats.totalQuotes || 0}</div>
                     <div class="stat-label">Total Quotes</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon estimations">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalEstimations || 0}</div>
+                    <div class="stat-label">Estimations</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon messages">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalMessages || 0}</div>
+                    <div class="stat-label">Messages</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon active">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-number">${stats.activeJobs || 0}</div>
+                    <div class="stat-label">Active Jobs</div>
                 </div>
             `;
         }
@@ -601,7 +862,7 @@
                                 <td><strong>${job.title || 'Untitled'}</strong></td>
                                 <td>${job.posterName || 'Unknown'}</td>
                                 <td>${job.budget || '0'}</td>
-                                <td><span class="user-type ${job.status}">${job.status.toUpperCase()}</span></td>
+                                <td><span class="status-badge ${job.status}">${job.status.toUpperCase()}</span></td>
                                 <td>${job.quotesCount || 0}</td>
                                 <td>${job.createdAt ? new Date(job.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
                             </tr>
@@ -656,12 +917,142 @@
                                 <td>${quote.designerName || 'Unknown'}</td>
                                 <td>${quote.quoteAmount || '0'}</td>
                                 <td>${quote.timeline ? quote.timeline + ' days' : 'N/A'}</td>
-                                <td><span class="user-type ${quote.status}">${quote.status.toUpperCase()}</span></td>
+                                <td><span class="status-badge ${quote.status}">${quote.status.toUpperCase()}</span></td>
                                 <td>${quote.createdAt ? new Date(quote.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
+            `;
+        }
+        
+        // Load estimations data
+        async function loadEstimationsData() {
+            try {
+                console.log('🧮 Loading estimations data...');
+                const data = await apiCall('/estimation');
+                estimationsData = data.estimations || [];
+                console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
+                renderEstimationsTab();
+            } catch (error) {
+                console.error('❌ Error loading estimations:', error);
+                document.getElementById('estimations-tab').innerHTML = `
+                    <div class="error">Failed to load estimations: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // Render estimations tab
+        function renderEstimationsTab() {
+            const estimationsTab = document.getElementById('estimations-tab');
+            
+            if (estimationsData.length === 0) {
+                estimationsTab.innerHTML = '<div class="no-data">No estimations found</div>';
+                return;
+            }
+            
+            estimationsTab.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-calculator"></i> All Estimations (${estimationsData.length})</h3>
+                    <button class="btn" onclick="refreshEstimations()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project Title</th>
+                            <th>Contractor</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Amount</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estimationsData.map(estimation => `
+                            <tr>
+                                <td><strong>${estimation.projectTitle || 'Untitled'}</strong></td>
+                                <td>${estimation.contractorName || 'Unknown'}</td>
+                                <td><span class="status-badge ${estimation.status}">${estimation.status.toUpperCase()}</span></td>
+                                <td>${estimation.uploadedFiles?.length || 0} files</td>
+                                <td>${estimation.estimatedAmount ? ' + estimation.estimatedAmount.toLocaleString() : 'Pending'}</td>
+                                <td>${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <div class="actions">
+                                        <button class="btn btn-sm" onclick="updateEstimationStatus('${estimation._id}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="viewEstimationFiles('${estimation._id}')">
+                                            <i class="fas fa-file"></i>
+                                        </button>
+                                        ${estimation.status === 'completed' && estimation.resultFile ? 
+                                            `<button class="btn btn-sm btn-success" onclick="downloadResult('${estimation._id}')">
+                                                <i class="fas fa-download"></i>
+                                            </button>` : ''
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        // Load messages data
+        async function loadMessagesData() {
+            try {
+                console.log('💬 Loading messages data...');
+                const data = await apiCall('/messages');
+                messagesData = data.data || [];
+                console.log('✅ Messages data loaded:', messagesData.length, 'conversations');
+                renderMessagesTab();
+            } catch (error) {
+                console.error('❌ Error loading messages:', error);
+                document.getElementById('messages-tab').innerHTML = `
+                    <div class="error">Failed to load messages: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // Render messages tab
+        function renderMessagesTab() {
+            const messagesTab = document.getElementById('messages-tab');
+            
+            if (messagesData.length === 0) {
+                messagesTab.innerHTML = '<div class="no-data">No conversations found</div>';
+                return;
+            }
+            
+            messagesTab.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-comments"></i> Conversations (${messagesData.length})</h3>
+                    <button class="btn" onclick="refreshMessages()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <div class="conversation-list">
+                    ${messagesData.map(conversation => `
+                        <div class="conversation-item" onclick="viewConversation('${conversation.id}')">
+                            <div class="conversation-header">
+                                <div class="conversation-title">
+                                    ${conversation.jobTitle || 'Unknown Job'}
+                                </div>
+                                <div class="conversation-time">
+                                    ${conversation.updatedAt ? new Date(conversation.updatedAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                </div>
+                            </div>
+                            <div class="conversation-preview">
+                                <strong>Participants:</strong> ${conversation.participants?.map(p => p.name).join(', ') || 'Unknown'}
+                            </div>
+                            <div class="conversation-preview">
+                                <strong>Last message:</strong> ${conversation.lastMessage || 'No messages yet'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             `;
         }
         
@@ -682,7 +1073,8 @@
                             <li>Total Users: ${dashboardData.stats?.totalUsers || 0}</li>
                             <li>Active Jobs: ${dashboardData.stats?.activeJobs || 0}</li>
                             <li>Total Quotes: ${dashboardData.stats?.totalQuotes || 0}</li>
-                            <li>System Uptime: Online</li>
+                            <li>Estimations: ${dashboardData.stats?.totalEstimations || 0}</li>
+                            <li>Conversations: ${dashboardData.stats?.totalMessages || 0}</li>
                         </ul>
                     </div>
                     
@@ -693,6 +1085,16 @@
                             <li>Designers: ${dashboardData.stats?.designers || 0}</li>
                             <li>Completed Jobs: ${dashboardData.stats?.completedJobs || 0}</li>
                             <li>Last Updated: ${new Date().toLocaleString()}</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                        <h4><i class="fas fa-tasks"></i> Recent Activity</h4>
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            <li>Pending Estimations: ${estimationsData.filter(e => e.status === 'pending').length}</li>
+                            <li>Active Conversations: ${messagesData.length}</li>
+                            <li>Recent Jobs: ${jobsData.filter(j => j.status === 'open').length}</li>
+                            <li>System Health: <span style="color: green;">✓ Operational</span></li>
                         </ul>
                     </div>
                 </div>
@@ -739,9 +1141,162 @@
                 loadJobsData();
             } else if (tabName === 'quotes' && quotesData.length === 0) {
                 loadQuotesData();
+            } else if (tabName === 'estimations' && estimationsData.length === 0) {
+                loadEstimationsData();
+            } else if (tabName === 'messages' && messagesData.length === 0) {
+                loadMessagesData();
             } else if (tabName === 'overview') {
                 renderOverviewTab();
             }
+        }
+        
+        // Update estimation status
+        function updateEstimationStatus(estimationId) {
+            currentEstimationId = estimationId;
+            const estimation = estimationsData.find(e => e._id === estimationId);
+            
+            if (estimation) {
+                document.getElementById('statusSelect').value = estimation.status;
+                document.getElementById('statusNotes').value = '';
+                document.getElementById('statusModal').style.display = 'block';
+            }
+        }
+        
+        // Handle status form submission
+        document.getElementById('statusForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const status = document.getElementById('statusSelect').value;
+            const notes = document.getElementById('statusNotes').value;
+            
+            try {
+                await apiCall(`/estimation/${currentEstimationId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status, notes })
+                });
+                
+                // Update local data
+                const estimation = estimationsData.find(e => e._id === currentEstimationId);
+                if (estimation) {
+                    estimation.status = status;
+                }
+                
+                // Refresh the tab
+                renderEstimationsTab();
+                closeModal('statusModal');
+                
+                alert('Estimation status updated successfully!');
+                
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Failed to update status: ' + error.message);
+            }
+        });
+        
+        // View estimation files
+        async function viewEstimationFiles(estimationId) {
+            try {
+                const data = await apiCall(`/estimation/${estimationId}/files`);
+                const files = data.files || [];
+                
+                if (files.length === 0) {
+                    alert('No files found for this estimation.');
+                    return;
+                }
+                
+                let filesList = 'Files for this estimation:\n\n';
+                files.forEach((file, index) => {
+                    filesList += `${index + 1}. ${file.name}\n`;
+                });
+                
+                alert(filesList);
+                
+            } catch (error) {
+                console.error('Error loading files:', error);
+                alert('Failed to load files: ' + error.message);
+            }
+        }
+        
+        // Download estimation result
+        async function downloadResult(estimationId) {
+            try {
+                const data = await apiCall(`/estimation/${estimationId}/result`);
+                
+                if (data.resultFile && data.resultFile.url) {
+                    window.open(data.resultFile.url, '_blank');
+                } else {
+                    alert('No result file available for this estimation.');
+                }
+                
+            } catch (error) {
+                console.error('Error downloading result:', error);
+                alert('Failed to download result: ' + error.message);
+            }
+        }
+        
+        // View conversation messages
+        async function viewConversation(conversationId) {
+            try {
+                document.getElementById('messagesModal').style.display = 'block';
+                document.getElementById('messagesContent').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading messages...</p>
+                    </div>
+                `;
+                
+                const data = await apiCall(`/messages/${conversationId}/messages`);
+                const messages = data.data || [];
+                
+                if (messages.length === 0) {
+                    document.getElementById('messagesContent').innerHTML = '<div class="no-data">No messages in this conversation</div>';
+                    return;
+                }
+                
+                const messagesHtml = `
+                    <div class="messages-container">
+                        ${messages.map(message => `
+                            <div class="message">
+                                <div class="message-header">
+                                    ${message.senderName || 'Unknown'}
+                                    <span class="message-time">${message.createdAt ? new Date(message.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</span>
+                                </div>
+                                <div class="message-text">${message.text || ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                document.getElementById('messagesContent').innerHTML = messagesHtml;
+                
+                // Scroll to bottom
+                const container = document.querySelector('.messages-container');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+                
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messagesContent').innerHTML = `
+                    <div class="error">Failed to load messages: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // Refresh functions
+        function refreshEstimations() {
+            estimationsData = [];
+            loadEstimationsData();
+        }
+        
+        function refreshMessages() {
+            messagesData = [];
+            loadMessagesData();
         }
         
         // Refresh all data
@@ -751,6 +1306,8 @@
             if (usersData.length > 0) loadUsersData();
             if (jobsData.length > 0) loadJobsData();
             if (quotesData.length > 0) loadQuotesData();
+            if (estimationsData.length > 0) loadEstimationsData();
+            if (messagesData.length > 0) loadMessagesData();
         }
         
         // Export data (placeholder)
@@ -776,6 +1333,19 @@
                 
                 // Redirect to login
                 window.location.href = 'index.html';
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const statusModal = document.getElementById('statusModal');
+            const messagesModal = document.getElementById('messagesModal');
+            
+            if (event.target === statusModal) {
+                statusModal.style.display = 'none';
+            }
+            if (event.target === messagesModal) {
+                messagesModal.style.display = 'none';
             }
         }
         
