@@ -26,15 +26,8 @@
                 <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
                 <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
                 <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
-                <button class="tab" onclick="showTab('estimations')">
-                    <i class="fas fa-calculator"></i> Estimations
-                    <span class="notification-badge" id="estimationBadge" style="display:none;">0</span>
-                </button>
-                <button class="tab" onclick="showTab('messages')">
-                    <i class="fas fa-comments"></i> Messages
-                    <span class="notification-badge" id="messageBadge" style="display:none;">0</span>
-                </button>
-                <button class="tab" onclick="showTab('subscriptions')"><i class="fas fa-credit-card"></i> Subscriptions</button>
+                <button class="tab" onclick="showTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
+                <button class="tab" onclick="showTab('messages')"><i class="fas fa-comments"></i> Messages</button>
             </nav>
         </aside>
 
@@ -61,20 +54,18 @@
                 <div id="quotes-tab" class="tab-content"></div>
                 <div id="estimations-tab" class="tab-content"></div>
                 <div id="messages-tab" class="tab-content"></div>
-                <div id="subscriptions-tab" class="tab-content"></div>
             </section>
         </main>
     </div>
 
-    <div id="pdfModal" class="modal">
+    <div id="filesModal" class="modal">
         <div class="modal-content">
              <div class="modal-header">
-                <h3>View Estimation Files</h3>
-                <button class="close" onclick="closeModal('pdfModal')">&times;</button>
+                <h3 id="filesModalTitle">Estimation Files</h3>
+                <button class="close" onclick="closeModal('filesModal')">&times;</button>
             </div>
-            <div class="pdf-viewer-container">
-                <iframe id="pdfViewer" src=""></iframe>
-            </div>
+            <div id="filesModalContent" class="files-list-container">
+                </div>
         </div>
     </div>
 
@@ -115,8 +106,8 @@
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
             if (!token) {
-                console.error("Authentication token not found.");
-                window.location.href = 'index.html'; // Redirect to login if no token
+                alert("Authentication token not found. Please log in.");
+                window.location.href = 'index.html';
                 return;
             }
             const config = {
@@ -125,12 +116,16 @@
             };
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
-                if (response.status === 401) { logout(); return; }
+                if (response.status === 401) {
+                    alert("Your session has expired or is invalid. Please log in again.");
+                    logout();
+                    return;
+                }
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: `HTTP Error: ${response.status}` }));
                     throw new Error(errorData.message);
                 }
-                 if (response.status === 204) { return null; } // Handle No Content response
+                if (response.status === 204) { return null; }
                 return await response.json();
             } catch (error) {
                 console.error(`API Call Error to ${endpoint}:`, error);
@@ -139,13 +134,12 @@
         }
 
         function initializeApp() {
+            if (!getToken()) {
+                window.location.href = 'index.html'; // Redirect if not logged in
+                return;
+            }
             loadDashboardStats();
             showTab('overview');
-        }
-
-        function refreshAllData() {
-            loadDashboardStats();
-            loadTabData(currentTab);
         }
 
         // --- UI RENDERING ---
@@ -161,7 +155,6 @@
                 dashboardData = data.data;
                 document.getElementById('adminName').textContent = dashboardData.adminUser ? dashboardData.adminUser.split('@')[0] : 'Admin';
                 renderStatsGrid(dashboardData.stats);
-                updateNotificationBadges();
             } catch (error) {
                 statsGrid.innerHTML = getErrorHtml(error.message);
             }
@@ -175,52 +168,35 @@
                 <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div><div class="stat-number">${stats.totalEstimations || 0}</div><div class="stat-label">Estimations</div></div></div>
             `;
         }
-
-        function updateNotificationBadges() {
-            const estBadge = document.getElementById('estimationBadge');
-            const msgBadge = document.getElementById('messageBadge');
-            if (dashboardData.stats?.pendingEstimations > 0) {
-                estBadge.textContent = dashboardData.stats.pendingEstimations;
-                estBadge.style.display = 'block';
-            } else { estBadge.style.display = 'none'; }
-            if (dashboardData.stats?.unreadMessages > 0) {
-                msgBadge.textContent = dashboardData.stats.unreadMessages;
-                msgBadge.style.display = 'block';
-            } else { msgBadge.style.display = 'none'; }
-        }
-
+        
         function showTab(tabName) {
             currentTab = tabName;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
             const activeTab = document.getElementById(`${tabName}-tab`);
             activeTab.classList.add('active');
             activeTab.innerHTML = getLoadingHtml();
-
             loadTabData(tabName);
         }
 
         function loadTabData(tabName) {
-             const actions = {
+            const actions = {
                 'overview': renderOverviewTab,
-                'users': () => loadAndRenderData('users-tab', '/admin/users', renderUsersTable, 'users'),
-                'jobs': () => loadAndRenderData('jobs-tab', '/jobs', renderJobsTable, 'jobs'),
-                'quotes': () => loadAndRenderData('quotes-tab', '/quotes', renderQuotesTable, 'quotes'),
+                'users': () => loadAndRenderData('users-tab', '/admin/users', renderUsersTable, 'data'),
+                'jobs': () => loadAndRenderData('jobs-tab', '/jobs', renderJobsTable, 'data'),
+                'quotes': () => loadAndRenderData('quotes-tab', '/quotes', renderQuotesTable, 'data'),
                 'estimations': () => loadAndRenderData('estimations-tab', '/estimation', renderEstimationsTable, 'estimations'),
-                'messages': () => loadAndRenderData('messages-tab', '/messages', renderMessagesList, 'conversations'),
-                'subscriptions': () => document.getElementById('subscriptions-tab').innerHTML = getNoDataHtml('Subscriptions module is not implemented.')
+                'messages': () => loadAndRenderData('messages-tab', '/messages', renderMessagesList, 'data')
             };
-            actions[tabName]();
+            if(actions[tabName]) actions[tabName]();
         }
         
         async function loadAndRenderData(containerId, endpoint, renderer, dataKey) {
             const container = document.getElementById(containerId);
             try {
                 const response = await apiCall(endpoint);
-                // Handle varied response structures
-                const items = response.data || response[dataKey] || response[`${dataKey}`.slice(0,-1) + 's'] || [];
+                const items = response[dataKey] || [];
                 if (items.length === 0) {
                     container.innerHTML = getNoDataHtml(`No ${dataKey} found.`);
                     return;
@@ -230,24 +206,14 @@
                 container.innerHTML = getErrorHtml(error.message);
             }
         }
-
+        
         function renderOverviewTab() {
             const container = document.getElementById('overview-tab');
             if (!dashboardData?.stats) {
                 container.innerHTML = getNoDataHtml('Overview data not available.');
                 return;
             }
-            container.innerHTML = `
-                <div class="success"><h3><i class="fas fa-check-circle"></i> System Status: Operational</h3></div>
-                <div class="quick-stats-container">
-                    <h3><i class="fas fa-chart-line"></i> Quick Stats</h3>
-                    <div class="quick-stats-grid">
-                        <div class="quick-stat"><strong>Active Jobs:</strong> <span>${dashboardData.stats.activeJobs || 0}</span></div>
-                        <div class="quick-stat"><strong>Completed Jobs:</strong> <span>${dashboardData.stats.completedJobs || 0}</span></div>
-                        <div class="quick-stat"><strong>Pending Estimations:</strong> <span>${dashboardData.stats.pendingEstimations || 0}</span></div>
-                        <div class="quick-stat"><strong>Active Subscriptions:</strong> <span>${dashboardData.stats.activeSubscriptions || 0}</span></div>
-                    </div>
-                </div>`;
+            container.innerHTML = `<div class="success"><h3><i class="fas fa-check-circle"></i> System Status: Operational</h3></div>`;
         }
         
         // --- TABLE RENDERERS ---
@@ -278,7 +244,7 @@
                 <td>${est.uploadedFiles?.length || 0}</td>
                 <td>${new Date(est.createdAt).toLocaleDateString()}</td>
                 <td><div class="actions">
-                    <button class="btn btn-sm btn-info" title="View PDF Files" onclick="viewEstimationPDFs('${est._id}')"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn btn-sm btn-info" title="View Files" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i></button>
                     <button class="btn btn-sm btn-success" title="Download All Files" onclick="downloadEstimationFiles('${est._id}')"><i class="fas fa-download"></i></button>
                 </div></td>
             </tr>`).join('')}
@@ -288,10 +254,7 @@
         function renderMessagesList(conversations) {
             return `<h3>Conversations (${conversations.length})</h3><div class="conversation-list">
             ${conversations.map(c => `<div class="conversation-item" onclick="viewConversation('${c.id}')">
-                <div class="conversation-header">
-                    <div class="conversation-title">${c.jobTitle || 'General Inquiry'}</div>
-                    <div class="conversation-time">${new Date(c.updatedAt.seconds * 1000).toLocaleDateString()}</div>
-                </div>
+                <div class="conversation-header"><div class="conversation-title">${c.jobTitle || 'General Inquiry'}</div><div class="conversation-time">${new Date(c.updatedAt.seconds * 1000).toLocaleDateString()}</div></div>
                 <p class="conversation-preview"><strong>Last:</strong> ${c.lastMessage || 'No messages yet'}</p>
             </div>`).join('')}
             </div>`;
@@ -300,8 +263,9 @@
         // --- FEATURE FUNCTIONS ---
         async function downloadEstimationFiles(estimationId) {
             try {
-                const estimation = await apiCall(`/estimation/${estimationId}`);
-                const files = estimation.uploadedFiles || [];
+                // CORRECTED: Fetch from the /files endpoint to get the file list.
+                const data = await apiCall(`/estimation/${estimationId}/files`);
+                const files = data.files || [];
                 if (files.length === 0) {
                     alert('No files found for this estimation.');
                     return;
@@ -315,34 +279,43 @@
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        await new Promise(resolve => setTimeout(resolve, 300)); // Stagger downloads
+                        await new Promise(resolve => setTimeout(resolve, 300));
                     }
                 }
             } catch (error) {
                 alert(`Failed to download files: ${error.message}`);
             }
         }
-
-        async function viewEstimationPDFs(estimationId) {
+        
+        async function viewEstimationFiles(estimationId) {
              try {
-                const estimation = await apiCall(`/estimation/${estimationId}`);
-                const pdfFiles = (estimation.uploadedFiles || []).filter(f => f.url && f.url.toLowerCase().endsWith('.pdf'));
-                if (pdfFiles.length === 0) {
-                    alert('No PDF files found for this estimation to view.');
-                    return;
+                const data = await apiCall(`/estimation/${estimationId}/files`);
+                const files = data.files || [];
+                const modalContent = document.getElementById('filesModalContent');
+                if (files.length === 0) {
+                    modalContent.innerHTML = getNoDataHtml('No files are attached to this estimation.');
+                } else {
+                    modalContent.innerHTML = files.map(file => `
+                        <div class="file-item">
+                            <div class="file-icon"><i class="fas fa-file-alt"></i></div>
+                            <div class="file-details">
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-size">${(file.size / 1024).toFixed(1)} KB</span>
+                            </div>
+                            <a href="${file.url}" target="_blank" download="${file.name}" class="btn btn-sm btn-info"><i class="fas fa-download"></i> Download</a>
+                        </div>
+                    `).join('');
                 }
-                // For simplicity, we'll just open the first PDF found. A more complex UI could show a list.
-                document.getElementById('pdfViewer').src = pdfFiles[0].url;
-                openModal('pdfModal');
+                openModal('filesModal');
             } catch (error) {
-                alert(`Failed to load PDF: ${error.message}`);
+                alert(`Failed to load files: ${error.message}`);
             }
         }
 
         async function viewConversation(conversationId) {
             currentConversationId = conversationId;
             openModal('messagesModal');
-            document.getElementById('messagesModalHeader').innerHTML = `<h3>Conversation</h3><div class="header-buttons"><button class="btn btn-sm btn-danger" onclick="deleteConversation('${conversationId}')"><i class="fas fa-trash"></i> Delete</button><button class="close" onclick="closeModal('messagesModal')">&times;</button></div>`;
+            document.getElementById('messagesModalHeader').innerHTML = `<h3>Conversation</h3><div class="header-buttons"><button class="btn btn-sm btn-danger" onclick="deleteConversation('${conversationId}')"><i class="fas fa-trash"></i> Delete All</button><button class="close" onclick="closeModal('messagesModal')">&times;</button></div>`;
             const contentArea = document.getElementById('messagesContent');
             contentArea.innerHTML = getLoadingHtml();
             try {
@@ -354,10 +327,10 @@
                     contentArea.innerHTML = `<div class="messages-container">${messages.map(msg => `
                         <div class="message">
                             <div class="message-header">
-                                <div><strong>${msg.senderName || 'Unknown'}</strong><span class="message-time">${new Date(msg.createdAt.seconds * 1000).toLocaleString()}</span></div>
+                                <div><strong>${msg.senderName}</strong><span class="message-time">${new Date(msg.createdAt.seconds * 1000).toLocaleString()}</span></div>
                                 <button class="btn-delete-msg" title="Delete Message" onclick="deleteMessage('${msg.id}')"><i class="fas fa-times"></i></button>
                             </div>
-                            <div class="message-text">${msg.text || ''}</div>
+                            <div class="message-text">${msg.text}</div>
                         </div>`).join('')}</div>`;
                     contentArea.querySelector('.messages-container').scrollTop = contentArea.querySelector('.messages-container').scrollHeight;
                 }
@@ -373,174 +346,32 @@
             try {
                 await apiCall(`/messages/${currentConversationId}/send`, { method: 'POST', body: JSON.stringify({ text }) });
                 input.value = '';
-                viewConversation(currentConversationId); // Refresh messages
-            } catch (error) {
-                alert(`Failed to send reply: ${error.message}`);
-            }
+                viewConversation(currentConversationId);
+            } catch (error) { alert(`Failed to send reply: ${error.message}`); }
         }
         
         async function deleteMessage(messageId) {
-            if (!confirm('Are you sure you want to permanently delete this message?')) return;
+            if (!confirm('Permanently delete this message?')) return;
             try {
                 // NOTE: This assumes your backend has a DELETE endpoint like this.
                 await apiCall(`/messages/delete/${messageId}`, { method: 'DELETE' });
                 alert('Message deleted.');
-                viewConversation(currentConversationId); // Refresh
-            } catch (error) {
-                alert(`Failed to delete message: ${error.message}.\nYour backend might not support this endpoint.`);
-            }
+                viewConversation(currentConversationId);
+            } catch (error) { alert(`Failed to delete message: ${error.message}.\nYour backend might not support this specific action.`); }
         }
         
         async function deleteConversation(conversationId) {
-            if (!confirm('Are you sure you want to permanently delete this entire conversation?')) return;
+            if (!confirm('Permanently delete this entire conversation? This cannot be undone.')) return;
             try {
                 await apiCall(`/messages/${conversationId}`, { method: 'DELETE' });
                 alert('Conversation deleted.');
                 closeModal('messagesModal');
-                loadTabData('messages'); // Refresh list
-            } catch (error) {
-                alert(`Failed to delete conversation: ${error.message}`);
-            }
+                loadTabData('messages');
+            } catch (error) { alert(`Failed to delete conversation: ${error.message}`); }
         }
         
-        // --- MODAL CONTROLS ---
         function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
     </script>
 </body>
 </html>
-admin-style.css (Updated)
-Save this in a file named admin-style.css in the same folder as your admin.html. I've added a few new styles to support the message deletion feature and ensure everything looks polished.
-
-CSS
-
-/* === VARIABLES & RESET === */
-:root {
-    --primary: #6366f1; --primary-dark: #4f46e5; --secondary: #ec4899;
-    --accent: #8b5cf6; --success: #10b981; --warning: #f59e0b;
-    --danger: #ef4444; --dark: #0f172a; --dark-secondary: #1e293b;
-    --light: #f8fafc; --glass-bg: rgba(255, 255, 255, 0.1);
-    --glass-border: rgba(255, 255, 255, 0.2); --neon-glow: 0 0 20px rgba(99, 102, 241, 0.5);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    min-height: 100vh; overflow-x: hidden; position: relative; color: var(--light);
-}
-
-/* === ANIMATED BACKGROUND === */
-.animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: gradientShift 15s ease infinite; }
-@keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-.floating-orbs { position: fixed; width: 100%; height: 100%; overflow: hidden; z-index: -1; }
-.orb { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.5; animation: float 20s infinite ease-in-out; }
-.orb1 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(99, 102, 241, 0.8) 0%, transparent 70%); top: -150px; left: -150px; animation-duration: 25s; }
-.orb2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(236, 72, 153, 0.8) 0%, transparent 70%); bottom: -200px; right: -200px; animation-duration: 30s; animation-delay: 5s; }
-
-/* === LAYOUT & MAIN COMPONENTS === */
-.container { display: flex; min-height: 100vh; backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.4); }
-.sidebar { width: 280px; background: linear-gradient(135deg, var(--glass-bg), rgba(99, 102, 241, 0.1)); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 30px 20px; display: flex; flex-direction: column; }
-.main-content { flex: 1; padding: 30px; overflow-y: auto; max-height: 100vh; }
-.logo-container { text-align: center; margin-bottom: 40px; }
-.logo { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, #bdc3c7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.logo-subtitle { color: rgba(255, 255, 255, 0.7); font-size: 12px; text-transform: uppercase; letter-spacing: 3px; }
-.nav-menu { flex: 1; margin-top: 20px; }
-.tab { display: flex; align-items: center; padding: 15px 20px; margin-bottom: 10px; color: rgba(255, 255, 255, 0.8); border: none; background: none; width: 100%; text-align: left; cursor: pointer; border-radius: 15px; transition: all 0.3s; position: relative; font-size: 14px; }
-.tab:hover { background: rgba(99, 102, 241, 0.2); color: white; transform: translateX(10px); box-shadow: var(--neon-glow); }
-.tab.active { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4); }
-.tab i { margin-right: 15px; font-size: 18px; width: 20px; text-align: center; }
-.notification-badge { position: absolute; top: 10px; right: 20px; background: var(--danger); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; }
-.header { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px 30px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-.header h1 { color: white; font-size: 28px; display: flex; align-items: center; gap: 15px; }
-.header-actions { display: flex; gap: 15px; align-items: center; }
-.admin-badge { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); color: white; padding: 10px 20px; border-radius: 50px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-.btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; color: white; padding: 10px 20px; border-radius: 50px; cursor: pointer; font-size: 14px; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
-.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
-.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.btn-success { background: linear-gradient(135deg, #10b981, #059669); }
-.btn-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-
-/* === GRIDS & SECTIONS === */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 30px; }
-.stat-card { background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; display: flex; align-items: center; gap: 20px; transition: all 0.3s; }
-.stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); }
-.stat-icon { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; flex-shrink: 0; }
-.stat-icon.users { background: linear-gradient(135deg, #667eea, #764ba2); }
-.stat-icon.jobs { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.stat-icon.quotes { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-.stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
-.stat-number { font-size: 28px; font-weight: 800; color: white; }
-.stat-label { color: rgba(255, 255, 255, 0.7); font-size: 14px; text-transform: uppercase; }
-.section { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px; }
-.section h2, .section h3 { color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
-.tab-content { display: none; } .tab-content.active { display: block; animation: fadeIn 0.5s; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.quick-stats-container { margin-top: 30px; }
-.quick-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-.quick-stat { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; color: white; }
-
-/* === TABLES & BADGES === */
-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 15px; overflow: hidden; }
-th { background: rgba(99, 102, 241, 0.2); font-weight: 600; text-align: left; padding: 15px; font-size: 14px; text-transform: uppercase; }
-td { padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-tr:hover { background: rgba(99, 102, 241, 0.1); }
-.actions { display: flex; gap: 8px; }
-.status-badge, .user-type { padding: 6px 12px; border-radius: 20px; font-size: 11px; text-transform: uppercase; }
-.status-badge.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-.status-badge.open, .status-badge.active { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.status-badge.completed { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
-.status-badge.rejected, .status-badge.cancelled { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.user-type.contractor { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.user-type.designer { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-
-/* === MODALS === */
-.modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); }
-.modal-content { background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(255, 255, 255, 0.1); margin: 5% auto; padding: 30px; border-radius: 20px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-.modal-header h3 { font-size: 24px; margin: 0; }
-.modal-header .header-buttons { display: flex; align-items: center; gap: 15px; }
-.close { color: rgba(255, 255, 255, 0.6); font-size: 32px; cursor: pointer; background: none; border: none; }
-.close:hover { color: white; }
-.pdf-viewer-container { margin-top: 20px; }
-#pdfViewer { width: 100%; height: 500px; border: 1px solid var(--glass-border); border-radius: 10px; background: white; }
-.conversation-list { max-height: 500px; overflow-y: auto; }
-.conversation-item { background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; }
-.conversation-item:hover { background: rgba(99, 102, 241, 0.1); transform: translateX(5px); }
-.conversation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.conversation-title { font-weight: 600; }
-.conversation-time { font-size: 12px; color: rgba(255, 255, 255, 0.5); }
-.conversation-preview { color: rgba(255, 255, 255, 0.7); font-size: 14px; }
-.messages-container { max-height: 400px; overflow-y: auto; background: rgba(0, 0, 0, 0.2); border-radius: 15px; padding: 20px; margin: 20px 0; }
-.message { margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 15px; border-left: 3px solid var(--primary); }
-.message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--primary); }
-.message-time { font-size: 11px; color: rgba(255, 255, 255, 0.5); margin-left: 10px; }
-.btn-delete-msg { background: none; border: none; color: rgba(255, 255, 255, 0.4); cursor: pointer; transition: color 0.3s; font-size: 14px; }
-.btn-delete-msg:hover { color: var(--danger); }
-.message-reply-box { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-.message-input { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); border-radius: 10px; color: white; margin-bottom: 15px; resize: vertical; min-height: 80px; }
-
-/* === UTILITY & STATES === */
-.loading, .no-data { text-align: center; padding: 60px; color: rgba(255, 255, 255, 0.7); }
-.spinner { width: 50px; height: 50px; border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 20px; border-radius: 15px; }
-.success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; padding: 20px; border-radius: 15px; }
-
-/* === SCROLLBAR & RESPONSIVE === */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-::-webkit-scrollbar-thumb { background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 10px; }
-@media (max-width: 768px) {
-    .sidebar { position: fixed; left: -280px; z-index: 2000; height: 100vh; }
-    .main-content { padding: 20px; }
-    .header { flex-direction: column; gap: 15px; }
-    .stats-grid { grid-template-columns: 1fr; }
-    .modal-content { width: 95%; }
-}
-
-
-
-
-
-
