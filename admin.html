@@ -224,11 +224,11 @@
         .tabs {
             display: flex;
             margin-bottom: 40px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(233, 236, 239, 0.5); /* Lighter background */
             border-radius: 15px;
             padding: 8px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             overflow-x: auto;
             gap: 5px;
         }
@@ -274,7 +274,7 @@
         }
 
         .tab:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.8);
             color: #495057;
             transform: translateY(-1px);
         }
@@ -299,119 +299,6 @@
             }
         }
 
-        /* Continue with remaining CSS... */
-        /* (This is Part 1 - HTML structure and basic CSS) */
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>
-                <i class="fas fa-tachometer-alt"></i>
-                Admin Dashboard
-            </h1>
-            <div class="header-actions">
-                <div class="admin-badge" id="adminBadge">
-                    <i class="fas fa-user-shield"></i>
-                    <span id="adminName">Loading...</span>
-                </div>
-                <button class="btn btn-danger" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
-                </button>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="stats-grid" id="statsGrid">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading dashboard statistics...</p>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="section">
-            <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
-            
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('overview')">
-                    <i class="fas fa-home"></i> Overview
-                </button>
-                <button class="tab" onclick="showTab('users')">
-                    <i class="fas fa-users"></i> Users
-                </button>
-                <button class="tab" onclick="showTab('jobs')">
-                    <i class="fas fa-briefcase"></i> Jobs
-                </button>
-                <button class="tab" onclick="showTab('quotes')">
-                    <i class="fas fa-file-invoice-dollar"></i> Quotes
-                </button>
-                <button class="tab" onclick="showTab('estimations')">
-                    <i class="fas fa-calculator"></i> Estimations
-                </button>
-                <button class="tab" onclick="showTab('messages')">
-                    <i class="fas fa-comments"></i> Messages
-                </button>
-                <button class="tab" onclick="showTab('subscriptions')">
-                    <i class="fas fa-credit-card"></i> Subscriptions
-                </button>
-            </div>
-            
-            <!-- Tab Contents -->
-            <div id="overview-tab" class="tab-content active">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading overview data...</p>
-                </div>
-            </div>
-            
-            <div id="users-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading users data...</p>
-                </div>
-            </div>
-            
-            <div id="jobs-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading jobs data...</p>
-                </div>
-            </div>
-            
-            <div id="quotes-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading quotes data...</p>
-                </div>
-            </div>
-            
-            <div id="estimations-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading estimations data...</p>
-                </div>
-            </div>
-            
-            <div id="messages-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading messages data...</p>
-                </div>
-            </div>
-            
-            <div id="subscriptions-tab" class="tab-content">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading subscriptions data...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <style>
         /* === ENHANCED SECTION HEADERS === */
         .section-header {
             display: flex;
@@ -619,18 +506,7 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(23, 162, 184, 0.4);
         }
-
-        .btn-download {
-            background: linear-gradient(135deg, #6f42c1, #563d7c);
-            color: white;
-            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
-        }
-
-        .btn-download:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(111, 66, 193, 0.4);
-        }
-
+        
         /* === ACTION GROUPS === */
         .action-group {
             display: flex;
@@ -707,19 +583,7 @@
             color: white;
             box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
         }
-
-        .status-badge.replied {
-            background: linear-gradient(135deg, #6f42c1, #563d7c);
-            color: white;
-            box-shadow: 0 2px 10px rgba(111, 66, 193, 0.3);
-        }
-
-        .status-badge.archived {
-            background: linear-gradient(135deg, #6c757d, #495057);
-            color: white;
-            box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
-        }
-
+        
         .type-badge {
             padding: 4px 12px;
             border-radius: 15px;
@@ -793,7 +657,7 @@
             border: 1px solid rgba(220, 53, 69, 0.2);
             color: #dc3545;
         }
-
+        
         .error i {
             font-size: 48px;
             margin-bottom: 20px;
@@ -833,117 +697,7 @@
             color: #6c757d;
             font-size: 12px;
         }
-
-        /* === RESPONSIVE DESIGN === */
-        @media (max-width: 1024px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header {
-                padding: 15px 20px;
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-            }
-            
-            .section {
-                padding: 25px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .section-header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-            
-            .header-actions {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-            
-            .tabs {
-                flex-direction: column;
-                padding: 0;
-                background: none;
-                border: none;
-            }
-            
-            .tab {
-                border-radius: 0;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-                justify-content: center;
-            }
-            
-            .tab.active {
-                transform: none;
-            }
-            
-            .data-table {
-                font-size: 12px;
-            }
-            
-            .data-table th,
-            .data-table td {
-                padding: 10px 8px;
-            }
-            
-            .action-group {
-                flex-direction: column;
-                gap: 5px;
-            }
-            
-            .btn-sm {
-                padding: 6px 12px;
-                font-size: 11px;
-            }
-        }
-    </style>
-
-    <!-- Enhanced Modals -->
-    <div id="statusModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Update Status</h3>
-                <span class="close" onclick="closeModal('statusModal')">&times;</span>
-            </div>
-            <form id="statusForm">
-                <div style="padding: 30px;">
-                    <div class="form-group">
-                        <label for="statusSelect">Status:</label>
-                        <select id="statusSelect" required>
-                            <option value="pending">Pending</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="statusNotes">Notes (Optional):</label>
-                        <textarea id="statusNotes" placeholder="Add any notes..."></textarea>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('statusModal')">Cancel</button>
-                    <button type="submit" class="btn btn-success">Update Status</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <style>
+        
         /* === MODAL STYLES === */
         .modal {
             display: none;
@@ -955,6 +709,12 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal-content {
@@ -969,6 +729,12 @@
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(31, 38, 135, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.18);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1064,7 +830,170 @@
             border-top: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 0 0 20px 20px;
         }
+
+        /* === RESPONSIVE DESIGN === */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 15px;
+            }
+            .header {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
+            .section {
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .section-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .header-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .tabs {
+                padding: 5px;
+            }
+            .tab {
+                justify-content: center;
+            }
+            .data-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            .action-group {
+                flex-direction: row; /* Keep actions horizontal if possible */
+            }
+        }
     </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-tachometer-alt"></i>
+                Admin Dashboard
+            </h1>
+            <div class="header-actions">
+                <div class="admin-badge" id="adminBadge">
+                    <i class="fas fa-user-shield"></i>
+                    <span id="adminName">Loading...</span>
+                </div>
+                <button class="btn btn-danger" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading dashboard statistics...</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('overview')">
+                    <i class="fas fa-home"></i> Overview
+                </button>
+                <button class="tab" onclick="showTab('users')">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="tab" onclick="showTab('jobs')">
+                    <i class="fas fa-briefcase"></i> Jobs
+                </button>
+                <button class="tab" onclick="showTab('quotes')">
+                    <i class="fas fa-file-invoice-dollar"></i> Quotes
+                </button>
+                <button class="tab" onclick="showTab('estimations')">
+                    <i class="fas fa-calculator"></i> Estimations
+                </button>
+                <button class="tab" onclick="showTab('messages')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
+                <button class="tab" onclick="showTab('subscriptions')">
+                    <i class="fas fa-credit-card"></i> Subscriptions
+                </button>
+            </div>
+            
+            <div id="overview-tab" class="tab-content active">
+                </div>
+            
+            <div id="users-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading users data...</p></div>
+            </div>
+            
+            <div id="jobs-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading jobs data...</p></div>
+            </div>
+            
+            <div id="quotes-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading quotes data...</p></div>
+            </div>
+            
+            <div id="estimations-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading estimations data...</p></div>
+            </div>
+            
+            <div id="messages-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading messages data...</p></div>
+            </div>
+            
+            <div id="subscriptions-tab" class="tab-content">
+                <div class="loading"><div class="spinner"></div><p>Loading subscriptions data...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Status</h3>
+                <span class="close" onclick="closeModal('statusModal')">&times;</span>
+            </div>
+            <form id="statusForm">
+                <div style="padding: 30px;">
+                    <div class="form-group">
+                        <label for="statusSelect">Status:</label>
+                        <select id="statusSelect" required>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="statusNotes">Notes (Optional):</label>
+                        <textarea id="statusNotes" placeholder="Add any notes..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('statusModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         console.log('🗂️ SteelConnect Admin Dashboard loaded');
         
@@ -1076,9 +1005,9 @@
         let estimationsData = [];
         let messagesData = [];
         let subscriptionsData = [];
-        let currentEstimationId = null;
-        let currentMessageId = null;
-        
+        let currentItemId = null;
+        let currentItemType = '';
+
         // Get authentication token
         function getToken() {
             return localStorage.getItem('adminToken') || 
@@ -1103,11 +1032,6 @@
                 ...options
             };
             
-            // Handle FormData for file uploads
-            if (options.body instanceof FormData) {
-                delete config.headers['Content-Type'];
-            }
-            
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
                 
@@ -1125,7 +1049,7 @@
                         const errorJson = JSON.parse(errorText);
                         errorMessage = errorJson.message || errorMessage;
                     } catch (e) {
-                        // Use default error message
+                       // Use default error message
                     }
                     throw new Error(errorMessage);
                 }
@@ -1141,7 +1065,6 @@
 
         // Enhanced showNotification with better styling
         function showNotification(message, type = 'info') {
-            // Remove existing notifications
             const existing = document.querySelectorAll('.notification');
             existing.forEach(n => n.remove());
 
@@ -1183,28 +1106,24 @@
         async function loadDashboardStats() {
             try {
                 console.log('📊 Loading dashboard statistics...');
-                showNotification('Loading dashboard data...', 'info');
-                
                 const data = await apiCall('/admin/dashboard');
                 dashboardData = data.data || data;
                 
                 console.log('✅ Dashboard data loaded:', dashboardData);
                 
-                // Update admin name
                 const adminName = document.getElementById('adminName');
                 if (adminName && (dashboardData.adminUser || dashboardData.user)) {
                     const userName = dashboardData.adminUser || dashboardData.user?.name || dashboardData.user?.email;
                     adminName.textContent = userName.split('@')[0];
                 }
                 
-                // Render stats cards
                 renderStatsGrid(dashboardData.stats || dashboardData);
-                showNotification('Dashboard loaded successfully!', 'success');
+                renderOverviewTab(); // Re-render overview tab with fresh data
                 
             } catch (error) {
                 console.error('❌ Error loading dashboard:', error);
                 document.getElementById('statsGrid').innerHTML = `
-                    <div class="error">
+                    <div class="error" style="grid-column: 1 / -1;">
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Failed to load dashboard</h3>
                         <p>${error.message}</p>
@@ -1217,1517 +1136,396 @@
             }
         }
         
-        // Render stats grid with improved design
+        // Render stats grid
         function renderStatsGrid(stats) {
             const statsGrid = document.getElementById('statsGrid');
-            
-            const defaultStats = {
-                totalUsers: 0,
-                contractors: 0,
-                designers: 0,
-                totalJobs: 0,
-                totalQuotes: 0,
-                totalEstimations: 0,
-                totalSubscriptions: 0,
-                totalMessages: 0
-            };
-            
-            const finalStats = { ...defaultStats, ...stats };
+            const finalStats = { totalUsers: 0, contractors: 0, designers: 0, totalJobs: 0, totalQuotes: 0, totalEstimations: 0, totalSubscriptions: 0, totalMessages: 0, ...stats };
             
             statsGrid.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-icon users">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalUsers || 0}</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon contractors">
-                        <i class="fas fa-hard-hat"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.contractors || 0}</div>
-                    <div class="stat-label">Contractors</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon designers">
-                        <i class="fas fa-drafting-compass"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.designers || 0}</div>
-                    <div class="stat-label">Designers</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon jobs">
-                        <i class="fas fa-briefcase"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalJobs || 0}</div>
-                    <div class="stat-label">Total Jobs</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon quotes">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalQuotes || 0}</div>
-                    <div class="stat-label">Total Quotes</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon estimations">
-                        <i class="fas fa-calculator"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalEstimations || 0}</div>
-                    <div class="stat-label">Estimations</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon subscriptions">
-                        <i class="fas fa-credit-card"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalSubscriptions || 0}</div>
-                    <div class="stat-label">Subscriptions</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon messages">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <div class="stat-number">${finalStats.totalMessages || 0}</div>
-                    <div class="stat-label">Messages</div>
-                </div>
+                <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${finalStats.totalUsers}</div><div class="stat-label">Total Users</div></div>
+                <div class="stat-card"><div class="stat-icon contractors"><i class="fas fa-hard-hat"></i></div><div class="stat-number">${finalStats.contractors}</div><div class="stat-label">Contractors</div></div>
+                <div class="stat-card"><div class="stat-icon designers"><i class="fas fa-drafting-compass"></i></div><div class="stat-number">${finalStats.designers}</div><div class="stat-label">Designers</div></div>
+                <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${finalStats.totalJobs}</div><div class="stat-label">Total Jobs</div></div>
+                <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${finalStats.totalQuotes}</div><div class="stat-label">Total Quotes</div></div>
+                <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${finalStats.totalEstimations}</div><div class="stat-label">Estimations</div></div>
+                <div class="stat-card"><div class="stat-icon subscriptions"><i class="fas fa-credit-card"></i></div><div class="stat-number">${finalStats.totalSubscriptions}</div><div class="stat-label">Subscriptions</div></div>
+                <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${finalStats.totalMessages}</div><div class="stat-label">Messages</div></div>
             `;
+        }
+
+        // Centralized Tab Loader
+        const tabLoaders = {
+            'users': { load: loadUsersData, render: renderUsersTab, data: () => usersData },
+            'jobs': { load: loadJobsData, render: renderJobsTab, data: () => jobsData },
+            'quotes': { load: loadQuotesData, render: renderQuotesTab, data: () => quotesData },
+            'estimations': { load: loadEstimationsData, render: renderEstimationsTab, data: () => estimationsData },
+            'messages': { load: loadMessagesData, render: renderMessagesTab, data: () => messagesData },
+            'subscriptions': { load: loadSubscriptionsData, render: renderSubscriptionsTab, data: () => subscriptionsData },
+            'overview': { load: () => {}, render: renderOverviewTab, data: () => [{}] },
+        };
+        
+        // Show tab function
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`[onclick*="showTab('${tabName}')"]`).classList.add('active');
+
+            const loader = tabLoaders[tabName];
+            if (loader) {
+                if (loader.data().length === 0) {
+                    loader.load();
+                } else {
+                    loader.render();
+                }
+            }
         }
         
-        // Enhanced show tab function
-        function showTab(tabName) {
-            // Hide all tab contents
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Remove active class from all tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab content
-            const targetTab = document.getElementById(`${tabName}-tab`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            
-            // Add active class to clicked tab
-            const clickedTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
-            if (clickedTab) {
-                clickedTab.classList.add('active');
-            }
-            
-            // Load data if needed
-            try {
-                switch(tabName) {
-                    case 'users':
-                        if (usersData.length === 0) loadUsersData();
-                        else renderUsersTab();
-                        break;
-                    case 'jobs':
-                        if (jobsData.length === 0) loadJobsData();
-                        else renderJobsTab();
-                        break;
-                    case 'quotes':
-                        if (quotesData.length === 0) loadQuotesData();
-                        else renderQuotesTab();
-                        break;
-                    case 'estimations':
-                        if (estimationsData.length === 0) loadEstimationsData();
-                        else renderEstimationsTab();
-                        break;
-                    case 'messages':
-                        if (messagesData.length === 0) loadMessagesData();
-                        else renderMessagesTab();
-                        break;
-                    case 'subscriptions':
-                        if (subscriptionsData.length === 0) loadSubscriptionsData();
-                        else renderSubscriptionsTab();
-                        break;
-                    case 'overview':
-                        renderOverviewTab();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Error loading ${tabName} tab:`, error);
-                showNotification(`Failed to load ${tabName} data`, 'error');
-            }
-        }
-
+        // Render Overview Tab
         function renderOverviewTab() {
-            const overviewTab = document.getElementById('overview-tab');
-            
-            overviewTab.innerHTML = `
+            document.getElementById('overview-tab').innerHTML = `
                 <div class="section-header">
                     <h3><i class="fas fa-home"></i> Dashboard Overview</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadDashboardStats()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
+                    <button class="btn btn-primary" onclick="loadDashboardStats()"><i class="fas fa-sync-alt"></i> Refresh Stats</button>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-top: 30px;">
-                    <div class="stat-card">
-                        <div class="stat-icon active">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="stat-number">98%</div>
-                        <div class="stat-label">System Uptime</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon completed">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div class="stat-number">Normal</div>
-                        <div class="stat-label">Server Status</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon users">
-                            <i class="fas fa-database"></i>
-                        </div>
-                        <div class="stat-number">Connected</div>
-                        <div class="stat-label">Database Status</div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 40px;">
-                    <h4 style="margin-bottom: 20px; color: #2c3e50; font-size: 20px; font-weight: 600;">
-                        <i class="fas fa-bell"></i> Recent Activity
-                    </h4>
-                    <div style="background: rgba(255,255,255,0.7); padding: 30px; border-radius: 15px; border: 1px solid rgba(0,0,0,0.05);">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                <i class="fas fa-user-plus"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: 600; color: #2c3e50;">New user registered</div>
-                                <div style="font-size: 14px; color: #6c757d;">2 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                <i class="fas fa-file-alt"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: 600; color: #2c3e50;">New quote request submitted</div>
-                                <div style="font-size: 14px; color: #6c757d;">15 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #17a2b8, #138496); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                <i class="fas fa-calculator"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: 600; color: #2c3e50;">Estimation completed</div>
-                                <div style="font-size: 14px; color: #6c757d;">1 hour ago</div>
-                            </div>
-                        </div>
-                    </div>
+                <p>Welcome to the SteelConnect Admin Dashboard. From here you can manage all aspects of the platform.</p>
+                `;
+        }
+        
+        // Generic Error/NoData Renderer
+        function renderErrorState(tabId, message, onRetry) {
+            document.getElementById(tabId).innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Failed to load data</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="${onRetry}">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
                 </div>
             `;
         }
 
-        // Enhanced data loading functions
+        function renderNoDataState(tabId, title, text, onRetry) {
+             document.getElementById(tabId).innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-folder-open"></i>
+                    <h3>${title}</h3>
+                    <p>${text}</p>
+                    <button class="btn btn-primary" onclick="${onRetry}">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            `;
+        }
+
+        // Data Loading Functions
         async function loadUsersData() {
             try {
-                console.log('👥 Loading users data...');
                 const data = await apiCall('/admin/users');
                 usersData = data.users || data.data || data || [];
-                console.log('✅ Users data loaded:', usersData.length, 'users');
                 renderUsersTab();
-                showNotification(`Loaded ${usersData.length} users`, 'success');
             } catch (error) {
-                console.error('❌ Error loading users:', error);
-                document.getElementById('users-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load users</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Joined</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${usersData.map(user => `
-                                <tr>
-                                    <td>
-                                        <div class="user-info">
-                                            <strong>${user.name || (user.firstName + ' ' + (user.lastName || '')) || 'N/A'}</strong>
-                                            <small>${user.company || user.companyName || 'No company'}</small>
-                                        </div>
-                                    </td>
-                                    <td>${user.email}</td>
-                                    <td><span class="type-badge ${user.type || user.role || 'user'}">${(user.type || user.role || 'user').toUpperCase()}</span></td>
-                                    <td><span class="status-badge ${user.isActive !== false ? 'active' : 'inactive'}">${user.isActive !== false ? 'Active' : 'Inactive'}</span></td>
-                                    <td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id || user.id}')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id || user.id}', ${user.isActive === false})" title="${user.isActive !== false ? 'Deactivate' : 'Activate'}">
-                                                <i class="fas fa-${user.isActive !== false ? 'ban' : 'check'}"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+                renderErrorState('users-tab', error.message, 'loadUsersData()');
+            }
+        }
+
+        async function loadJobsData() {
+            try {
+                const data = await apiCall('/admin/jobs');
+                jobsData = data.jobs || data.data || data || [];
+                renderJobsTab();
+            } catch (error) {
+                renderErrorState('jobs-tab', error.message, 'loadJobsData()');
+            }
+        }
+        
+        async function loadQuotesData() {
+            try {
+                const data = await apiCall('/admin/quotes');
+                quotesData = data.quotes || data.data || data || [];
+                renderQuotesTab();
+            } catch (error) {
+                renderErrorState('quotes-tab', error.message, 'loadQuotesData()');
+            }
+        }
+
+        async function loadEstimationsData() {
+            try {
+                const data = await apiCall('/admin/estimations');
+                estimationsData = data.estimations || data.data || data || [];
+                renderEstimationsTab();
+            } catch (error) {
+                renderErrorState('estimations-tab', error.message, 'loadEstimationsData()');
+            }
+        }
+
+        async function loadMessagesData() {
+            try {
+                const data = await apiCall('/admin/messages');
+                messagesData = data.messages || data.data || data || [];
+                renderMessagesTab();
+            } catch (error) {
+                renderErrorState('messages-tab', error.message, 'loadMessagesData()');
+            }
+        }
+
+        async function loadSubscriptionsData() {
+            try {
+                const data = await apiCall('/admin/subscriptions');
+                subscriptionsData = data.subscriptions || data.data || data || [];
+                renderSubscriptionsTab();
+            } catch (error) {
+                renderErrorState('subscriptions-tab', error.message, 'loadSubscriptionsData()');
+            }
+        }
+
+        // Render Functions (Corrected and Completed)
+        function renderUsersTab() {
+            const tab = document.getElementById('users-tab');
+            if (!usersData || usersData.length === 0) {
+                renderNoDataState('users-tab', 'No Users Found', 'Registered users will appear here.', 'loadUsersData()');
+                return;
+            }
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3><button class="btn btn-primary" onclick="loadUsersData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody>
+                ${usersData.map(user => `
+                    <tr>
+                        <td><div class="user-info"><strong>${user.name || (user.firstName + ' ' + (user.lastName || '')) || 'N/A'}</strong><small>${user.company || user.companyName || 'No company'}</small></div></td>
+                        <td>${user.email}</td>
+                        <td><span class="type-badge ${user.type || user.role || 'user'}">${(user.type || user.role || 'user').toUpperCase()}</span></td>
+                        <td><span class="status-badge ${user.isActive !== false ? 'active' : 'inactive'}">${user.isActive !== false ? 'Active' : 'Inactive'}</span></td>
+                        <td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id || user.id}')" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id || user.id}', ${user.isActive === false})" title="${user.isActive !== false ? 'Deactivate' : 'Activate'}"><i class="fas fa-${user.isActive !== false ? 'ban' : 'check'}"></i></button>
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
 
         function renderJobsTab() {
-            const jobsTab = document.getElementById('jobs-tab');
-            
+            const tab = document.getElementById('jobs-tab');
             if (!jobsData || jobsData.length === 0) {
-                jobsTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-briefcase"></i>
-                        <h3>No jobs found</h3>
-                        <p>Jobs will appear here once projects are initiated.</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
+                renderNoDataState('jobs-tab', 'No Jobs Found', 'Jobs will appear here once projects are initiated.', 'loadJobsData()');
                 return;
             }
-            
-            jobsTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-briefcase"></i> All Jobs (${jobsData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Client</th>
-                                <th>Contractor</th>
-                                <th>Status</th>
-                                <th>Budget</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${jobsData.map(job => `
-                                <tr>
-                                    <td>
-                                        <div class="project-info">
-                                            <strong>${job.title || job.projectTitle || 'Untitled Job'}</strong>
-                                            <small>${job.category || job.type || 'General'}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="client-info">
-                                            <strong>${job.clientName || job.client?.name || 'N/A'}</strong>
-                                            <small>${job.clientEmail || job.client?.email || 'N/A'}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="contractor-info">
-                                            <strong>${job.contractorName || job.contractor?.name || 'Unassigned'}</strong>
-                                            <small>${job.contractorEmail || job.contractor?.email || 'N/A'}</small>
-                                        </div>
-                                    </td>
-                                    <td><span class="status-badge ${job.status || 'pending'}">${(job.status || 'pending').toUpperCase()}</span></td>
-                                    <td>${job.budget ? 'ersData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load users: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.jobs || data.data || data || [];
-                renderJobsTab();
-                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load jobs</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load jobs: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                console.log('📄 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.quotes || data.data || data || [];
-                renderQuotesTab();
-                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load quotes</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load quotes: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || data || [];
-                renderEstimationsTab();
-                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load estimations</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load estimations: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || data.data || data || [];
-                renderMessagesTab();
-                showNotification(`Loaded ${messagesData.length} messages`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load messages</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load messages: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.subscriptions || data.data || data || [];
-                renderSubscriptionsTab();
-                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load subscriptions</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
-            }
-        }
-
-        // Render functions
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (!usersData || usersData.length === 0) {
-                usersTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-users"></i>
-                        <h3>No users found</h3>
-                        <p>Registered users will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            usersTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadUs + job.budget.toLocaleString() : 'N/A'}</td>
-                                    <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${job._id || job.id}', 'job')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-warning" onclick="updateStatus('${job._id || job.id}', 'job')" title="Update Status">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-briefcase"></i> All Jobs (${jobsData.length})</h3><button class="btn btn-primary" onclick="loadJobsData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Title</th><th>Client</th><th>Contractor</th><th>Status</th><th>Budget</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+                ${jobsData.map(job => `
+                    <tr>
+                        <td><div class="project-info"><strong>${job.title || job.projectTitle || 'Untitled Job'}</strong><small>${job.category || job.type || 'General'}</small></div></td>
+                        <td><div class="client-info"><strong>${job.clientName || job.client?.name || 'N/A'}</strong><small>${job.clientEmail || job.client?.email || 'N/A'}</small></div></td>
+                        <td><div class="contractor-info"><strong>${job.contractorName || job.contractor?.name || 'Unassigned'}</strong><small>${job.contractorEmail || job.contractor?.email || 'N/A'}</small></div></td>
+                        <td><span class="status-badge ${job.status || 'pending'}">${(job.status || 'pending').replace('-', ' ').toUpperCase()}</span></td>
+                        <td>${job.budget ? `$${job.budget.toLocaleString()}` : 'N/A'}</td>
+                        <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewDetails('${job._id || job.id}', 'job')" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${job._id || job.id}', 'job')" title="Update Status"><i class="fas fa-edit"></i></button>
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
 
         function renderQuotesTab() {
-            const quotesTab = document.getElementById('quotes-tab');
-            
+            const tab = document.getElementById('quotes-tab');
             if (!quotesData || quotesData.length === 0) {
-                quotesTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                        <h3>No quotes found</h3>
-                        <p>Quote requests will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
+                renderNoDataState('quotes-tab', 'No Quotes Found', 'Quote requests from users will appear here.', 'loadQuotesData()');
                 return;
             }
-            
-            quotesTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-file-invoice-dollar"></i> All Quotes (${quotesData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Quote #</th>
-                                <th>Client</th>
-                                <th>Project</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${quotesData.map(quote => `
-                                <tr>
-                                    <td><strong>#${quote.quoteNumber || (quote._id || quote.id)?.slice(-6) || 'N/A'}</strong></td>
-                                    <td>
-                                        <div class="client-info">
-                                            <strong>${quote.clientName || quote.client?.name || 'N/A'}</strong>
-                                            <small>${quote.clientEmail || quote.client?.email || 'N/A'}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="project-info">
-                                            <strong>${quote.projectTitle || quote.title || 'Untitled Project'}</strong>
-                                            <small>${quote.projectType || quote.category || 'General'}</small>
-                                        </div>
-                                    </td>
-                                    <td>${quote.amount ? 'ersData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load users: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.jobs || data.data || data || [];
-                renderJobsTab();
-                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load jobs</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load jobs: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                console.log('📄 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.quotes || data.data || data || [];
-                renderQuotesTab();
-                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load quotes</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load quotes: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || data || [];
-                renderEstimationsTab();
-                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load estimations</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load estimations: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || data.data || data || [];
-                renderMessagesTab();
-                showNotification(`Loaded ${messagesData.length} messages`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load messages</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load messages: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.subscriptions || data.data || data || [];
-                renderSubscriptionsTab();
-                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load subscriptions</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
-            }
-        }
-
-        // Render functions
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (!usersData || usersData.length === 0) {
-                usersTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-users"></i>
-                        <h3>No users found</h3>
-                        <p>Registered users will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            usersTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadUs + quote.amount.toLocaleString() : 'Pending'}</td>
-                                    <td><span class="status-badge ${quote.status || 'pending'}">${(quote.status || 'pending').toUpperCase()}</span></td>
-                                    <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${quote._id || quote.id}', 'quote')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-warning" onclick="updateStatus('${quote._id || quote.id}', 'quote')" title="Update Status">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-file-invoice-dollar"></i> All Quotes (${quotesData.length})</h3><button class="btn btn-primary" onclick="loadQuotesData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Quote #</th><th>Client</th><th>Project</th><th>Amount</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+                ${quotesData.map(quote => `
+                    <tr>
+                        <td><strong>#${quote.quoteNumber || (quote._id || quote.id)?.slice(-6) || 'N/A'}</strong></td>
+                        <td><div class="client-info"><strong>${quote.clientName || quote.client?.name || 'N/A'}</strong><small>${quote.clientEmail || quote.client?.email || 'N/A'}</small></div></td>
+                        <td><div class="project-info"><strong>${quote.projectTitle || quote.title || 'Untitled Project'}</strong><small>${quote.projectType || quote.category || 'General'}</small></div></td>
+                        <td>${quote.amount ? `$${quote.amount.toLocaleString()}` : 'Pending'}</td>
+                        <td><span class="status-badge ${quote.status || 'pending'}">${(quote.status || 'pending').toUpperCase()}</span></td>
+                        <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewDetails('${quote._id || quote.id}', 'quote')" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${quote._id || quote.id}', 'quote')" title="Update Status"><i class="fas fa-edit"></i></button>
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
 
         function renderEstimationsTab() {
-            const estimationsTab = document.getElementById('estimations-tab');
-            
-            if (!estimationsData || estimationsData.length === 0) {
-                estimationsTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-calculator"></i>
-                        <h3>No estimations found</h3>
-                        <p>Estimation requests will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
+            const tab = document.getElementById('estimations-tab');
+             if (!estimationsData || estimationsData.length === 0) {
+                renderNoDataState('estimations-tab', 'No Estimations Found', 'Estimation requests from contractors will appear here.', 'loadEstimationsData()');
                 return;
             }
-            
-            estimationsTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-calculator"></i> All Estimations (${estimationsData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Project Title</th>
-                                <th>Contractor</th>
-                                <th>Status</th>
-                                <th>Files</th>
-                                <th>Amount</th>
-                                <th>Submitted</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${estimationsData.map(estimation => `
-                                <tr>
-                                    <td>
-                                        <div class="project-info">
-                                            <strong>${estimation.projectTitle || estimation.title || 'Untitled'}</strong>
-                                            <small>${estimation.projectType || estimation.category || 'General'}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="contractor-info">
-                                            <strong>${estimation.contractorName || estimation.contractor?.name || 'Unknown'}</strong>
-                                            <small>${estimation.contractorEmail || estimation.contractor?.email || 'N/A'}</small>
-                                        </div>
-                                    </td>
-                                    <td><span class="status-badge ${estimation.status || 'pending'}">${(estimation.status || 'pending').toUpperCase()}</span></td>
-                                    <td>${estimation.uploadedFiles?.length || estimation.files?.length || 0} files</td>
-                                    <td>${(estimation.estimatedAmount || estimation.amount) ? 'ersData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load users: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.jobs || data.data || data || [];
-                renderJobsTab();
-                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load jobs</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load jobs: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                console.log('📄 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.quotes || data.data || data || [];
-                renderQuotesTab();
-                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load quotes</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load quotes: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || data || [];
-                renderEstimationsTab();
-                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load estimations</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load estimations: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || data.data || data || [];
-                renderMessagesTab();
-                showNotification(`Loaded ${messagesData.length} messages`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load messages</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load messages: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.subscriptions || data.data || data || [];
-                renderSubscriptionsTab();
-                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load subscriptions</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
-            }
-        }
-
-        // Render functions
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (!usersData || usersData.length === 0) {
-                usersTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-users"></i>
-                        <h3>No users found</h3>
-                        <p>Registered users will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            usersTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadUs + (estimation.estimatedAmount || estimation.amount).toLocaleString() : 'Pending'}</td>
-                                    <td>${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${estimation._id || estimation.id}', 'estimation')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-primary" onclick="updateEstimationStatus('${estimation._id || estimation.id}')" title="Update Status">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-calculator"></i> All Estimations (${estimationsData.length})</h3><button class="btn btn-primary" onclick="loadEstimationsData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>Project Title</th><th>Contractor</th><th>Status</th><th>Files</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>
+                ${estimationsData.map(est => `
+                    <tr>
+                        <td><div class="project-info"><strong>${est.projectTitle || est.title || 'Untitled'}</strong><small>${est.projectType || est.category || 'General'}</small></div></td>
+                        <td><div class="contractor-info"><strong>${est.contractorName || est.contractor?.name || 'Unknown'}</strong><small>${est.contractorEmail || est.contractor?.email || 'N/A'}</small></div></td>
+                        <td><span class="status-badge ${est.status || 'pending'}">${(est.status || 'pending').toUpperCase()}</span></td>
+                        <td>${est.uploadedFiles?.length || est.files?.length || 0} files</td>
+                        <td>${(est.estimatedAmount || est.amount) ? `$${(est.estimatedAmount || est.amount).toLocaleString()}` : 'Pending'}</td>
+                        <td>${est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewDetails('${est._id || est.id}', 'estimation')" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${est._id || est.id}', 'estimation')" title="Update Status"><i class="fas fa-edit"></i></button>
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
 
         function renderMessagesTab() {
-            const messagesTab = document.getElementById('messages-tab');
-            
+            const tab = document.getElementById('messages-tab');
             if (!messagesData || messagesData.length === 0) {
-                messagesTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-comments"></i>
-                        <h3>No messages found</h3>
-                        <p>User messages will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
+                renderNoDataState('messages-tab', 'No Messages Found', 'User messages from the contact form will appear here.', 'loadMessagesData()');
                 return;
             }
-            
-            messagesTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-comments"></i> Messages (${messagesData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>From</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Received</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${messagesData.map(message => `
-                                <tr>
-                                    <td>
-                                        <div class="user-info">
-                                            <strong>${message.senderName || message.name || 'Unknown Sender'}</strong>
-                                            <small>${message.senderEmail || message.email || 'No email'}</small>
-                                        </div>
-                                    </td>
-                                    <td>${message.subject || message.title || 'No Subject'}</td>
-                                    <td><span class="status-badge ${message.status || 'unread'}">${(message.status || 'unread').toUpperCase()}</span></td>
-                                    <td>${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${message._id || message.id}', 'message')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-primary" onclick="replyToMessage('${message._id || message.id}')" title="Reply">
-                                                <i class="fas fa-reply"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-warning" onclick="markAsRead('${message._id || message.id}')" title="Mark as Read">
-                                                <i class="fas fa-envelope-open"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-comments"></i> Messages (${messagesData.length})</h3><button class="btn btn-primary" onclick="loadMessagesData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>From</th><th>Subject</th><th>Status</th><th>Received</th><th>Actions</th></tr></thead><tbody>
+                ${messagesData.map(msg => `
+                    <tr>
+                        <td><div class="user-info"><strong>${msg.senderName || msg.name || 'Unknown'}</strong><small>${msg.senderEmail || msg.email || 'No email'}</small></div></td>
+                        <td>${msg.subject || msg.title || 'No Subject'}</td>
+                        <td><span class="status-badge ${msg.status || 'unread'}">${(msg.status || 'unread').toUpperCase()}</span></td>
+                        <td>${msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewDetails('${msg._id || msg.id}', 'message')" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="markAsRead('${msg._id || msg.id}')" title="Mark as Read"><i class="fas fa-envelope-open"></i></button>
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
 
         function renderSubscriptionsTab() {
-            const subscriptionsTab = document.getElementById('subscriptions-tab');
-            
+            const tab = document.getElementById('subscriptions-tab');
             if (!subscriptionsData || subscriptionsData.length === 0) {
-                subscriptionsTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-credit-card"></i>
-                        <h3>No subscriptions found</h3>
-                        <p>User subscriptions will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
+                renderNoDataState('subscriptions-tab', 'No Subscriptions Found', 'User subscriptions will appear here.', 'loadSubscriptionsData()');
                 return;
             }
-            
-            subscriptionsTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-credit-card"></i> Subscriptions (${subscriptionsData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Status</th>
-                                <th>Started</th>
-                                <th>Next Billing</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${subscriptionsData.map(sub => `
-                                <tr>
-                                    <td>
-                                        <div class="user-info">
-                                            <strong>${sub.userName || sub.user?.name || 'N/A'}</strong>
-                                            <small>${sub.userEmail || sub.user?.email || 'N/A'}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="project-info">
-                                            <strong>${sub.planName || sub.plan?.name || 'N/A'}</strong>
-                                            <small>${sub.planPrice ? 'ersData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load users: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.jobs || data.data || data || [];
-                renderJobsTab();
-                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load jobs</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load jobs: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                console.log('📄 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.quotes || data.data || data || [];
-                renderQuotesTab();
-                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load quotes</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load quotes: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || data || [];
-                renderEstimationsTab();
-                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load estimations</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load estimations: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || data.data || data || [];
-                renderMessagesTab();
-                showNotification(`Loaded ${messagesData.length} messages`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load messages</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load messages: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.subscriptions || data.data || data || [];
-                renderSubscriptionsTab();
-                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load subscriptions</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
-            }
-        }
-
-        // Render functions
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (!usersData || usersData.length === 0) {
-                usersTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-users"></i>
-                        <h3>No users found</h3>
-                        <p>Registered users will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            usersTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadUs + sub.planPrice : 'N/A'}/${sub.planInterval || 'month'}</small>
-                                        </div>
-                                    </td>
-                                    <td><span class="status-badge ${sub.status || 'active'}">${(sub.status || 'active').toUpperCase()}</span></td>
-                                    <td>${sub.startDate ? new Date(sub.startDate).toLocaleDateString() : (sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A')}</td>
-                                    <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${sub._id || sub.id}', 'subscription')" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            ${sub.status === 'active' ? `
-                                                <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id || sub.id}')" title="Cancel">
-                                                    <i class="fas fa-ban"></i>
-                                                </button>
-                                            ` : ''}
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+            tab.innerHTML = `
+                <div class="section-header"><h3><i class="fas fa-credit-card"></i> Subscriptions (${subscriptionsData.length})</h3><button class="btn btn-primary" onclick="loadSubscriptionsData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+                <div class="table-container"><table class="data-table"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Started</th><th>Next Billing</th><th>Actions</th></tr></thead><tbody>
+                ${subscriptionsData.map(sub => `
+                    <tr>
+                        <td><div class="user-info"><strong>${sub.userName || sub.user?.name || 'N/A'}</strong><small>${sub.userEmail || sub.user?.email || 'N/A'}</small></div></td>
+                        <td><div class="project-info"><strong>${sub.planName || sub.plan?.name || 'N/A'}</strong><small>${sub.planPrice ? `$${sub.planPrice}` : 'N/A'}/${sub.planInterval || 'month'}</small></div></td>
+                        <td><span class="status-badge ${sub.status || 'active'}">${(sub.status || 'active').toUpperCase()}</span></td>
+                        <td>${sub.startDate ? new Date(sub.startDate).toLocaleDateString() : (sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A')}</td>
+                        <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
+                        <td><div class="action-group">
+                            <button class="btn btn-sm btn-info" onclick="viewDetails('${sub._id || sub.id}', 'subscription')" title="View Details"><i class="fas fa-eye"></i></button>
+                            ${sub.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="cancelSubscription('${sub._id || sub.id}')" title="Cancel"><i class="fas fa-ban"></i></button>` : ''}
+                        </div></td>
+                    </tr>
+                `).join('')}
+                </tbody></table></div>
             `;
         }
-
-        // Generic action functions
-        function viewDetails(id, type) {
-            showNotification(`Loading ${type} details...`, 'info');
-        }
-
-        function updateStatus(id, type) {
-            currentEstimationId = id;
-            document.getElementById('statusModal').style.display = 'block';
-        }
-
-        function updateEstimationStatus(id) {
-            currentEstimationId = id;
-            document.getElementById('statusModal').style.display = 'block';
-        }
-
-        function viewUserDetails(id) {
-            showNotification('Loading user details...', 'info');
-        }
-
-        function toggleUserStatus(id, newStatus) {
-            showNotification(`${newStatus ? 'Activating' : 'Deactivating'} user...`, 'info');
-        }
-
-        function replyToMessage(id) {
-            showNotification('Reply functionality coming soon...', 'info');
-        }
-
-        function markAsRead(id) {
-            showNotification('Message marked as read', 'success');
-        }
-
-        function cancelSubscription(id) {
-            if (confirm('Are you sure you want to cancel this subscription?')) {
-                showNotification('Subscription cancelled', 'success');
-            }
-        }
-
+        
         // Modal functions
+        function openStatusModal(id, type) {
+            currentItemId = id;
+            currentItemType = type;
+            document.getElementById('statusModal').style.display = 'block';
+        }
+
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) modal.style.display = 'none';
         }
 
+        // Generic action functions
+        function viewDetails(id, type) { showNotification(`Viewing details for ${type} #${id.slice(-6)}...`, 'info'); }
+        function viewUserDetails(id) { showNotification(`Viewing details for user #${id.slice(-6)}...`, 'info'); }
+        function toggleUserStatus(id, newStatus) { showNotification(`${newStatus ? 'Activating' : 'Deactivating'} user...`, 'info'); }
+        function markAsRead(id) { showNotification('Message marked as read', 'success'); }
+        function cancelSubscription(id) { if (confirm('Are you sure you want to cancel this subscription?')) { showNotification('Subscription cancelled', 'success'); }}
+
         // Logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                console.log('Logging out admin...');
                 localStorage.clear();
                 sessionStorage.clear();
                 showNotification('Logged out successfully', 'success');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1000);
+                setTimeout(() => { window.location.href = 'index.html'; }, 1000);
             }
         }
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing admin dashboard...');
-            
-            const token = getToken();
-            
-            if (!token) {
-                console.log('No authentication token found, redirecting to login...');
+            if (!getToken()) {
                 showNotification('Please log in to access the admin panel', 'error');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 2000);
+                setTimeout(() => { window.location.href = 'index.html'; }, 2000);
                 return;
             }
             
-            console.log('Authentication token found, loading dashboard...');
-            showNotification('Welcome to SteelConnect Admin Panel!', 'success');
+            showNotification('Welcome to the SteelConnect Admin Panel!', 'success');
             loadDashboardStats();
             
-            // Set up auto-refresh every 5 minutes
             setInterval(() => {
                 if (document.visibilityState === 'visible') {
+                    console.log("Auto-refreshing stats...");
                     loadDashboardStats();
                 }
-            }, 5 * 60 * 1000);
+            }, 5 * 60 * 1000); // 5 minutes
         });
 
         // Modal event handlers
         window.onclick = function(event) {
-            const modals = ['statusModal'];
-            modals.forEach(modalId => {
-                const modal = document.getElementById(modalId);
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
+            const modal = document.getElementById('statusModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
         }
 
         // Status form handler
-        const statusForm = document.getElementById('statusForm');
-        if (statusForm) {
-            statusForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
+        document.getElementById('statusForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const status = document.getElementById('statusSelect').value;
+            const notes = document.getElementById('statusNotes').value;
+            
+            try {
+                showNotification(`Updating ${currentItemType} status...`, 'info');
+                // Dummy API call for demonstration. Replace with actual call:
+                // await apiCall(`/admin/${currentItemType}s/${currentItemId}/status`, {
+                //     method: 'PUT',
+                //     body: JSON.stringify({ status, notes })
+                // });
+                console.log(`Updating ${currentItemType} ${currentItemId} to ${status} with notes: ${notes}`);
+
+                closeModal('statusModal');
+                showNotification('Status updated successfully!', 'success');
                 
-                const status = document.getElementById('statusSelect').value;
-                const notes = document.getElementById('statusNotes').value;
-                
-                try {
-                    showNotification('Updating status...', 'info');
-                    // API call would go here
-                    closeModal('statusModal');
-                    showNotification('Status updated successfully!', 'success');
-                    
-                } catch (error) {
-                    console.error('Error updating status:', error);
-                    showNotification(`Failed to update status: ${error.message}`, 'error');
+                // Refresh the relevant tab's data
+                const tabName = `${currentItemType}s`;
+                if (tabLoaders[tabName]) {
+                    tabLoaders[tabName].load();
                 }
-            });
-        }
+
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showNotification(`Failed to update status: ${error.message}`, 'error');
+            }
+        });
+
     </script>
 </body>
-</html>ersData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load users: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.jobs || data.data || data || [];
-                renderJobsTab();
-                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load jobs</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadJobsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load jobs: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                console.log('📄 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.quotes || data.data || data || [];
-                renderQuotesTab();
-                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load quotes</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadQuotesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load quotes: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || data || [];
-                renderEstimationsTab();
-                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load estimations</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load estimations: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || data.data || data || [];
-                renderMessagesTab();
-                showNotification(`Loaded ${messagesData.length} messages`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load messages</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load messages: ${error.message}`, 'error');
-            }
-        }
-
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.subscriptions || data.data || data || [];
-                renderSubscriptionsTab();
-                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to load subscriptions</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
-                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
-            }
-        }
-
-        // Render functions
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (!usersData || usersData.length === 0) {
-                usersTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-users"></i>
-                        <h3>No users found</h3>
-                        <p>Registered users will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadUsersData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            usersTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadUs
+</html>
