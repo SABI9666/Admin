@@ -82,13 +82,11 @@
     </div>
     
     <script>
-        // --- CONFIGURATION ---
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
         let dashboardData = {};
         let currentTab = 'overview';
         let currentConversationId = null;
 
-        // --- CORE FUNCTIONS ---
         document.addEventListener('DOMContentLoaded', initializeApp);
 
         function getToken() {
@@ -135,14 +133,13 @@
 
         function initializeApp() {
             if (!getToken()) {
-                window.location.href = 'index.html'; // Redirect if not logged in
+                window.location.href = 'index.html';
                 return;
             }
             loadDashboardStats();
             showTab('overview');
         }
 
-        // --- UI RENDERING ---
         function getLoadingHtml() { return '<div class="loading"><div class="spinner"></div><p>Loading data...</p></div>'; }
         function getErrorHtml(message) { return `<div class="error">Failed to load data: ${message}</div>`; }
         function getNoDataHtml(message) { return `<div class="no-data">${message}</div>`; }
@@ -197,11 +194,7 @@
             try {
                 const response = await apiCall(endpoint);
                 const items = response[dataKey] || [];
-                if (items.length === 0) {
-                    container.innerHTML = getNoDataHtml(`No ${dataKey} found.`);
-                    return;
-                }
-                container.innerHTML = renderer(items);
+                container.innerHTML = items.length === 0 ? getNoDataHtml(`No ${dataKey} found.`) : renderer(items);
             } catch (error) {
                 container.innerHTML = getErrorHtml(error.message);
             }
@@ -209,14 +202,9 @@
         
         function renderOverviewTab() {
             const container = document.getElementById('overview-tab');
-            if (!dashboardData?.stats) {
-                container.innerHTML = getNoDataHtml('Overview data not available.');
-                return;
-            }
             container.innerHTML = `<div class="success"><h3><i class="fas fa-check-circle"></i> System Status: Operational</h3></div>`;
         }
         
-        // --- TABLE RENDERERS ---
         function renderUsersTable(users) {
             return `<h3>All Users (${users.length})</h3><table><thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Joined</th></tr></thead><tbody>
             ${users.map(u => `<tr><td><strong>${u.name}</strong></td><td>${u.email}</td><td><span class="user-type ${u.type}">${u.type}</span></td><td>${new Date(u.createdAt).toLocaleDateString()}</td></tr>`).join('')}
@@ -244,8 +232,7 @@
                 <td>${est.uploadedFiles?.length || 0}</td>
                 <td>${new Date(est.createdAt).toLocaleDateString()}</td>
                 <td><div class="actions">
-                    <button class="btn btn-sm btn-info" title="View Files" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i></button>
-                    <button class="btn btn-sm btn-success" title="Download All Files" onclick="downloadEstimationFiles('${est._id}')"><i class="fas fa-download"></i></button>
+                    <button class="btn btn-sm btn-info" title="View & Download Files" onclick="viewEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i></button>
                 </div></td>
             </tr>`).join('')}
             </tbody></table>`;
@@ -259,36 +246,10 @@
             </div>`).join('')}
             </div>`;
         }
-
-        // --- FEATURE FUNCTIONS ---
-        async function downloadEstimationFiles(estimationId) {
-            try {
-                // CORRECTED: Fetch from the /files endpoint to get the file list.
-                const data = await apiCall(`/estimation/${estimationId}/files`);
-                const files = data.files || [];
-                if (files.length === 0) {
-                    alert('No files found for this estimation.');
-                    return;
-                }
-                alert(`Starting download for ${files.length} file(s).`);
-                for (const file of files) {
-                    if (file.url) {
-                        const link = document.createElement('a');
-                        link.href = file.url;
-                        link.download = file.name || 'downloaded-file';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                    }
-                }
-            } catch (error) {
-                alert(`Failed to download files: ${error.message}`);
-            }
-        }
         
         async function viewEstimationFiles(estimationId) {
              try {
+                // CORRECTED: Fetches all files, not just PDFs.
                 const data = await apiCall(`/estimation/${estimationId}/files`);
                 const files = data.files || [];
                 const modalContent = document.getElementById('filesModalContent');
@@ -302,7 +263,7 @@
                                 <span class="file-name">${file.name}</span>
                                 <span class="file-size">${(file.size / 1024).toFixed(1)} KB</span>
                             </div>
-                            <a href="${file.url}" target="_blank" download="${file.name}" class="btn btn-sm btn-info"><i class="fas fa-download"></i> Download</a>
+                            <a href="${file.url}" target="_blank" download="${file.name}" class="btn btn-sm btn-success"><i class="fas fa-download"></i> Download</a>
                         </div>
                     `).join('');
                 }
@@ -353,11 +314,10 @@
         async function deleteMessage(messageId) {
             if (!confirm('Permanently delete this message?')) return;
             try {
-                // NOTE: This assumes your backend has a DELETE endpoint like this.
                 await apiCall(`/messages/delete/${messageId}`, { method: 'DELETE' });
                 alert('Message deleted.');
                 viewConversation(currentConversationId);
-            } catch (error) { alert(`Failed to delete message: ${error.message}.\nYour backend might not support this specific action.`); }
+            } catch (error) { alert(`Failed to delete message: ${error.message}.\nNote: This requires a specific backend API endpoint.`); }
         }
         
         async function deleteConversation(conversationId) {
