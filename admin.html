@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteelConnect - Admin Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="admin.css">
+</style>
 </head>
 <body>
     <div class="animated-bg"></div>
@@ -16,16 +9,26 @@
     </div>
 
     <div class="container">
+        <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="logo-container">
                 <div class="logo">STEELCONNECT</div>
                 <div class="logo-subtitle">Admin Portal</div>
             </div>
+
             <nav class="nav-menu">
-                <button class="tab active" onclick="showTab('overview')"><i class="fas fa-home"></i> Overview</button>
-                <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
-                <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
-                <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
+                <button class="tab active" onclick="showTab('overview')">
+                    <i class="fas fa-home"></i> Overview
+                </button>
+                <button class="tab" onclick="showTab('users')">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="tab" onclick="showTab('jobs')">
+                    <i class="fas fa-briefcase"></i> Jobs
+                </button>
+                <button class="tab" onclick="showTab('quotes')">
+                    <i class="fas fa-file-invoice-dollar"></i> Quotes
+                </button>
                 <button class="tab" onclick="showTab('estimations')">
                     <i class="fas fa-calculator"></i> Estimations
                     <span class="notification-badge" id="estimationBadge" style="display:none;">0</span>
@@ -34,43 +37,103 @@
                     <i class="fas fa-comments"></i> Messages
                     <span class="notification-badge" id="messageBadge" style="display:none;">0</span>
                 </button>
-                <button class="tab" onclick="showTab('subscriptions')"><i class="fas fa-credit-card"></i> Subscriptions</button>
+                <button class="tab" onclick="showTab('subscriptions')">
+                    <i class="fas fa-credit-card"></i> Subscriptions
+                </button>
             </nav>
         </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
+            <!-- Header -->
             <div class="header">
-                <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+                <h1>
+                    <i class="fas fa-tachometer-alt"></i>
+                    Admin Dashboard
+                </h1>
                 <div class="header-actions">
                     <div class="admin-badge">
                         <i class="fas fa-user-shield"></i>
                         <span id="adminName">Admin</span>
                     </div>
-                    <button class="btn btn-danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button class="btn btn-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
                 </div>
             </div>
 
+            <!-- Stats Grid -->
             <div class="stats-grid" id="statsGrid">
-                <div class="loading"><div class="spinner"></div><p>Loading dashboard statistics...</p></div>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading dashboard statistics...</p>
+                </div>
             </div>
 
+            <!-- Main Section -->
             <div class="section">
                 <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
-                <div id="overview-tab" class="tab-content active"><div class="loading"><div class="spinner"></div><p>Loading overview data...</p></div></div>
-                <div id="users-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading users data...</p></div></div>
-                <div id="jobs-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading jobs data...</p></div></div>
-                <div id="quotes-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading quotes data...</p></div></div>
-                <div id="estimations-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading estimations data...</p></div></div>
-                <div id="messages-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading messages data...</p></div></div>
-                <div id="subscriptions-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading subscriptions data...</p></div></div>
+                
+                <!-- Tab Contents -->
+                <div id="overview-tab" class="tab-content active">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading overview data...</p>
+                    </div>
+                </div>
+                
+                <div id="users-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading users data...</p>
+                    </div>
+                </div>
+                
+                <div id="jobs-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading jobs data...</p>
+                    </div>
+                </div>
+                
+                <div id="quotes-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading quotes data...</p>
+                    </div>
+                </div>
+                
+                <div id="estimations-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading estimations data...</p>
+                    </div>
+                </div>
+                
+                <div id="messages-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading messages data...</p>
+                    </div>
+                </div>
+                
+                <div id="subscriptions-tab" class="tab-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading subscriptions data...</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
+    <!-- Floating Action Button -->
     <div class="fab" onclick="refreshAllData()">
         <i class="fas fa-sync-alt"></i>
     </div>
 
+    <!-- PDF Viewer Modal -->
     <div id="pdfModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -81,10 +144,16 @@
                 <div class="pdf-viewer-header">
                     <h4 id="pdfFileName">Document</h4>
                     <div class="pdf-viewer-controls">
-                        <button class="btn btn-sm" onclick="previousPDF()"><i class="fas fa-arrow-left"></i> Previous</button>
-                        <span id="pdfPageInfo">1 / 1</span>
-                        <button class="btn btn-sm" onclick="nextPDF()">Next <i class="fas fa-arrow-right"></i></button>
-                        <button class="btn btn-info btn-sm" onclick="downloadCurrentPDF()"><i class="fas fa-download"></i> Download</button>
+                        <button class="btn btn-sm" onclick="previousPDF()">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </button>
+                        <span id="pdfPageInfo" style="color: white; margin: 0 15px;">1 / 1</span>
+                        <button class="btn btn-sm" onclick="nextPDF()">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="downloadCurrentPDF()">
+                            <i class="fas fa-download"></i> Download
+                        </button>
                     </div>
                 </div>
                 <iframe id="pdfViewer" src=""></iframe>
@@ -92,6 +161,7 @@
         </div>
     </div>
 
+    <!-- Messages Modal -->
     <div id="messagesModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -99,24 +169,30 @@
                 <button class="close" onclick="closeModal('messagesModal')">&times;</button>
             </div>
             <div id="messagesContent">
-                <div class="loading"><div class="spinner"></div><p>Loading messages...</p></div>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
             </div>
             <div class="message-reply-box" id="replyBox" style="display:none;">
                 <textarea class="message-input" id="replyMessage" placeholder="Type your message here..."></textarea>
-                <button class="btn btn-success" onclick="sendReply()"><i class="fas fa-paper-plane"></i> Send Reply</button>
+                <button class="btn btn-success" onclick="sendReply()">
+                    <i class="fas fa-paper-plane"></i> Send Reply
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Status Update Modal -->
     <div id="statusModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Update Estimation Status</h3>
+                <h3>Update Status</h3>
                 <button class="close" onclick="closeModal('statusModal')">&times;</button>
             </div>
             <form id="statusForm">
                 <div class="form-group">
-                    <label for="statusSelect">New Status:</label>
+                    <label for="statusSelect">Status:</label>
                     <select id="statusSelect" required>
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
@@ -129,7 +205,7 @@
                     <label for="statusNotes">Notes (Optional):</label>
                     <textarea id="statusNotes" placeholder="Add any notes about this status change..."></textarea>
                 </div>
-                <div class="form-actions">
+                <div style="text-align: right; margin-top: 20px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('statusModal')">Cancel</button>
                     <button type="submit" class="btn btn-success">Update Status</button>
                 </div>
@@ -147,36 +223,44 @@
         let currentConversationId = null;
         let currentEstimationId = null;
 
-        // Get authentication token from localStorage or sessionStorage
+        // Get authentication token
         function getToken() {
-            return localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+            return localStorage.getItem('adminToken') || 
+                   localStorage.getItem('token') || 
+                   sessionStorage.getItem('adminToken');
         }
 
-        // Make an authenticated API call
+        // Make authenticated API call
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
+            
             if (!token) {
-                // Redirect to login if no token is found
-                window.location.href = 'index.html'; 
+                window.location.href = 'index.html';
                 return;
             }
-
+            
             const config = {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
                 ...options
             };
-
+            
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
-                if (response.status === 401) { // Handle unauthorized access
+                
+                if (response.status === 401) {
                     localStorage.clear();
                     sessionStorage.clear();
                     window.location.href = 'index.html';
                     return;
                 }
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
+                
                 return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
@@ -184,320 +268,2639 @@
             }
         }
 
-        // Load main dashboard statistics
+        // Load dashboard stats
         async function loadDashboardStats() {
             try {
                 const data = await apiCall('/admin/dashboard');
                 dashboardData = data.data;
-                document.getElementById('adminName').textContent = dashboardData.adminUser ? dashboardData.adminUser.split('@')[0] : 'Admin';
+                
+                // Update admin name
+                document.getElementById('adminName').textContent = 
+                    dashboardData.adminUser ? dashboardData.adminUser.split('@')[0] : 'Admin';
+                
+                // Render stats
                 renderStatsGrid(dashboardData.stats);
+                
+                // Update badges
                 updateNotificationBadges();
+                
             } catch (error) {
-                document.getElementById('statsGrid').innerHTML = '<div class="error">Failed to load dashboard statistics.</div>';
+                console.error('Error loading dashboard:', error);
+                document.getElementById('statsGrid').innerHTML = 
+                    '<div class="error">Failed to load dashboard</div>';
             }
         }
 
-        // Render the main stats grid with animations
+        // Render stats grid
         function renderStatsGrid(stats) {
             const statsGrid = document.getElementById('statsGrid');
+            
             statsGrid.innerHTML = `
-                <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-content"><div class="stat-number">${stats.totalUsers || 0}</div><div class="stat-label">Total Users</div></div></div>
-                <div class="stat-card"><div class="stat-icon contractors"><i class="fas fa-hard-hat"></i></div><div class="stat-content"><div class="stat-number">${stats.contractors || 0}</div><div class="stat-label">Contractors</div></div></div>
-                <div class="stat-card"><div class="stat-icon designers"><i class="fas fa-drafting-compass"></i></div><div class="stat-content"><div class="stat-number">${stats.designers || 0}</div><div class="stat-label">Designers</div></div></div>
-                <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-content"><div class="stat-number">${stats.totalJobs || 0}</div><div class="stat-label">Total Jobs</div></div></div>
-                <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-content"><div class="stat-number">${stats.totalQuotes || 0}</div><div class="stat-label">Total Quotes</div></div></div>
-                <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-content"><div class="stat-number">${stats.totalEstimations || 0}</div><div class="stat-label">Estimations</div></div></div>
-                <div class="stat-card"><div class="stat-icon subscriptions"><i class="fas fa-credit-card"></i></div><div class="stat-content"><div class="stat-number">${stats.totalSubscriptions || 0}</div><div class="stat-label">Subscriptions</div></div></div>
-                <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-content"><div class="stat-number">${stats.totalMessages || 0}</div><div class="stat-label">Messages</div></div></div>
+                <div class="stat-card">
+                    <div class="stat-icon users">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalUsers || 0}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon contractors">
+                        <i class="fas fa-hard-hat"></i>
+                    </div>
+                    <div class="stat-number">${stats.contractors || 0}</div>
+                    <div class="stat-label">Contractors</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon designers">
+                        <i class="fas fa-drafting-compass"></i>
+                    </div>
+                    <div class="stat-number">${stats.designers || 0}</div>
+                    <div class="stat-label">Designers</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon jobs">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalJobs || 0}</div>
+                    <div class="stat-label">Total Jobs</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon quotes">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalQuotes || 0}</div>
+                    <div class="stat-label">Total Quotes</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon estimations">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalEstimations || 0}</div>
+                    <div class="stat-label">Estimations</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon subscriptions">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalSubscriptions || 0}</div>
+                    <div class="stat-label">Subscriptions</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon messages">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-number">${stats.totalMessages || 0}</div>
+                    <div class="stat-label">Messages</div>
+                </div>
             `;
+
+            // Animate stats
             animateStats();
         }
 
-        // Animate the numbers in the stats cards
+        // Animate stats numbers
         function animateStats() {
             document.querySelectorAll('.stat-number').forEach(element => {
-                const target = parseInt(element.textContent, 10);
+                const target = parseInt(element.textContent);
                 let current = 0;
-                const increment = Math.max(1, target / 50);
+                const increment = target / 50;
                 const timer = setInterval(() => {
                     current += increment;
                     if (current >= target) {
-                        element.textContent = target;
+                        current = target;
                         clearInterval(timer);
-                    } else {
-                        element.textContent = Math.floor(current);
                     }
-                }, 20);
+                    element.textContent = Math.floor(current);
+                }, 30);
             });
         }
-        
-        // Update notification badges for new messages and estimations
+
+        // Update notification badges
         function updateNotificationBadges() {
-            const estimationBadge = document.getElementById('estimationBadge');
+            // Update estimation badge
             if (dashboardData.stats?.pendingEstimations > 0) {
-                estimationBadge.textContent = dashboardData.stats.pendingEstimations;
-                estimationBadge.style.display = 'inline-block';
-            } else {
-                estimationBadge.style.display = 'none';
+                const badge = document.getElementById('estimationBadge');
+                badge.textContent = dashboardData.stats.pendingEstimations;
+                badge.style.display = 'block';
             }
             
-            const messageBadge = document.getElementById('messageBadge');
+            // Update message badge
             if (dashboardData.stats?.unreadMessages > 0) {
-                messageBadge.textContent = dashboardData.stats.unreadMessages;
-                messageBadge.style.display = 'inline-block';
-            } else {
-                messageBadge.style.display = 'none';
+                const badge = document.getElementById('messageBadge');
+                badge.textContent = dashboardData.stats.unreadMessages;
+                badge.style.display = 'block';
             }
         }
-        
-        // Handle tab switching and loading data for the selected tab
+
+        // Show tab
         function showTab(tabName) {
+            // Update active tab
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
             
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
             document.getElementById(`${tabName}-tab`).classList.add('active');
             
             currentTab = tabName;
             
+            // Load tab data
             switch(tabName) {
-                case 'overview': renderOverviewTab(); break;
-                case 'users': loadUsersData(); break;
-                case 'jobs': loadJobsData(); break;
-                case 'quotes': loadQuotesData(); break;
-                case 'estimations': loadEstimationsData(); break;
-                case 'messages': loadMessagesData(); break;
-                case 'subscriptions': loadSubscriptionsData(); break;
+                case 'overview':
+                    renderOverviewTab();
+                    break;
+                case 'users':
+                    loadUsersData();
+                    break;
+                case 'jobs':
+                    loadJobsData();
+                    break;
+                case 'quotes':
+                    loadQuotesData();
+                    break;
+                case 'estimations':
+                    loadEstimationsData();
+                    break;
+                case 'messages':
+                    loadMessagesData();
+                    break;
+                case 'subscriptions':
+                    loadSubscriptionsData();
+                    break;
             }
         }
 
-        // Render the content for the overview tab
+        // Render overview tab
         function renderOverviewTab() {
-            document.getElementById('overview-tab').innerHTML = `
-                <div class="success"><h3><i class="fas fa-check-circle"></i> System Status: All Systems Operational</h3><p>Your SteelConnect admin panel is running smoothly.</p></div>
-                <div class="quick-stats-container">
+            const overviewTab = document.getElementById('overview-tab');
+            
+            overviewTab.innerHTML = `
+                <div class="success">
+                    <h3><i class="fas fa-check-circle"></i> System Status: All Systems Operational</h3>
+                    <p>Your SteelConnect admin panel is running smoothly.</p>
+                </div>
+                
+                <div style="margin-top: 30px;">
                     <h3><i class="fas fa-chart-line"></i> Quick Stats</h3>
-                    <div class="quick-stats-grid">
-                        <div class="quick-stat"><strong style="color: #6366f1;">Active Jobs:</strong> <span>${dashboardData.stats?.activeJobs || 0}</span></div>
-                        <div class="quick-stat"><strong style="color: #22c55e;">Completed Jobs:</strong> <span>${dashboardData.stats?.completedJobs || 0}</span></div>
-                        <div class="quick-stat"><strong style="color: #f59e0b;">Pending Estimations:</strong> <span>${dashboardData.stats?.pendingEstimations || 0}</span></div>
-                        <div class="quick-stat"><strong style="color: #ec4899;">Active Subscriptions:</strong> <span>${dashboardData.stats?.activeSubscriptions || 0}</span></div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                            <strong style="color: #6366f1;">Active Jobs:</strong> 
+                            <span style="color: white;">${dashboardData.stats?.activeJobs || 0}</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                            <strong style="color: #22c55e;">Completed Jobs:</strong> 
+                            <span style="color: white;">${dashboardData.stats?.completedJobs || 0}</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                            <strong style="color: #f59e0b;">Pending Estimations:</strong> 
+                            <span style="color: white;">${dashboardData.stats?.pendingEstimations || 0}</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                            <strong style="color: #ec4899;">Active Subscriptions:</strong> 
+                            <span style="color: white;">${dashboardData.stats?.activeSubscriptions || 0}</span>
+                        </div>
                     </div>
-                </div>`;
+                </div>
+            `;
         }
-        
-        // Load and render estimations data
+
+        // Load estimations data
         async function loadEstimationsData() {
-            const estimationsTab = document.getElementById('estimations-tab');
             try {
                 const data = await apiCall('/estimation');
                 const estimations = data.estimations || [];
-                if (estimations.length === 0) {
-                    estimationsTab.innerHTML = '<div class="no-data"><i class="fas fa-folder-open"></i>No estimations found.</div>';
-                    return;
-                }
-                estimationsTab.innerHTML = `
-                    <h3><i class="fas fa-calculator"></i> All Estimations (${estimations.length})</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Amount</th><th>Date</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                ${estimations.map(est => `
-                                    <tr>
-                                        <td><strong>${est.projectTitle || 'Untitled'}</strong></td>
-                                        <td>${est.contractorName || 'N/A'}</td>
-                                        <td><span class="status-badge ${est.status}">${est.status}</span></td>
-                                        <td>${est.uploadedFiles?.length || 0} file(s)</td>
-                                        <td>${est.estimatedAmount ? `₹${est.estimatedAmount.toLocaleString()}` : 'Pending'}</td>
-                                        <td>${new Date(est.createdAt).toLocaleDateString()}</td>
-                                        <td>
-                                            <div class="actions">
-                                                <button class="btn btn-sm btn-info" onclick="viewEstimationPDF('${est._id}')"><i class="fas fa-file-pdf"></i> View Files</button>
-                                                <button class="btn btn-sm" onclick="openStatusModal('${est._id}', '${est.status}')"><i class="fas fa-edit"></i> Update</button>
-                                            </div>
-                                        </td>
-                                    </tr>`).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
+                renderEstimationsTab(estimations);
             } catch (error) {
-                estimationsTab.innerHTML = `<div class="error">Failed to load estimations: ${error.message}</div>`;
+                document.getElementById('estimations-tab').innerHTML = 
+                    '<div class="error">Failed to load estimations</div>';
             }
         }
-        
-        // Load and display PDF files for an estimation
+
+        // Render estimations tab
+        function renderEstimationsTab(estimations) {
+            const estimationsTab = document.getElementById('estimations-tab');
+            
+            if (estimations.length === 0) {
+                estimationsTab.innerHTML = '<div class="no-data">No estimations found</div>';
+                return;
+            }
+            
+            estimationsTab.innerHTML = `
+                <h3><i class="fas fa-calculator"></i> All Estimations (${estimations.length})</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Contractor</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estimations.map(est => `
+                            <tr>
+                                <td><strong>${est.projectTitle || 'Untitled'}</strong></td>
+                                <td>${est.contractorName || 'Unknown'}</td>
+                                <td><span class="status-badge ${est.status}">${est.status}</span></td>
+                                <td>${est.uploadedFiles?.length || 0} files</td>
+                                <td>${est.estimatedAmount ? '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Ultra Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* === VARIABLES & RESET === */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-secondary: #1e293b;
+            --light: #f8fafc;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --neon-glow: 0 0 20px rgba(99, 102, 241, 0.5);
+            --floating-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* === ANIMATED BACKGROUND === */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .floating-orbs {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.5;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.8) 0%, transparent 70%);
+            top: -150px;
+            left: -150px;
+            animation-duration: 25s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.8) 0%, transparent 70%);
+            bottom: -200px;
+            right: -200px;
+            animation-duration: 30s;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation-duration: 20s;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(-100px, 100px) rotate(180deg); }
+            75% { transform: translate(-50px, -50px) rotate(270deg); }
+        }
+
+        /* === GLASSMORPHISM CONTAINER === */
+        .container {
+            display: flex;
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        /* === MODERN SIDEBAR === */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, var(--glass-bg), rgba(99, 102, 241, 0.1));
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            filter: drop-shadow(0 4px 20px rgba(99, 102, 241, 0.3));
+        }
+
+        .logo-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* === NAVIGATION MENU === */
+        .nav-menu {
+            flex: 1;
+            margin-top: 20px;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .tab:hover::before {
+            left: 100%;
+        }
+
+        .tab:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: white;
+            transform: translateX(10px);
+            box-shadow: var(--neon-glow);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .tab i {
+            margin-right: 15px;
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: var(--danger);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* === MAIN CONTENT === */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: linear-gradient(135deg, var(--glass-bg), rgba(236, 72, 153, 0.1));
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .admin-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* === STATS GRID === */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: cardFloat 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        .stat-card:nth-child(5) { animation-delay: 0.5s; }
+        .stat-card:nth-child(6) { animation-delay: 0.6s; }
+        .stat-card:nth-child(7) { animation-delay: 0.7s; }
+        .stat-card:nth-child(8) { animation-delay: 0.8s; }
+
+        @keyframes cardFloat {
+            from {
+                opacity: 0;
+                transform: translateY(30px) rotateX(-10deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) rotateX(0);
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .stat-icon.users { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-icon.jobs { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-icon.quotes { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-icon.contractors { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+        .stat-icon.designers { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+        .stat-icon.messages { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+        .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b, #19547b); }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* === CONTENT SECTION === */
+        .section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h3 {
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* === TAB CONTENT === */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* === TABLES === */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.2);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* === STATUS BADGES === */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-badge.pending {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .status-badge.active,
+        .status-badge.open {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-badge.completed {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+
+        .status-badge.in-progress {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .status-badge.rejected,
+        .status-badge.cancelled,
+        .status-badge.closed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* === USER TYPE BADGES === */
+        .user-type {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .user-type.admin {
+            background: rgba(236, 72, 153, 0.2);
+            color: #ec4899;
+        }
+
+        .user-type.contractor {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .user-type.designer {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        /* === MODALS === */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h3 {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .close {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            color: white;
+        }
+
+        /* === FORM STYLES === */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* === PDF VIEWER === */
+        .pdf-viewer-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 600px;
+            overflow: hidden;
+        }
+
+        .pdf-viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pdf-viewer-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        #pdfViewer {
+            width: 100%;
+            height: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: white;
+        }
+
+        /* === MESSAGES === */
+        .conversation-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .conversation-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateX(5px);
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .conversation-title {
+            font-weight: 600;
+            color: white;
+            font-size: 16px;
+        }
+
+        .conversation-time {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .conversation-preview {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .messages-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border-left: 3px solid var(--primary);
+            animation: slideInLeft 0.3s ease;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #6366f1;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-left: 10px;
+        }
+
+        .message-text {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .message-reply-box {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 15px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* === LOADING & EMPTY STATES === */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        /* === ACTION BUTTONS === */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* === FLOATING ACTION BUTTON === */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            animation: fabPulse 2s ease-in-out infinite;
+            z-index: 1000;
+        }
+
+        @keyframes fabPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6);
+            }
+        }
+
+        .fab:hover {
+            transform: scale(1.2) rotate(90deg);
+        }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--accent));
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                z-index: 1000;
+                height: 100vh;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+            }
+        } + est.estimatedAmount : 'Pending'}</td>
+                                <td>${est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <div class="actions">
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationPDF('${est._id}')">
+                                            <i class="fas fa-file-pdf"></i> View PDF
+                                        </button>
+                                        <button class="btn btn-sm btn-success" onclick="downloadEstimationFiles('${est._id}')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                        <button class="btn btn-sm" onclick="updateEstimationStatus('${est._id}', '${est.status}')">
+                                            <i class="fas fa-edit"></i> Status
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // View estimation PDF
         async function viewEstimationPDF(estimationId) {
             try {
-                const data = await apiCall(`/estimation/${estimationId}/files`);
-                currentPDFs = data.files.filter(file => file.url && (file.contentType === 'application/pdf' || file.url.toLowerCase().endsWith('.pdf')));
+                // First try to get estimation details
+                const estimation = await apiCall(`/estimation/${estimationId}`);
+                
+                // Check for uploaded files in the estimation
+                let files = [];
+                
+                if (estimation && estimation.uploadedFiles && estimation.uploadedFiles.length > 0) {
+                    files = estimation.uploadedFiles;
+                } else {
+                    // Try alternative endpoint
+                    const filesData = await apiCall(`/estimation/${estimationId}/files`);
+                    files = filesData.files || filesData.uploadedFiles || [];
+                }
+                
+                if (files.length === 0) {
+                    alert('No files found for this estimation.');
+                    return;
+                }
+                
+                // Process files - handle different file structures
+                currentPDFs = files.map(file => {
+                    // Handle different file object structures
+                    let url = file.url || file.fileUrl || file.downloadUrl || '';
+                    let name = file.name || file.fileName || file.originalName || 'Document';
+                    let type = file.contentType || file.mimeType || file.type || '';
+                    
+                    // Ensure proper URL format
+                    if (url && !url.startsWith('http')) {
+                        url = `${API_BASE}${url}`;
+                    }
+                    
+                    return {
+                        url: url,
+                        name: name,
+                        type: type,
+                        id: file._id || file.id || null
+                    };
+                }).filter(file => {
+                    // Filter for PDF files or any viewable documents
+                    return file.url && (
+                        file.url.includes('.pdf') || 
+                        file.type.includes('pdf') ||
+                        file.name.toLowerCase().endsWith('.pdf') ||
+                        file.type === 'application/pdf'
+                    );
+                });
                 
                 if (currentPDFs.length === 0) {
-                    alert('No viewable PDF files found for this estimation.');
+                    // If no PDFs, try to show all files
+                    currentPDFs = files.map(file => {
+                        let url = file.url || file.fileUrl || file.downloadUrl || '';
+                        let name = file.name || file.fileName || file.originalName || 'Document';
+                        
+                        if (url && !url.startsWith('http')) {
+                            url = `${API_BASE}${url}`;
+                        }
+                        
+                        return {
+                            url: url,
+                            name: name,
+                            id: file._id || file.id || null
+                        };
+                    }).filter(file => file.url);
+                }
+                
+                if (currentPDFs.length === 0) {
+                    alert('No viewable files available.');
                     return;
                 }
                 
                 currentPDFIndex = 0;
                 displayPDF();
                 document.getElementById('pdfModal').style.display = 'block';
+                
             } catch (error) {
+                console.error('Error loading PDF:', error);
                 alert('Failed to load PDF files: ' + error.message);
             }
         }
 
-        // Helper function to display the current PDF in the modal
+        // Display PDF
         function displayPDF() {
             if (currentPDFs.length === 0) return;
+            
             const pdf = currentPDFs[currentPDFIndex];
-            document.getElementById('pdfViewer').src = pdf.url;
-            document.getElementById('pdfFileName').textContent = pdf.name || 'Document';
-            document.getElementById('pdfPageInfo').textContent = `${currentPDFIndex + 1} / ${currentPDFs.length}`;
+            const viewer = document.getElementById('pdfViewer');
+            const fileName = document.getElementById('pdfFileName');
+            const pageInfo = document.getElementById('pdfPageInfo');
+            
+            // Set PDF viewer source with proper headers if needed
+            if (pdf.url) {
+                // For authenticated downloads, we might need to handle differently
+                const token = getToken();
+                
+                // If URL requires authentication, add token as query parameter
+                let viewerUrl = pdf.url;
+                if (!viewerUrl.includes('googleapis.com') && !viewerUrl.includes('cloudinary.com')) {
+                    const separator = viewerUrl.includes('?') ? '&' : '?';
+                    viewerUrl = `${viewerUrl}${separator}token=${token}`;
+                }
+                
+                viewer.src = viewerUrl;
+                fileName.textContent = pdf.name || 'Document';
+                pageInfo.textContent = `${currentPDFIndex + 1} / ${currentPDFs.length}`;
+            }
         }
-        function previousPDF() { if (currentPDFIndex > 0) { currentPDFIndex--; displayPDF(); } }
-        function nextPDF() { if (currentPDFIndex < currentPDFs.length - 1) { currentPDFIndex++; displayPDF(); } }
-        function downloadCurrentPDF() { if (currentPDFs.length > 0) window.open(currentPDFs[currentPDFIndex].url, '_blank'); }
 
-        // Open the modal to update an estimation's status
-        function openStatusModal(estimationId, currentStatus) {
-            currentEstimationId = estimationId;
-            document.getElementById('statusSelect').value = currentStatus;
-            document.getElementById('statusNotes').value = '';
-            document.getElementById('statusModal').style.display = 'block';
+        // Navigate PDFs
+        function previousPDF() {
+            if (currentPDFIndex > 0) {
+                currentPDFIndex--;
+                displayPDF();
+            }
         }
 
-        // Load and render conversations
+        function nextPDF() {
+            if (currentPDFIndex < currentPDFs.length - 1) {
+                currentPDFIndex++;
+                displayPDF();
+            }
+        }
+
+        // Download current PDF
+        async function downloadCurrentPDF() {
+            if (currentPDFs.length === 0) return;
+            
+            const pdf = currentPDFs[currentPDFIndex];
+            
+            try {
+                // If we have a direct URL, use it
+                if (pdf.url) {
+                    // Create a temporary anchor element for download
+                    const link = document.createElement('a');
+                    link.href = pdf.url;
+                    link.download = pdf.name || 'estimation-document.pdf';
+                    link.target = '_blank';
+                    
+                    // For cross-origin downloads, we might need to fetch and create blob
+                    if (!pdf.url.includes(window.location.hostname)) {
+                        try {
+                            const token = getToken();
+                            const response = await fetch(pdf.url, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                const blobUrl = window.URL.createObjectURL(blob);
+                                link.href = blobUrl;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(blobUrl);
+                            } else {
+                                // Fallback to direct window.open
+                                window.open(pdf.url, '_blank');
+                            }
+                        } catch (fetchError) {
+                            // If fetch fails, try direct download
+                            window.open(pdf.url, '_blank');
+                        }
+                    } else {
+                        // Same origin, direct download
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                } else if (pdf.id) {
+                    // If we only have an ID, try to get download URL from API
+                    const downloadUrl = `${API_BASE}/estimation/file/${pdf.id}/download`;
+                    window.open(downloadUrl, '_blank');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Failed to download file. Please try again.');
+            }
+        }
+
+        // Load messages data
         async function loadMessagesData() {
-            const messagesTab = document.getElementById('messages-tab');
             try {
                 const data = await apiCall('/messages');
-                const conversations = data.data || [];
-                if (conversations.length === 0) {
-                    messagesTab.innerHTML = '<div class="no-data"><i class="fas fa-comments-dollar"></i>No conversations found.</div>';
-                    return;
-                }
-                messagesTab.innerHTML = `
-                    <h3><i class="fas fa-comments"></i> Conversations (${conversations.length})</h3>
-                    <div class="conversation-list">
-                        ${conversations.map(conv => `
-                            <div class="conversation-item" onclick="viewConversation('${conv.id}')">
-                                <div class="conversation-header">
-                                    <div class="conversation-title">${conv.jobTitle || 'General Inquiry'}</div>
-                                    <div class="conversation-time">${new Date(conv.updatedAt.seconds * 1000).toLocaleDateString()}</div>
-                                </div>
-                                <div class="conversation-preview"><strong>Participants:</strong> ${conv.participants?.map(p => p.name).join(', ') || 'N/A'}</div>
-                                <div class="conversation-preview"><strong>Last:</strong> ${conv.lastMessage || 'No messages yet.'}</div>
-                            </div>`).join('')}
-                    </div>`;
+                const messages = data.data || [];
+                renderMessagesTab(messages);
             } catch (error) {
-                messagesTab.innerHTML = `<div class="error">Failed to load messages: ${error.message}</div>`;
+                document.getElementById('messages-tab').innerHTML = 
+                    '<div class="error">Failed to load messages</div>';
             }
         }
 
-        // View messages within a specific conversation
-        async function viewConversation(conversationId) {
-            currentConversationId = conversationId;
-            const messagesContent = document.getElementById('messagesContent');
-            const replyBox = document.getElementById('replyBox');
-            messagesContent.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading messages...</p></div>';
-            document.getElementById('messagesModal').style.display = 'block';
+        // Render messages tab
+        function renderMessagesTab(conversations) {
+            const messagesTab = document.getElementById('messages-tab');
+            
+            if (conversations.length === 0) {
+                messagesTab.innerHTML = '<div class="no-data">No conversations found</div>';
+                return;
+            }
+            
+            messagesTab.innerHTML = `
+                <h3><i class="fas fa-comments"></i> Conversations (${conversations.length})</h3>
+                <div class="conversation-list">
+                    ${conversations.map(conv => `
+                        <div class="conversation-item" onclick="viewConversation('${conv.id}')">
+                            <div class="conversation-header">
+                                <div class="conversation-title">
+                                    ${conv.jobTitle || 'Unknown Job'}
+                                </div>
+                                <div class="conversation-time">
+                                    ${conv.updatedAt ? new Date(conv.updatedAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                </div>
+                            </div>
+                            <div class="conversation-preview">
+                                <strong>Participants:</strong> ${conv.participants?.map(p => p.name).join(', ') || 'Unknown'}
+                            </div>
+                            <div class="conversation-preview">
+                                <strong>Last message:</strong> ${conv.lastMessage || 'No messages yet'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
+        // View conversation
+        async function viewConversation(conversationId) {
             try {
+                currentConversationId = conversationId;
+                document.getElementById('messagesModal').style.display = 'block';
+                
                 const data = await apiCall(`/messages/${conversationId}/messages`);
                 const messages = data.data || [];
-
+                
+                const messagesContent = document.getElementById('messagesContent');
+                
                 if (messages.length === 0) {
-                    messagesContent.innerHTML = '<div class="no-data">No messages in this conversation.</div>';
-                    replyBox.style.display = 'block'; // Still allow sending the first message
+                    messagesContent.innerHTML = '<div class="no-data">No messages in this conversation</div>';
+                    document.getElementById('replyBox').style.display = 'none';
                     return;
                 }
-
-                messagesContent.innerHTML = `<div class="messages-container">
-                    ${messages.map(msg => `
-                        <div class="message">
-                            <div class="message-header">
-                                ${msg.senderName || 'Unknown'}
-                                <span class="message-time">${new Date(msg.createdAt.seconds * 1000).toLocaleString()}</span>
+                
+                messagesContent.innerHTML = `
+                    <div class="messages-container">
+                        ${messages.map(msg => `
+                            <div class="message">
+                                <div class="message-header">
+                                    ${msg.senderName || 'Unknown'}
+                                    <span class="message-time">
+                                        ${msg.createdAt ? new Date(msg.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                                    </span>
+                                </div>
+                                <div class="message-text">${msg.text || ''}</div>
                             </div>
-                            <div class="message-text">${msg.text || ''}</div>
-                        </div>`).join('')}
-                </div>`;
-                replyBox.style.display = 'block';
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Show reply box
+                document.getElementById('replyBox').style.display = 'block';
+                
+                // Scroll to bottom
                 const container = messagesContent.querySelector('.messages-container');
-                if (container) container.scrollTop = container.scrollHeight;
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+                
             } catch (error) {
-                messagesContent.innerHTML = `<div class="error">Failed to load conversation: ${error.message}</div>`;
-                replyBox.style.display = 'none';
+                document.getElementById('messagesContent').innerHTML = 
+                    '<div class="error">Failed to load messages</div>';
             }
         }
 
-        // Send a reply message in a conversation
+        // Send reply
         async function sendReply() {
             const messageInput = document.getElementById('replyMessage');
-            const text = messageInput.value.trim();
-            if (!text) { alert('Please enter a message.'); return; }
-
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
             try {
                 await apiCall(`/messages/${currentConversationId}/send`, {
                     method: 'POST',
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify({ text: message })
                 });
+                
                 messageInput.value = '';
-                viewConversation(currentConversationId); // Refresh conversation
+                viewConversation(currentConversationId); // Reload messages
+                
             } catch (error) {
                 alert('Failed to send message: ' + error.message);
             }
         }
 
-        // Placeholder functions for other tabs
-        function loadUsersData() { document.getElementById('users-tab').innerHTML = `<h3><i class="fas fa-users"></i> All Users</h3><div class="no-data">User management is under development.</div>`; }
-        function loadJobsData() { document.getElementById('jobs-tab').innerHTML = `<h3><i class="fas fa-briefcase"></i> All Jobs</h3><div class="no-data">Job management is under development.</div>`; }
-        function loadQuotesData() { document.getElementById('quotes-tab').innerHTML = `<h3><i class="fas fa-file-invoice-dollar"></i> All Quotes</h3><div class="no-data">Quote management is under development.</div>`; }
-        function loadSubscriptionsData() { document.getElementById('subscriptions-tab').innerHTML = `<h3><i class="fas fa-credit-card"></i> Subscriptions</h3><div class="no-data">Subscription management is under development.</div>`; }
-
-        // General utility functions
-        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-        function logout() {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
-        function refreshAllData() {
-            const fabIcon = document.querySelector('.fab i');
-            fabIcon.classList.add('fa-spin');
-            loadDashboardStats();
-            if(currentTab) showTab(currentTab);
-            setTimeout(() => fabIcon.classList.remove('fa-spin'), 1000);
-        }
-
-        // Event listener for the status update form
-        document.getElementById('statusForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const status = document.getElementById('statusSelect').value;
-            const notes = document.getElementById('statusNotes').value;
-            
+        // Download all estimation files
+        async function downloadEstimationFiles(estimationId) {
             try {
-                await apiCall(`/estimation/${currentEstimationId}/status`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ status, notes })
-                });
-                alert('Status updated successfully!');
-                closeModal('statusModal');
-                loadEstimationsData(); // Refresh estimations tab
-                loadDashboardStats(); // Refresh dashboard stats
+                // Get estimation details
+                const estimation = await apiCall(`/estimation/${estimationId}`);
+                
+                // Check for uploaded files
+                let files = [];
+                
+                if (estimation && estimation.uploadedFiles && estimation.uploadedFiles.length > 0) {
+                    files = estimation.uploadedFiles;
+                } else {
+                    // Try alternative endpoint
+                    const filesData = await apiCall(`/estimation/${estimationId}/files`);
+                    files = filesData.files || filesData.uploadedFiles || [];
+                }
+                
+                if (files.length === 0) {
+                    alert('No files found for this estimation.');
+                    return;
+                }
+                
+                // Download each file
+                for (const file of files) {
+                    let url = file.url || file.fileUrl || file.downloadUrl || '';
+                    let name = file.name || file.fileName || file.originalName || 'document';
+                    
+                    // Ensure proper URL format
+                    if (url && !url.startsWith('http')) {
+                        url = `${API_BASE}${url}`;
+                    }
+                    
+                    if (url) {
+                        // Create download link
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = name;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Small delay between downloads
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                
             } catch (error) {
-                alert('Failed to update status: ' + error.message);
+                console.error('Download error:', error);
+                alert('Failed to download files: ' + error.message);
             }
-        });
+        }
 
-        // Initial application load
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!getToken()) {
-                // For demonstration, we'll stay on the page. In production, this would redirect.
-                // window.location.href = 'index.html'; 
-                console.warn("No auth token found. In a real app, you would be redirected to login.");
+        // Update estimation status
+        function updateEstimationStatus(estimationId, currentStatus) {
+            currentEstimationId = estimationId;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Ultra Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* === VARIABLES & RESET === */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-secondary: #1e293b;
+            --light: #f8fafc;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --neon-glow: 0 0 20px rgba(99, 102, 241, 0.5);
+            --floating-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* === ANIMATED BACKGROUND === */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .floating-orbs {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.5;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.8) 0%, transparent 70%);
+            top: -150px;
+            left: -150px;
+            animation-duration: 25s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.8) 0%, transparent 70%);
+            bottom: -200px;
+            right: -200px;
+            animation-duration: 30s;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation-duration: 20s;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(-100px, 100px) rotate(180deg); }
+            75% { transform: translate(-50px, -50px) rotate(270deg); }
+        }
+
+        /* === GLASSMORPHISM CONTAINER === */
+        .container {
+            display: flex;
+            min-height: 100vh;
+            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        /* === MODERN SIDEBAR === */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, var(--glass-bg), rgba(99, 102, 241, 0.1));
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            filter: drop-shadow(0 4px 20px rgba(99, 102, 241, 0.3));
+        }
+
+        .logo-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* === NAVIGATION MENU === */
+        .nav-menu {
+            flex: 1;
+            margin-top: 20px;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .tab:hover::before {
+            left: 100%;
+        }
+
+        .tab:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: white;
+            transform: translateX(10px);
+            box-shadow: var(--neon-glow);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .tab i {
+            margin-right: 15px;
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: var(--danger);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* === MAIN CONTENT === */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: linear-gradient(135deg, var(--glass-bg), rgba(236, 72, 153, 0.1));
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
             }
-            loadDashboardStats();
-            showTab('overview');
-        });
-    </script>
-</body>
-</html>
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .admin-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* === STATS GRID === */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: cardFloat 0.8s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        .stat-card:nth-child(5) { animation-delay: 0.5s; }
+        .stat-card:nth-child(6) { animation-delay: 0.6s; }
+        .stat-card:nth-child(7) { animation-delay: 0.7s; }
+        .stat-card:nth-child(8) { animation-delay: 0.8s; }
+
+        @keyframes cardFloat {
+            from {
+                opacity: 0;
+                transform: translateY(30px) rotateX(-10deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) rotateX(0);
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .stat-icon.users { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-icon.jobs { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-icon.quotes { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-icon.contractors { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+        .stat-icon.designers { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+        .stat-icon.messages { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+        .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b, #19547b); }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* === CONTENT SECTION === */
+        .section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section h2 {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h3 {
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* === TAB CONTENT === */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* === TABLES === */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.2);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* === STATUS BADGES === */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-badge.pending {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .status-badge.active,
+        .status-badge.open {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-badge.completed {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+
+        .status-badge.in-progress {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .status-badge.rejected,
+        .status-badge.cancelled,
+        .status-badge.closed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* === USER TYPE BADGES === */
+        .user-type {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .user-type.admin {
+            background: rgba(236, 72, 153, 0.2);
+            color: #ec4899;
+        }
+
+        .user-type.contractor {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .user-type.designer {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        /* === MODALS === */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h3 {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .close {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            color: white;
+        }
+
+        /* === FORM STYLES === */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* === PDF VIEWER === */
+        .pdf-viewer-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 600px;
+            overflow: hidden;
+        }
+
+        .pdf-viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pdf-viewer-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        #pdfViewer {
+            width: 100%;
+            height: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: white;
+        }
+
+        /* === MESSAGES === */
+        .conversation-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .conversation-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateX(5px);
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .conversation-title {
+            font-weight: 600;
+            color: white;
+            font-size: 16px;
+        }
+
+        .conversation-time {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .conversation-preview {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .messages-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border-left: 3px solid var(--primary);
+            animation: slideInLeft 0.3s ease;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #6366f1;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-left: 10px;
+        }
+
+        .message-text {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .message-reply-box {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 15px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* === LOADING & EMPTY STATES === */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        /* === ACTION BUTTONS === */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* === FLOATING ACTION BUTTON === */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            animation: fabPulse 2s ease-in-out infinite;
+            z-index: 1000;
+        }
+
+        @keyframes fabPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6);
+            }
+        }
+
+        .fab:hover {
+            transform: scale(1.2) rotate(90deg);
+        }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--accent));
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                z-index: 1000;
+                height: 100vh;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+            }
+        }
