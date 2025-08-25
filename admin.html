@@ -9,30 +9,32 @@
 </head>
 <body>
     <div id="notification-container"></div>
-    <div class="container">
-        <div class="header">
-            <h1>
-                <i class="fas fa-tachometer-alt"></i>
-                Admin Dashboard
-            </h1>
+
+    <div class="container" style="max-width: 1600px; margin: 0 auto; padding: 20px;">
+        <div class="admin-header" style="background: white; padding: 20px 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
             <div class="header-actions">
-                <div class="admin-badge" id="adminBadge">
+                <div id="adminBadge" class="admin-user-badge">
                     <i class="fas fa-user-shield"></i>
                     <span id="adminName">Admin</span>
                 </div>
                 <button class="btn btn-danger" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
             </div>
         </div>
 
-        <div class="stats-grid" id="statsGrid">
-            <div class="loading"><div class="spinner"></div><p>Loading dashboard statistics...</p></div>
+        <div class="admin-stats-grid" id="statsGrid">
+            <div class="loading-spinner" style="grid-column: 1 / -1;"><div class="spinner"></div><p>Loading dashboard statistics...</p></div>
         </div>
 
-        <div class="section">
-            <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
+        <div class="section" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div class="admin-section-header" style="padding: 0; border: none; margin-bottom: 20px;">
+                <h2 class="section-title" style="margin: 0;">
+                    <i class="fas fa-cogs"></i> Management Portal
+                </h2>
+            </div>
+            
             <div class="tabs">
                 <button class="tab active" onclick="showTab('overview')"><i class="fas fa-home"></i> Overview</button>
                 <button class="tab" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
@@ -86,32 +88,21 @@
         function formatCurrency(amount) {
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
         }
-
-        function downloadFile(url, filename) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
+        
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
             if (!token) {
                 window.location.href = 'index.html';
                 throw new Error('No authentication token.');
             }
-
             const config = { headers: { 'Authorization': `Bearer ${token}` }, ...options };
             if (options.body && !(options.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
             }
-
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
                 if (response.status === 401) {
-                    logout(true); // Force logout on auth error
+                    logout(true); 
                     throw new Error('Session expired.');
                 }
                 const responseData = await response.json().catch(() => ({}));
@@ -125,34 +116,31 @@
             }
         }
 
-        function createModal(id, title, content) {
-            const existingModal = document.getElementById(id);
-            if(existingModal) existingModal.remove();
-
+        function createModal(id, title, content, isLarge = false) {
+            document.getElementById(id)?.remove();
             const modal = document.createElement('div');
             modal.id = id;
             modal.className = 'modal-overlay';
             modal.style.display = 'flex';
             modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header" style="justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e9ecef;">
+                <div class="modal-content ${isLarge ? 'large' : ''}">
+                    <div class="modal-header" style="justify-content: space-between; padding: 20px; border-bottom: 1px solid #e9ecef;">
                         <h3>${title}</h3>
                         <button class="modal-close" onclick="document.getElementById('${id}').remove()">&times;</button>
                     </div>
                     <div class="modal-body" style="padding: 20px;">${content}</div>
-                </div>
-            `;
+                </div>`;
             document.body.appendChild(modal);
         }
 
         function renderLoading(tabId) {
             const tab = document.getElementById(tabId);
-            if (tab) tab.innerHTML = `<div class="loading"><div class="spinner"></div><p>Loading data...</p></div>`;
+            if (tab) tab.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading data...</p></div>`;
         }
 
         function renderError(tabId, message) {
             const tab = document.getElementById(tabId);
-            if (tab) tab.innerHTML = `<div class="error-state"><h3><i class="fas fa-exclamation-triangle"></i> Oops!</h3><p>${message}</p><button class="btn" onclick="showTab('${appState.currentTab}')">Retry</button></div>`;
+            if (tab) tab.innerHTML = `<div class="error-state"><h3><i class="fas fa-exclamation-triangle"></i> Oops!</h3><p>${message}</p><button class="btn btn-primary" onclick="showTab('${appState.currentTab}')">Retry</button></div>`;
         }
 
         // --- TAB MANAGEMENT ---
@@ -160,109 +148,95 @@
             appState.currentTab = tabName;
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
-            const tabContent = document.getElementById(`${tabName}-tab`);
-            const tabButton = document.querySelector(`.tab[onclick*="'${tabName}'"]`);
-            if (tabContent) tabContent.classList.add('active');
-            if (tabButton) tabButton.classList.add('active');
-
-            const contentLoaders = {
-                overview: renderOverviewTab,
-                users: loadUsersData,
-                jobs: loadJobsData,
-                quotes: loadQuotesData,
-                estimations: loadEstimationsData,
-                messages: loadMessagesData,
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`.tab[onclick*="'${tabName}'"]`).classList.add('active');
+            const loaders = {
+                overview: renderOverviewTab, users: loadUsersData, jobs: loadJobsData,
+                quotes: loadQuotesData, estimations: loadEstimationsData, messages: loadMessagesData,
                 subscriptions: loadSubscriptionsData,
             };
-
-            if (contentLoaders[tabName]) {
-                contentLoaders[tabName]();
-            }
+            if (loaders[tabName]) loaders[tabName]();
         }
         
         // --- DATA LOADERS & RENDERERS ---
-
         async function loadDashboardStats() {
             try {
                 const data = await apiCall('/admin/dashboard');
                 appState.dataCache.dashboard = data;
                 if (data.user) document.getElementById('adminName').textContent = data.user.name || 'Admin';
-                
                 const stats = data.stats || {};
-                const statsGrid = document.getElementById('statsGrid');
-                statsGrid.innerHTML = `
-                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div><div class="stat-number">${stats.totalUsers || 0}</div><div class="stat-label">Total Users</div></div></div>
-                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div><div class="stat-number">${stats.totalJobs || 0}</div><div class="stat-label">Total Jobs</div></div></div>
-                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-alt"></i></div><div><div class="stat-number">${stats.totalQuotes || 0}</div><div class="stat-label">Total Quotes</div></div></div>
-                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div><div class="stat-number">${stats.totalEstimations || 0}</div><div class="stat-label">Estimations</div></div></div>
-                `;
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="admin-stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-info"><span class="stat-value">${stats.totalUsers || 0}</span><span class="stat-label">Total Users</span></div></div>
+                    <div class="admin-stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-info"><span class="stat-value">${stats.totalJobs || 0}</span><span class="stat-label">Total Jobs</span></div></div>
+                    <div class="admin-stat-card"><div class="stat-icon quotes"><i class="fas fa-file-alt"></i></div><div class="stat-info"><span class="stat-value">${stats.totalQuotes || 0}</span><span class="stat-label">Total Quotes</span></div></div>
+                    <div class="admin-stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-info"><span class="stat-value">${stats.totalEstimations || 0}</span><span class="stat-label">Estimations</span></div></div>`;
                 renderOverviewTab();
             } catch (error) {
-                document.getElementById('statsGrid').innerHTML = `<div class="error" style="grid-column: 1 / -1;">Failed to load dashboard stats. Please refresh.</div>`;
+                document.getElementById('statsGrid').innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">Failed to load dashboard stats. Please refresh.</div>`;
             }
         }
 
         function renderOverviewTab() {
             const stats = appState.dataCache.dashboard?.stats || {};
-            document.getElementById('overview-tab').innerHTML = `<h2>Welcome, Admin!</h2><p>Here's a quick summary of your platform's activity.</p>
-            <div class="admin-stats-grid" style="margin-top:20px;">
-                <div class="admin-stat-card"><div class="stat-info"><span class="stat-value">${stats.pendingEstimations || 0}</span><span class="stat-label">Pending Estimations</span></div></div>
-                <div class="admin-stat-card"><div class="stat-info"><span class="stat-value">${stats.unreadMessages || 0}</span><span class="stat-label">Unread Messages</span></div></div>
-                <div class="admin-stat-card"><div class="stat-info"><span class="stat-value">${stats.activeSubscriptions || 0}</span><span class="stat-label">Active Subscriptions</span></div></div>
-            </div>`;
+            document.getElementById('overview-tab').innerHTML = `<h2>Welcome, Admin!</h2><p>Here's a quick summary of your platform's activity.</p>`;
+        }
+
+        async function loadGenericData(module, endpoint) {
+            renderLoading(`${module}-tab`);
+            try {
+                const response = await apiCall(`/admin/${endpoint}`);
+                // The actual data can be in a key like 'users', 'jobs', etc. or in 'data'
+                const dataArray = response[module] || response.data || [];
+                appState.dataCache[module] = Array.isArray(dataArray) ? dataArray : [];
+                return true;
+            } catch (error) {
+                renderError(`${module}-tab`, error.message);
+                return false;
+            }
         }
 
         async function loadUsersData() {
-            renderLoading('users-tab');
-            try {
-                const { users = [] } = await apiCall('/admin/users');
-                appState.dataCache.users = users || [];
-                const content = appState.dataCache.users.length === 0 ? '<div class="no-data">No users found.</div>' : `
-                    <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
-                    <tbody>${appState.dataCache.users.map(user => `
+            if (await loadGenericData('users', 'users')) {
+                const users = appState.dataCache.users;
+                const content = users.length === 0 ? '<div class="no-data">No users found.</div>' : `
+                    <div class="admin-table-container"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+                    <tbody>${users.map(user => `
                         <tr><td>${user.name || 'N/A'}</td><td>${user.email || 'N/A'}</td><td>${user.role || 'N/A'}</td><td>${formatDate(user.createdAt)}</td></tr>
-                    `).join('')}</tbody></table>`;
-                document.getElementById('users-tab').innerHTML = `<h3>All Users (${appState.dataCache.users.length})</h3>${content}`;
-            } catch (error) { renderError('users-tab', error.message); }
+                    `).join('')}</tbody></table></div>`;
+                document.getElementById('users-tab').innerHTML = `<h3>All Users (${users.length})</h3>${content}`;
+            }
         }
 
         async function loadJobsData() {
-            renderLoading('jobs-tab');
-            try {
-                const { jobs = [] } = await apiCall('/admin/jobs');
-                appState.dataCache.jobs = jobs || [];
-                const content = appState.dataCache.jobs.length === 0 ? '<div class="no-data">No jobs found.</div>' : `
-                    <table><thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Value</th></tr></thead>
-                    <tbody>${appState.dataCache.jobs.map(job => `
-                        <tr><td>${job.projectTitle || 'N/A'}</td><td>${job.clientName || 'N/A'}</td><td>${job.status || 'N/A'}</td><td>${formatCurrency(job.value)}</td></tr>
-                    `).join('')}</tbody></table>`;
-                document.getElementById('jobs-tab').innerHTML = `<h3>All Jobs (${appState.dataCache.jobs.length})</h3>${content}`;
-            } catch (error) { renderError('jobs-tab', error.message); }
+            if (await loadGenericData('jobs', 'jobs')) {
+                const jobs = appState.dataCache.jobs;
+                const content = jobs.length === 0 ? '<div class="no-data">No jobs found.</div>' : `
+                    <div class="admin-table-container"><table><thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Value</th></tr></thead>
+                    <tbody>${jobs.map(job => `
+                        <tr><td>${job.projectTitle || 'N/A'}</td><td>${job.clientName || 'N/A'}</td><td><span class="status-badge ${job.status}">${job.status || 'N/A'}</span></td><td>${formatCurrency(job.value)}</td></tr>
+                    `).join('')}</tbody></table></div>`;
+                document.getElementById('jobs-tab').innerHTML = `<h3>All Jobs (${jobs.length})</h3>${content}`;
+            }
         }
-
+        
         async function loadQuotesData() {
-            renderLoading('quotes-tab');
-            try {
-                const { quotes = [] } = await apiCall('/admin/quotes');
-                appState.dataCache.quotes = quotes || [];
-                const content = appState.dataCache.quotes.length === 0 ? '<div class="no-data">No quotes found.</div>' : `
-                    <table><thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead>
-                    <tbody>${appState.dataCache.quotes.map(quote => `
-                        <tr><td>${quote.projectTitle || 'N/A'}</td><td>${quote.clientName || 'N/A'}</td><td>${quote.status || 'N/A'}</td><td>${formatCurrency(quote.amount)}</td></tr>
-                    `).join('')}</tbody></table>`;
-                document.getElementById('quotes-tab').innerHTML = `<h3>All Quotes (${appState.dataCache.quotes.length})</h3>${content}`;
-            } catch (error) { renderError('quotes-tab', error.message); }
+            if (await loadGenericData('quotes', 'quotes')) {
+                const quotes = appState.dataCache.quotes;
+                const content = quotes.length === 0 ? '<div class="no-data">No quotes found.</div>' : `
+                    <div class="admin-table-container"><table><thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead>
+                    <tbody>${quotes.map(quote => `
+                        <tr><td>${quote.projectTitle || 'N/A'}</td><td>${quote.clientName || 'N/A'}</td><td><span class="status-badge ${quote.status}">${quote.status || 'N/A'}</span></td><td>${formatCurrency(quote.amount)}</td></tr>
+                    `).join('')}</tbody></table></div>`;
+                document.getElementById('quotes-tab').innerHTML = `<h3>All Quotes (${quotes.length})</h3>${content}`;
+            }
         }
         
         async function loadEstimationsData() {
-            renderLoading('estimations-tab');
-            try {
-                const { estimations = [] } = await apiCall('/admin/estimations');
-                appState.dataCache.estimations = estimations || [];
-                const content = appState.dataCache.estimations.length === 0 ? '<div class="no-data">No estimations found.</div>' : `
-                    <table><thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Submitted</th><th>Actions</th></tr></thead>
-                    <tbody>${appState.dataCache.estimations.map(est => `
+            if (await loadGenericData('estimations', 'estimations')) {
+                const estimations = appState.dataCache.estimations;
+                const content = estimations.length === 0 ? '<div class="no-data">No estimations found.</div>' : `
+                    <div class="admin-table-container"><table><thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Submitted</th><th>Actions</th></tr></thead>
+                    <tbody>${estimations.map(est => `
                         <tr>
                             <td><strong>${est.projectTitle || 'N/A'}</strong></td><td>${est.contractorName || 'N/A'}</td>
                             <td><span class="status-badge ${est.status}">${est.status || 'N/A'}</span></td>
@@ -270,57 +244,48 @@
                             <td><div class="action-buttons">
                                 <button class="btn btn-sm btn-warning" onclick="viewEstimationFiles('${est._id}')" title="View Contractor Files"><i class="fas fa-file-alt"></i></button>
                                 <button class="btn btn-sm btn-success" onclick="showUploadModal('${est._id}')" title="Upload Result"><i class="fas fa-upload"></i></button>
-                                ${est.resultFile ? `<button class="btn btn-sm btn-info" onclick="downloadResult('${est._id}')" title="Download Result"><i class="fas fa-download"></i></button>` : ''}
+                                ${est.resultFile ? `<button class="btn btn-sm btn-info" onclick="window.open('${est.resultFile.url}', '_blank')" title="View/Download Result"><i class="fas fa-external-link-alt"></i></button>` : ''}
                             </div></td>
-                        </tr>`).join('')}
-                    </tbody></table>`;
-                document.getElementById('estimations-tab').innerHTML = `<h3>All Estimations (${appState.dataCache.estimations.length})</h3>${content}`;
-            } catch (error) { renderError('estimations-tab', error.message); }
+                        </tr>`).join('')}</tbody></table></div>`;
+                document.getElementById('estimations-tab').innerHTML = `<h3>All Estimations (${estimations.length})</h3>${content}`;
+            }
         }
 
         async function loadMessagesData() {
-            renderLoading('messages-tab');
-            try {
-                const { messages = [] } = await apiCall('/admin/messages');
-                appState.dataCache.messages = messages || [];
-                const content = appState.dataCache.messages.length === 0 ? '<div class="no-data">No messages found.</div>' : `
-                    <div class="messages-container">${appState.dataCache.messages.map(msg => `
+            if (await loadGenericData('messages', 'messages')) {
+                const messages = appState.dataCache.messages;
+                const content = messages.length === 0 ? '<div class="no-data">No messages found.</div>' : `
+                    <div class="messages-container">${messages.map(msg => `
                         <div class="message-card">
                             <div class="message-header"><div class="sender-info"><strong>${msg.senderName || 'N/A'}</strong><small>${msg.senderEmail || ''}</small></div> <span class="message-time">${formatDate(msg.createdAt)}</span></div>
                             <div class="message-content"><h4>${msg.subject || '(No Subject)'}</h4><p>${(msg.content || '').substring(0, 150)}...</p></div>
                         </div>`).join('')}
                     </div>`;
-                document.getElementById('messages-tab').innerHTML = `<h3>All Messages (${appState.dataCache.messages.length})</h3>${content}`;
-            } catch (error) { renderError('messages-tab', error.message); }
+                document.getElementById('messages-tab').innerHTML = `<h3>All Messages (${messages.length})</h3>${content}`;
+            }
         }
 
         async function loadSubscriptionsData() {
             renderLoading('subscriptions-tab');
-            document.getElementById('subscriptions-tab').innerHTML = '<div class="no-data">Subscriptions module is under development.</div>';
+            document.getElementById('subscriptions-tab').innerHTML = '<div class="coming-soon"><i class="fas fa-tools"></i><h3>Coming Soon</h3><p>The Subscriptions module is under development.</p></div>';
         }
 
         // --- ESTIMATION ACTIONS ---
         async function viewEstimationFiles(estimationId) {
             try {
                 const { files = [] } = await apiCall(`/admin/estimations/${estimationId}/files`);
-                if (!files || files.length === 0) return showNotification('No contractor files for this estimation.', 'info');
+                if (!files.length) return showNotification('No contractor files for this estimation.', 'info');
                 
                 const filesHtml = files.map(file => `
                     <div class="file-item">
                         <span><i class="fas fa-file"></i> ${file.name || 'Untitled'}</span>
-                        <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">Download</button>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-secondary" onclick="window.open('${file.url}', '_blank')">View</button>
+                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">Download</button>
+                        </div>
                     </div>`).join('');
-                createModal('filesModal', 'Contractor Files', filesHtml);
+                createModal('filesModal', 'Contractor Uploaded Files', filesHtml);
             } catch (error) { showNotification(`Error loading files: ${error.message}`, 'error'); }
-        }
-
-        async function downloadResult(estimationId) {
-            try {
-                const { resultFile } = await apiCall(`/admin/estimations/${estimationId}/result`);
-                if (resultFile && resultFile.url) {
-                    downloadFile(resultFile.url, resultFile.name || 'estimation-result.pdf');
-                } else { showNotification('No result file found.', 'warning'); }
-            } catch (error) { showNotification(`Failed to download result: ${error.message}`, 'error'); }
         }
 
         function showUploadModal(estimationId) {
@@ -332,7 +297,7 @@
                         <div class="file-upload-area" id="resultUploadArea"><i class="fas fa-cloud-upload-alt"></i><p><strong>Click to browse</strong> or drag and drop</p><input type="file" id="resultFile" hidden></div>
                         <div id="file-preview-container" class="uploaded-files" style="margin-top:15px;"></div>
                     </div>
-                    <div class="form-actions" style="justify-content:flex-end; margin-top:20px;"><button type="submit" class="btn btn-success"><i class="fas fa-paper-plane"></i> Upload & Send</button></div>
+                    <div class="form-actions"><button type="submit" class="btn btn-success"><i class="fas fa-paper-plane"></i> Upload & Send</button></div>
                 </form>`;
             createModal('uploadModal', 'Upload Estimation Result', modalContent);
             
@@ -352,7 +317,7 @@
         }
 
         function handleFileSelect(files) {
-            if (files.length === 0) return;
+            if (!files.length) return;
             const file = files[0];
             document.getElementById('file-preview-container').innerHTML = `
                 <div class="file-item">
