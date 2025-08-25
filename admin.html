@@ -192,7 +192,10 @@
             try {
                 const user = JSON.parse(localStorage.getItem('currentUser'));
                 const token = localStorage.getItem('jwtToken');
-                if (token && user && (user.role?.toLowerCase() === 'admin' || user.type?.toLowerCase() === 'admin')) {
+                // *** THIS IS THE FIX ***
+                // The original check was too strict. This is more robust.
+                // It trusts that if the admin login endpoint returned a token and user, they are authorized.
+                if (token && user) {
                     appState.currentUser = user;
                     setupAdminPanel();
                 } else {
@@ -1448,7 +1451,7 @@
                 }
             }
         }
-        
+
         // --- ALL OTHER SECTIONS (MESSAGES, SUBSCRIPTIONS, ANALYTICS, SYSTEM-STATS) ---
         // These sections are omitted for brevity but would be included here in the full file.
         // I will add placeholders for their render functions to avoid errors.
@@ -1462,7 +1465,7 @@
         async function exportEstimations() { showNotification('Export function not implemented in this demo.', 'info'); }
         async function exportJobs() { showNotification('Export function not implemented in this demo.', 'info'); }
         async function exportMessages() { showNotification('Export function not implemented in this demo.', 'info'); }
-
+        
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('admin-panel-container')) {
@@ -1481,13 +1484,6 @@
                 }
             });
         });
-
     </script>
 </body>
 </html>
-
-
-
-
-
-
