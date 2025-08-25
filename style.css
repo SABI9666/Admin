@@ -2130,4 +2130,64 @@ body {
     }
     
     .modal-content {
-        b
+        background-color: #333;
+        color: #e0e0e0;
+    }
+}
+
+/* --- NEW STYLES ADDED FOR FILE DOWNLOAD MODAL --- */
+#filesContent {
+    padding: 10px 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.file-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.file-list-item:last-child {
+    border-bottom: none;
+}
+
+.file-list-item:hover {
+    background-color: #f8f9fa;
+}
+
+.file-info-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-info-container .fas {
+    color: #007bff;
+    font-size: 1.2rem;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.download-link {
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background-color: #28a745;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.download-link:hover {
+    background-color: #218838;
+}
