@@ -780,6 +780,10 @@
         .form-group {
             margin-bottom: 25px;
         }
+        .form-group p {
+            font-size: 16px;
+            padding-top: 5px;
+        }
 
         .form-group label {
             display: block;
@@ -1041,6 +1045,19 @@
                 </div>
             </div>
             <div class="form-actions" id="messageModalActions">
+                 </div>
+        </div>
+    </div>
+
+    <div id="estimationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Estimation Details</h3>
+                <span class="close" onclick="closeModal('estimationModal')">&times;</span>
+            </div>
+            <div id="estimationModalBody" style="padding: 30px;">
+                </div>
+            <div class="form-actions" id="estimationModalActions">
                  </div>
         </div>
     </div>
@@ -1432,7 +1449,7 @@
                         <td>${(est.estimatedAmount || est.amount) ? `$${(est.estimatedAmount || est.amount).toLocaleString()}` : 'Pending'}</td>
                         <td>${est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</td>
                         <td><div class="action-group">
-                            <button class="btn btn-sm btn-success" onclick="downloadEstimationPDF('${est._id || est.id}')" title="Download PDF Estimate"><i class="fas fa-file-pdf"></i></button>
+                            <button class="btn btn-sm btn-info" onclick="openEstimationModal('${est._id || est.id}')" title="View Details"><i class="fas fa-eye"></i></button>
                             <button class="btn btn-sm btn-primary" onclick="openUploadModal('${est._id || est.id}')" title="Upload Result"><i class="fas fa-upload"></i></button>
                             <button class="btn btn-sm btn-warning" onclick="openStatusModal('${est._id || est.id}', 'estimation')" title="Update Status"><i class="fas fa-edit"></i></button>
                         </div></td>
@@ -1528,8 +1545,6 @@
 
             if ((message.status || 'unread') === 'unread') {
                 try {
-                    // DEMO: This is where you would make the API call
-                    // await apiCall(`/admin/messages/${id}/status`, { method: 'PUT', body: JSON.stringify({ status: 'read' }) });
                     console.log(`Marking message ${id} as read.`);
                     message.status = 'read'; 
                     renderMessagesTab();
@@ -1537,6 +1552,46 @@
                     console.error('Failed to mark message as read:', error);
                 }
             }
+        }
+
+        async function openEstimationModal(id) {
+            const est = estimationsData.find(e => (e._id || e.id) === id);
+            if (!est) {
+                showNotification('Could not find estimation details.', 'error');
+                return;
+            }
+
+            const modalBody = document.getElementById('estimationModalBody');
+            modalBody.innerHTML = `
+                <div class="form-group">
+                    <label>Project Title:</label>
+                    <p><strong>${est.projectTitle || est.title || 'Untitled'}</strong> (${est.projectType || est.category || 'General'})</p>
+                </div>
+                <div class="form-group">
+                    <label>Contractor:</label>
+                    <p><strong>${est.contractorName || est.contractor?.name || 'Unknown'}</strong> &lt;${est.contractorEmail || est.contractor?.email || 'N/A'}&gt;</p>
+                </div>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <p><span class="status-badge ${est.status || 'pending'}">${(est.status || 'pending').toUpperCase()}</span></p>
+                </div>
+                <div class="form-group">
+                    <label>Submitted Amount:</label>
+                    <p><strong>${(est.estimatedAmount || est.amount) ? `$${(est.estimatedAmount || est.amount).toLocaleString()}` : 'Pending'}</strong></p>
+                </div>
+                <div class="form-group">
+                    <label>Files Submitted:</label>
+                    <p>${est.uploadedFiles?.length || est.files?.length || 0} files</p>
+                </div>
+            `;
+            
+            const actionsContainer = document.getElementById('estimationModalActions');
+            actionsContainer.innerHTML = `
+                <button type="button" class="btn btn-secondary" onclick="closeModal('estimationModal')">Close</button>
+                <button type="button" class="btn btn-success" onclick="downloadEstimationPDF('${id}')"><i class="fas fa-file-pdf"></i> Download as PDF</button>
+            `;
+
+            document.getElementById('estimationModal').style.display = 'block';
         }
 
 
@@ -1548,14 +1603,41 @@
         // Generic action functions
         function viewDetails(id, type) { showNotification(`Viewing details for ${type} #${id.slice(-6)}...`, 'info'); }
         function viewUserDetails(id) { showNotification(`Viewing details for user #${id.slice(-6)}...`, 'info'); }
-        function toggleUserStatus(id, newStatus) { showNotification(`${newStatus ? 'Activating' : 'Deactivating'} user...`, 'info'); }
+        
+        async function toggleUserStatus(activate, id) {
+            const actionText = activate ? 'activate' : 'deactivate';
+            if (!confirm(`Are you sure you want to ${actionText} this user?`)) {
+                return;
+            }
+
+            try {
+                showNotification(`Updating user status...`, 'info');
+                
+                const userIndex = usersData.findIndex(u => (u._id || u.id) === id);
+                if (userIndex === -1) {
+                    throw new Error('User not found.');
+                }
+                
+                console.log(`Simulating API call to ${actionText} user ${id}`);
+                
+                usersData[userIndex].isActive = activate;
+                
+                renderUsersTab();
+                
+                showNotification(`User has been ${actionText}d successfully!`, 'success');
+
+            } catch (error) {
+                console.error(`Failed to ${actionText} user:`, error);
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+
         function downloadEstimationPDF(id) { showNotification(`Preparing PDF download for estimation #${id.slice(-6)}...`, 'info'); console.log(`Download PDF for estimation ${id}`); }
         async function markMessageResponded(id) {
             try {
                 showNotification('Marking message as responded...', 'info');
                 console.log(`Marking message ${id} as responded.`);
                 closeModal('messageModal');
-                // DEMO: Update local data and re-render for immediate feedback
                 const message = messagesData.find(m => (m._id || m.id) === id);
                 if (message) message.status = 'responded';
                 renderMessagesTab();
