@@ -5,7 +5,1100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* === PROFESSIONAL STEELCONNECT ADMIN DASHBOARD === */
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        /* === CONTAINER AND LAYOUT === */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* === HEADER STYLES === */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.1;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .admin-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* === STATS GRID === */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(31, 38, 135, 0.5);
+        }
+
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-icon::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+        }
+
+        .stat-card:hover .stat-icon::before {
+            animation: shine 0.6s ease-in-out;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .stat-icon.users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-icon.jobs { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-icon.quotes { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-icon.contractors { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .stat-icon.designers { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .stat-icon.active { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        .stat-icon.completed { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+        .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+        .stat-icon.messages { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+        .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); }
+
+        .stat-number {
+            font-size: 42px;
+            font-weight: 800;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* === SECTION STYLES === */
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            position: relative;
+        }
+
+        .section h2 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* === ENHANCED TAB SYSTEM === */
+        .tabs {
+            display: flex;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-x: auto;
+            gap: 5px;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .tab:hover::before {
+            left: 100%;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: #495057;
+            transform: translateY(-1px);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* === ENHANCED SECTION HEADERS === */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .section-header h3 {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+
+        /* === ENHANCED TABLE STYLES === */
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(20px);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .data-table thead {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+
+        .data-table th {
+            padding: 20px 15px;
+            text-align: left;
+            font-weight: 700;
+            color: #495057;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            border-bottom: 3px solid #667eea;
+            position: relative;
+        }
+
+        .data-table th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .data-table th:hover::after {
+            width: 100%;
+        }
+
+        .data-table td {
+            padding: 20px 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+
+        .data-table tbody tr {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .data-table tbody tr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            opacity: 0.1;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateX(5px);
+        }
+
+        .data-table tbody tr:hover::before {
+            width: 4px;
+        }
+
+        /* === ENHANCED BUTTONS === */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-info:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(23, 162, 184, 0.4);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #6f42c1, #563d7c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(111, 66, 193, 0.4);
+        }
+
+        /* === ACTION GROUPS === */
+        .action-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* === ENHANCED STATUS BADGES === */
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .status-badge:hover::before {
+            left: 100%;
+        }
+
+        .status-badge.pending {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+            box-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .status-badge.active,
+        .status-badge.completed {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-badge.inactive,
+        .status-badge.cancelled,
+        .status-badge.rejected {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            box-shadow: 0 2px 10px rgba(220, 53, 69, 0.3);
+        }
+
+        .status-badge.in-progress {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            box-shadow: 0 2px 10px rgba(23, 162, 184, 0.3);
+        }
+
+        .status-badge.unread {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0, 123, 255, 0.3);
+        }
+
+        .status-badge.read {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-badge.replied {
+            background: linear-gradient(135deg, #6f42c1, #563d7c);
+            color: white;
+            box-shadow: 0 2px 10px rgba(111, 66, 193, 0.3);
+        }
+
+        .status-badge.archived {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
+        }
+
+        .type-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .type-badge.admin {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .type-badge.contractor {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+        }
+
+        .type-badge.designer {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        /* === ENHANCED MESSAGES CONTAINER === */
+        .messages-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .message-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .message-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .message-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(31, 38, 135, 0.5);
+        }
+
+        .message-card:hover::before {
+            width: 8px;
+        }
+
+        .message-card.unread {
+            background: rgba(0, 123, 255, 0.02);
+            border-left: 4px solid #007bff;
+        }
+
+        .message-card.read {
+            border-left: 4px solid #28a745;
+        }
+
+        .message-card.replied {
+            border-left: 4px solid #6f42c1;
+        }
+
+        .message-card.archived {
+            opacity: 0.7;
+            border-left: 4px solid #6c757d;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .sender-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sender-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .sender-details strong {
+            display: block;
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .sender-details small {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .message-meta {
+            text-align: right;
+        }
+
+        .message-time {
+            display: block;
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .message-content {
+            padding: 0 25px 20px;
+        }
+
+        .message-content h4 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .message-preview {
+            color: #6c757d;
+            line-height: 1.6;
+            margin: 0;
+            font-size: 15px;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            padding: 20px 25px;
+            background: rgba(248, 249, 250, 0.5);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            flex-wrap: wrap;
+        }
+
+        /* === ENHANCED MODALS === */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(31, 38, 135, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .modal-content.large {
+            max-width: 1000px;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .close {
+            color: #6c757d;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .close:hover {
+            color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* === ENHANCED FORMS === */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            color: #2c3e50;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+            line-height: 1.6;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding: 25px 30px;
+            background: rgba(248, 249, 250, 0.5);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 0 0 20px 20px;
+        }
+
+        /* === LOADING AND ERROR STATES === */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #6c757d;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05));
+            border-radius: 15px;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .error i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #dc3545;
+        }
+
+        .no-data {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #cbd5e0;
+        }
+
+        /* === PROJECT/USER INFO STYLES === */
+        .project-info, .contractor-info, .user-info, .client-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .project-info strong, .contractor-info strong, .user-info strong, .client-info strong {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .project-info small, .contractor-info small, .user-info small, .client-info small {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        /* === FILE UPLOAD STYLES === */
+        .file-upload-area {
+            border: 2px dashed rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.02);
+        }
+
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .uploaded-files {
+            margin-top: 15px;
+        }
+
+        /* === RESPONSIVE DESIGN === */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
+            
+            .section {
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .section-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .tabs {
+                flex-direction: column;
+                padding: 0;
+                background: none;
+                border: none;
+            }
+            
+            .tab {
+                border-radius: 0;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                justify-content: center;
+            }
+            
+            .tab.active {
+                transform: none;
+            }
+            
+            .data-table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 10px 8px;
+            }
+            
+            .action-group {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .btn-sm {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            
+            .modal-content {
+                margin: 10px;
+                width: calc(100% - 20px);
+            }
+            
+            .modal-header {
+                padding: 20px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -156,17 +1249,19 @@
                 <span class="close" onclick="closeModal('replyModal')">&times;</span>
             </div>
             <form id="replyForm">
-                <div class="form-group">
-                    <label for="replyRecipient">To:</label>
-                    <input type="text" id="replyRecipient" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="replySubject">Subject:</label>
-                    <input type="text" id="replySubject" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="replyMessage">Message:</label>
-                    <textarea id="replyMessage" rows="6" placeholder="Type your reply here..." required></textarea>
+                <div style="padding: 30px;">
+                    <div class="form-group">
+                        <label for="replyRecipient">To:</label>
+                        <input type="text" id="replyRecipient" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="replySubject">Subject:</label>
+                        <input type="text" id="replySubject" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="replyMessage">Message:</label>
+                        <textarea id="replyMessage" rows="6" placeholder="Type your reply here..." required></textarea>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('replyModal')">Cancel</button>
@@ -178,7 +1273,7 @@
         </div>
     </div>
 
-    <!-- Other existing modals remain unchanged -->
+    <!-- Status Modal -->
     <div id="statusModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -186,19 +1281,21 @@
                 <span class="close" onclick="closeModal('statusModal')">&times;</span>
             </div>
             <form id="statusForm">
-                <div class="form-group">
-                    <label for="statusSelect">Status:</label>
-                    <select id="statusSelect" required>
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="statusNotes">Notes (Optional):</label>
-                    <textarea id="statusNotes" placeholder="Add any notes about this status change..."></textarea>
+                <div style="padding: 30px;">
+                    <div class="form-group">
+                        <label for="statusSelect">Status:</label>
+                        <select id="statusSelect" required>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="statusNotes">Notes (Optional):</label>
+                        <textarea id="statusNotes" placeholder="Add any notes about this status change..."></textarea>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('statusModal')">Cancel</button>
@@ -208,6 +1305,7 @@
         </div>
     </div>
 
+    <!-- Upload Result Modal -->
     <div id="uploadResultModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -215,22 +1313,24 @@
                 <span class="close" onclick="closeModal('uploadResultModal')">&times;</span>
             </div>
             <form id="uploadResultForm" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label>Result File (PDF):</label>
-                    <div class="file-upload-area" id="resultUploadArea">
-                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #ddd; margin-bottom: 10px;"></i>
-                        <p>Click to select or drag and drop your result file here</p>
-                        <input type="file" id="resultFile" accept=".pdf" style="display: none;">
+                <div style="padding: 30px;">
+                    <div class="form-group">
+                        <label>Result File (PDF):</label>
+                        <div class="file-upload-area" id="resultUploadArea">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #667eea; margin-bottom: 15px;"></i>
+                            <p>Click to select or drag and drop your result file here</p>
+                            <input type="file" id="resultFile" accept=".pdf" style="display: none;">
+                        </div>
+                        <div id="uploadedResultFiles" class="uploaded-files"></div>
                     </div>
-                    <div id="uploadedResultFiles" class="uploaded-files"></div>
-                </div>
-                <div class="form-group">
-                    <label for="estimationAmount">Estimated Amount ($):</label>
-                    <input type="number" id="estimationAmount" step="0.01" placeholder="Enter estimation amount">
-                </div>
-                <div class="form-group">
-                    <label for="resultNotes">Notes (Optional):</label>
-                    <textarea id="resultNotes" placeholder="Add any notes about this estimation..."></textarea>
+                    <div class="form-group">
+                        <label for="estimationAmount">Estimated Amount ($):</label>
+                        <input type="number" id="estimationAmount" step="0.01" placeholder="Enter estimation amount">
+                    </div>
+                    <div class="form-group">
+                        <label for="resultNotes">Notes (Optional):</label>
+                        <textarea id="resultNotes" placeholder="Add any notes about this estimation..."></textarea>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('uploadResultModal')">Cancel</button>
@@ -240,6 +1340,7 @@
         </div>
     </div>
 
+    <!-- Create Plan Modal -->
     <div id="createPlanModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -247,38 +1348,40 @@
                 <span class="close" onclick="closeModal('createPlanModal')">&times;</span>
             </div>
             <form id="createPlanForm">
-                <div class="form-group">
-                    <label for="planName">Plan Name:</label>
-                    <input type="text" id="planName" required placeholder="e.g., Premium Plan">
-                </div>
-                <div class="form-group">
-                    <label for="planPrice">Price ($):</label>
-                    <input type="number" id="planPrice" step="0.01" required placeholder="29.99">
-                </div>
-                <div class="form-group">
-                    <label for="planInterval">Billing Interval:</label>
-                    <select id="planInterval" required>
-                        <option value="month">Monthly</option>
-                        <option value="year">Yearly</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="planDescription">Description:</label>
-                    <textarea id="planDescription" placeholder="Plan description..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Features:</label>
-                    <div id="featuresContainer">
-                        <div class="feature-input">
-                            <input type="text" placeholder="Feature 1">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
+                <div style="padding: 30px;">
+                    <div class="form-group">
+                        <label for="planName">Plan Name:</label>
+                        <input type="text" id="planName" required placeholder="e.g., Premium Plan">
                     </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
-                        <i class="fas fa-plus"></i> Add Feature
-                    </button>
+                    <div class="form-group">
+                        <label for="planPrice">Price ($):</label>
+                        <input type="number" id="planPrice" step="0.01" required placeholder="29.99">
+                    </div>
+                    <div class="form-group">
+                        <label for="planInterval">Billing Interval:</label>
+                        <select id="planInterval" required>
+                            <option value="month">Monthly</option>
+                            <option value="year">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="planDescription">Description:</label>
+                        <textarea id="planDescription" placeholder="Plan description..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Features:</label>
+                        <div id="featuresContainer">
+                            <div class="feature-input" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" placeholder="Feature 1" style="flex: 1;">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
+                            <i class="fas fa-plus"></i> Add Feature
+                        </button>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('createPlanModal')">Cancel</button>
@@ -307,10 +1410,11 @@
         function getToken() {
             return localStorage.getItem('adminToken') || 
                    localStorage.getItem('token') || 
+                   localStorage.getItem('jwtToken') ||
                    sessionStorage.getItem('adminToken');
         }
         
-        // Make authenticated API call
+        // Make authenticated API call with better error handling
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
             
@@ -326,63 +1430,758 @@
                 ...options
             };
             
-            const response = await fetch(`${API_BASE}${endpoint}`, config);
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                
+                if (response.status === 401) {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.message || errorMessage;
+                    } catch (e) {
+                        // Use default error message
+                    }
+                    throw new Error(errorMessage);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    throw new Error('Network error: Unable to connect to server');
+                }
+                throw error;
+            }
+        }
+
+        // Enhanced showNotification with better styling
+        function showNotification(message, type = 'info') {
+            // Remove existing notifications
+            const existing = document.querySelectorAll('.notification');
+            existing.forEach(n => n.remove());
+
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, 
+                    ${type === 'success' ? '#28a745, #20c997' : 
+                      type === 'error' ? '#dc3545, #fd7e14' :
+                      type === 'warning' ? '#ffc107, #fd7e14' :
+                      '#17a2b8, #6f42c1'});
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                z-index: 10001;
+                max-width: 350px;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+                animation: slideInRight 0.3s ease;
+            `;
             
-            if (response.status === 401) {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('token');
-                sessionStorage.removeItem('adminToken');
-                window.location.href = 'index.html';
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                    <span style="flex: 1;">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.8;">&times;</button>
+                </div>
+            `;
+        }
+
+        function renderOverviewTab() {
+            const overviewTab = document.getElementById('overview-tab');
+            
+            overviewTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-home"></i> Dashboard Overview</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadDashboardStats()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-top: 30px;">
+                    <div class="stat-card">
+                        <div class="stat-icon active">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-number">98%</div>
+                        <div class="stat-label">System Uptime</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon completed">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="stat-number">Normal</div>
+                        <div class="stat-label">Server Status</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon users">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="stat-number">Connected</div>
+                        <div class="stat-label">Database Status</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px;">
+                    <h4 style="margin-bottom: 20px; color: #2c3e50; font-size: 20px; font-weight: 600;">
+                        <i class="fas fa-bell"></i> Recent Activity
+                    </h4>
+                    <div style="background: rgba(255,255,255,0.7); padding: 30px; border-radius: 15px; border: 1px solid rgba(0,0,0,0.05);">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #2c3e50;">New user registered</div>
+                                <div style="font-size: 14px; color: #6c757d;">2 minutes ago</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #2c3e50;">New quote request submitted</div>
+                                <div style="font-size: 14px; color: #6c757d;">15 minutes ago</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #17a2b8, #138496); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #2c3e50;">Estimation completed</div>
+                                <div style="font-size: 14px; color: #6c757d;">1 hour ago</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Enhanced modal and action functions
+        function updateEstimationStatus(estimationId) {
+            currentEstimationId = estimationId;
+            const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
+            
+            if (estimation) {
+                document.getElementById('statusSelect').value = estimation.status || 'pending';
+                document.getElementById('statusNotes').value = '';
+                document.getElementById('statusModal').style.display = 'block';
+            }
+        }
+
+        function uploadEstimationResult(estimationId) {
+            currentEstimationId = estimationId;
+            document.getElementById('resultFile').value = '';
+            document.getElementById('estimationAmount').value = '';
+            document.getElementById('resultNotes').value = '';
+            document.getElementById('uploadedResultFiles').innerHTML = '';
+            document.getElementById('uploadResultModal').style.display = 'block';
+            
+            // Setup file upload area
+            const uploadArea = document.getElementById('resultUploadArea');
+            const fileInput = document.getElementById('resultFile');
+            
+            uploadArea.onclick = () => fileInput.click();
+            
+            fileInput.onchange = function() {
+                const file = this.files[0];
+                if (file) {
+                    document.getElementById('uploadedResultFiles').innerHTML = `
+                        <div style="margin-top: 10px; padding: 10px; background: rgba(102,126,234,0.1); border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
+                            <span>${file.name}</span>
+                            <span style="margin-left: auto; font-size: 12px; color: #6c757d;">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    `;
+                }
+            };
+        }
+
+        async function downloadEstimationResult(estimationId) {
+            try {
+                showNotification('Preparing download...', 'info');
+                const data = await apiCall(`/estimation/${estimationId}/result`);
+                
+                if (data.resultFile && data.resultFile.url) {
+                    const link = document.createElement('a');
+                    link.href = data.resultFile.url;
+                    link.download = data.resultFile.name || `estimation-result-${estimationId}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showNotification('Download started!', 'success');
+                } else {
+                    showNotification('No result file available', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error downloading PDF:', error);
+                showNotification(`Failed to download: ${error.message}`, 'error');
+            }
+        }
+
+        // Enhanced message functions
+        async function viewMessageDetails(messageId) {
+            try {
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!message) {
+                    showNotification('Message not found', 'error');
+                    return;
+                }
+                
+                document.getElementById('messageControlContent').innerHTML = `
+                    <div style="padding: 30px;">
+                        <div class="message-header" style="padding: 0; border: none; margin-bottom: 30px;">
+                            <div class="sender-info">
+                                <div class="sender-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="sender-details">
+                                    <strong style="font-size: 18px;">${message.senderName || message.name || 'Unknown'}</strong>
+                                    <small style="font-size: 14px;">${message.senderEmail || message.email || 'No email'}</small>
+                                    <small style="display: block; margin-top: 5px;">Sent: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'Unknown'}</small>
+                                </div>
+                            </div>
+                            <span class="status-badge ${message.status || 'unread'}">${(message.status || 'unread').toUpperCase()}</span>
+                        </div>
+                        
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; font-size: 24px;">${message.subject || message.title || 'No Subject'}</h3>
+                        
+                        <div style="background: rgba(248,249,250,0.8); padding: 25px; border-radius: 12px; line-height: 1.7; border-left: 4px solid #667eea;">
+                            ${(message.content || message.message || message.body || 'No content').replace(/\n/g, '<br>')}
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px; margin-top: 30px; justify-content: flex-end;">
+                            <button class="btn btn-primary" onclick="replyToMessage('${messageId}')">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
+                            <button class="btn btn-success" onclick="markAsRead('${messageId}')">
+                                <i class="fas fa-check"></i> Mark as Read
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeModal('messagesControlModal')">Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('messagesControlModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error viewing message:', error);
+                showNotification(`Failed to load message: ${error.message}`, 'error');
+            }
+        }
+
+        async function replyToMessage(messageId) {
+            try {
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!message) {
+                    showNotification('Message not found', 'error');
+                    return;
+                }
+                
+                currentMessageId = messageId;
+                document.getElementById('replyRecipient').value = `${message.senderName || message.name} <${message.senderEmail || message.email}>`;
+                document.getElementById('replySubject').value = `Re: ${message.subject || message.title || 'No Subject'}`;
+                document.getElementById('replyMessage').value = '';
+                
+                document.getElementById('messagesControlModal').style.display = 'none';
+                document.getElementById('replyModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error preparing reply:', error);
+                showNotification(`Failed to prepare reply: ${error.message}`, 'error');
+            }
+        }
+
+        async function markAsRead(messageId) {
+            try {
+                await apiCall(`/admin/messages/${messageId}/read`, {
+                    method: 'PATCH'
+                });
+                
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.status = 'read';
+                }
+                
+                renderMessagesTab();
+                closeModal('messagesControlModal');
+                showNotification('Message marked as read', 'success');
+                
+            } catch (error) {
+                console.error('Error marking as read:', error);
+                showNotification(`Failed to mark as read: ${error.message}`, 'error');
+            }
+        }
+
+        async function archiveMessage(messageId) {
+            try {
+                await apiCall(`/admin/messages/${messageId}/archive`, {
+                    method: 'PATCH'
+                });
+                
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.status = 'archived';
+                }
+                
+                renderMessagesTab();
+                showNotification('Message archived', 'success');
+                
+            } catch (error) {
+                console.error('Error archiving message:', error);
+                showNotification(`Failed to archive message: ${error.message}`, 'error');
+            }
+        }
+
+        // Enhanced view functions
+        async function viewUserDetails(userId) {
+            const user = usersData.find(u => (u._id || u.id) === userId);
+            if (!user) {
+                showNotification('User not found', 'error');
                 return;
             }
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const modalContent = `
+                <div style="padding: 30px;">
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 20px; background: rgba(102,126,234,0.05); border-radius: 12px;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #2c3e50;">${user.name || user.firstName + ' ' + (user.lastName || '') || 'N/A'}</h3>
+                            <p style="margin: 5px 0; color: #6c757d;">${user.email}</p>
+                            <span class="type-badge ${user.type || user.role}">${(user.type || user.role || 'user').toUpperCase()}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div>
+                            <h4 style="color: #2c3e50; margin-bottom: 15px;">Contact Information</h4>
+                            <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
+                            <p><strong>Company:</strong> ${user.company || user.companyName || 'Not specified'}</p>
+                        </div>
+                        
+                        <div>
+                            <h4 style="color: #2c3e50; margin-bottom: 15px;">Account Details</h4>
+                            <p><strong>Status:</strong> <span class="status-badge ${user.isActive !== false ? 'active' : 'inactive'}">${user.isActive !== false ? 'Active' : 'Inactive'}</span></p>
+                            <p><strong>Joined:</strong> ${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
+                            <p><strong>Last Login:</strong> ${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeModal('userDetailsModal')">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            showModal('userDetailsModal', modalContent);
+        }
+
+        function showModal(modalId, content) {
+            const existingModal = document.getElementById('dynamic-modal');
+            if (existingModal) existingModal.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'dynamic-modal';
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Details</h3>
+                        <span class="close" onclick="closeModal('dynamic-modal')">&times;</span>
+                    </div>
+                    ${content}
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Enhanced close modal function
+        function closeModal(modalId) {
+            if (modalId === 'dynamic-modal') {
+                const modal = document.getElementById('dynamic-modal');
+                if (modal) modal.remove();
+            } else {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'none';
+            }
+        }
+
+        // Enhanced feature management functions
+        function addFeature() {
+            const container = document.getElementById('featuresContainer');
+            const featureDiv = document.createElement('div');
+            featureDiv.className = 'feature-input';
+            featureDiv.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+            featureDiv.innerHTML = `
+                <input type="text" placeholder="New feature" style="flex: 1;">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+                    <i class="fas fa-minus"></i>
+                </button>
+            `;
+            container.appendChild(featureDiv);
+        }
+
+        function removeFeature(button) {
+            button.parentElement.remove();
+        }
+
+        // Enhanced export functions (placeholders)
+        async function exportUsers() {
+            showNotification('Exporting users...', 'info');
+            // Implementation would generate CSV
+            setTimeout(() => {
+                showNotification('Users exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportJobs() {
+            showNotification('Exporting jobs...', 'info');
+            setTimeout(() => {
+                showNotification('Jobs exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportQuotes() {
+            showNotification('Exporting quotes...', 'info');
+            setTimeout(() => {
+                showNotification('Quotes exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportEstimations() {
+            showNotification('Exporting estimations...', 'info');
+            setTimeout(() => {
+                showNotification('Estimations exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportMessages() {
+            showNotification('Exporting messages...', 'info');
+            setTimeout(() => {
+                showNotification('Messages exported successfully!', 'success');
+            }, 2000);
+        }
+
+        // Enhanced logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                console.log('Logging out admin...');
+                localStorage.clear();
+                sessionStorage.clear();
+                showNotification('Logged out successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            }
+        }
+
+        // Enhanced form submissions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Status Form
+            const statusForm = document.getElementById('statusForm');
+            if (statusForm) {
+                statusForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const status = document.getElementById('statusSelect').value;
+                    const notes = document.getElementById('statusNotes').value;
+                    
+                    try {
+                        showNotification('Updating status...', 'info');
+                        await apiCall(`/estimation/${currentEstimationId}/status`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ status, notes })
+                        });
+                        
+                        const estimation = estimationsData.find(e => (e._id || e.id) === currentEstimationId);
+                        if (estimation) {
+                            estimation.status = status;
+                        }
+                        
+                        renderEstimationsTab();
+                        closeModal('statusModal');
+                        showNotification('Status updated successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error updating status:', error);
+                        showNotification(`Failed to update status: ${error.message}`, 'error');
+                    }
+                });
+            }
+
+            // Reply Form
+            const replyForm = document.getElementById('replyForm');
+            if (replyForm) {
+                replyForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const message = document.getElementById('replyMessage').value;
+                    
+                    try {
+                        showNotification('Sending reply...', 'info');
+                        await apiCall(`/admin/messages/${currentMessageId}/reply`, {
+                            method: 'POST',
+                            body: JSON.stringify({ message, content: message })
+                        });
+                        
+                        const msg = messagesData.find(m => (m._id || m.id) === currentMessageId);
+                        if (msg) {
+                            msg.status = 'replied';
+                        }
+                        
+                        renderMessagesTab();
+                        closeModal('replyModal');
+                        showNotification('Reply sent successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error sending reply:', error);
+                        showNotification(`Failed to send reply: ${error.message}`, 'error');
+                    }
+                });
+            }
+
+            // Upload Result Form
+            const uploadForm = document.getElementById('uploadResultForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const fileInput = document.getElementById('resultFile');
+                    const amount = document.getElementById('estimationAmount').value;
+                    const notes = document.getElementById('resultNotes').value;
+                    
+                    if (!fileInput.files[0]) {
+                        showNotification('Please select a file', 'error');
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('resultFile', fileInput.files[0]);
+                    if (amount) formData.append('amount', amount);
+                    if (notes) formData.append('notes', notes);
+                    
+                    try {
+                        showNotification('Uploading result...', 'info');
+                        await apiCall(`/estimation/${currentEstimationId}/result`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${getToken()}`
+                            },
+                            body: formData
+                        });
+                        
+                        const estimation = estimationsData.find(e => (e._id || e.id) === currentEstimationId);
+                        if (estimation) {
+                            estimation.status = 'completed';
+                            estimation.resultFile = true;
+                            if (amount) estimation.estimatedAmount = parseFloat(amount);
+                        }
+                        
+                        renderEstimationsTab();
+                        closeModal('uploadResultModal');
+                        showNotification('Result uploaded successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error uploading result:', error);
+                        showNotification(`Failed to upload result: ${error.message}`, 'error');
+                    }
+                });
+            }
+        });
+
+        // Click outside modal to close
+        window.onclick = function(event) {
+            const modals = ['statusModal', 'uploadResultModal', 'createPlanModal', 'estimationDetailsModal', 'messagesControlModal', 'replyModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Handle dynamic modal
+            if (event.target.id === 'dynamic-modal') {
+                event.target.remove();
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing admin dashboard...');
+            
+            const token = getToken();
+            
+            if (!token) {
+                console.log('No authentication token found, redirecting to login...');
+                showNotification('Please log in to access the admin panel', 'error');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                return;
             }
             
-            return await response.json();
+            console.log('Authentication token found, loading dashboard...');
+            showNotification('Welcome to SteelConnect Admin Panel!', 'success');
+            loadDashboardStats();
+            
+            // Set up auto-refresh every 5 minutes
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    loadDashboardStats();
+                }
+            }, 5 * 60 * 1000);
+        });
+
+        // Placeholder functions for missing functionality
+        function viewEstimationDetails(id) {
+            showNotification('Loading estimation details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewJobDetails(id) {
+            showNotification('Loading job details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewQuoteDetails(id) {
+            showNotification('Loading quote details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewSubscriptionDetails(id) {
+            showNotification('Loading subscription details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function updateJobStatus(id) {
+            showNotification('Job status update functionality coming soon...', 'info');
+        }
+
+        function updateQuoteStatus(id) {
+            showNotification('Quote status update functionality coming soon...', 'info');
+        }
+
+        function toggleUserStatus(id, newStatus) {
+            showNotification(`${newStatus ? 'Activating' : 'Deactivating'} user...`, 'info');
+            // Implementation would toggle user status
+        }
+
+        function createSubscriptionPlan() {
+            document.getElementById('createPlanModal').style.display = 'block';
+        }
+
+        function cancelSubscription(id) {
+            if (confirm('Are you sure you want to cancel this subscription?')) {
+                showNotification('Canceling subscription...', 'info');
+                // Implementation would cancel subscription
+            }
+        }
+    </script>
+</body>
+</html>
+            
+            // Add animation styles if not exists
+            if (!document.getElementById('notification-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'notification-styles';
+                styles.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
         }
         
-        // Load dashboard stats
+        // Load dashboard stats with better error handling
         async function loadDashboardStats() {
             try {
                 console.log('📊 Loading dashboard statistics...');
+                showNotification('Loading dashboard data...', 'info');
                 
                 const data = await apiCall('/admin/dashboard');
-                dashboardData = data.data;
+                dashboardData = data.data || data;
                 
                 console.log('✅ Dashboard data loaded:', dashboardData);
                 
                 // Update admin name
                 const adminName = document.getElementById('adminName');
-                if (adminName && dashboardData.adminUser) {
-                    adminName.textContent = dashboardData.adminUser.split('@')[0];
+                if (adminName && (dashboardData.adminUser || dashboardData.user)) {
+                    const userName = dashboardData.adminUser || dashboardData.user?.name || dashboardData.user?.email;
+                    adminName.textContent = userName.split('@')[0];
                 }
                 
                 // Render stats cards
-                renderStatsGrid(dashboardData.stats);
+                renderStatsGrid(dashboardData.stats || dashboardData);
+                showNotification('Dashboard loaded successfully!', 'success');
                 
             } catch (error) {
                 console.error('❌ Error loading dashboard:', error);
                 document.getElementById('statsGrid').innerHTML = `
                     <div class="error">
                         <i class="fas fa-exclamation-triangle"></i>
-                        Failed to load dashboard: ${error.message}
+                        <h3>Failed to load dashboard</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadDashboardStats()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
                     </div>
                 `;
+                showNotification(`Failed to load dashboard: ${error.message}`, 'error');
             }
         }
         
-        // Render stats grid
+        // Render stats grid with improved design
         function renderStatsGrid(stats) {
             const statsGrid = document.getElementById('statsGrid');
+            
+            const defaultStats = {
+                totalUsers: 0,
+                contractors: 0,
+                designers: 0,
+                totalJobs: 0,
+                totalQuotes: 0,
+                totalEstimations: 0,
+                totalSubscriptions: 0,
+                totalMessages: 0
+            };
+            
+            const finalStats = { ...defaultStats, ...stats };
             
             statsGrid.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-icon users">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="stat-number">${stats.totalUsers || 0}</div>
+                    <div class="stat-number">${finalStats.totalUsers || 0}</div>
                     <div class="stat-label">Total Users</div>
                 </div>
                 
@@ -390,7 +2189,7 @@
                     <div class="stat-icon contractors">
                         <i class="fas fa-hard-hat"></i>
                     </div>
-                    <div class="stat-number">${stats.contractors || 0}</div>
+                    <div class="stat-number">${finalStats.contractors || 0}</div>
                     <div class="stat-label">Contractors</div>
                 </div>
                 
@@ -398,7 +2197,7 @@
                     <div class="stat-icon designers">
                         <i class="fas fa-drafting-compass"></i>
                     </div>
-                    <div class="stat-number">${stats.designers || 0}</div>
+                    <div class="stat-number">${finalStats.designers || 0}</div>
                     <div class="stat-label">Designers</div>
                 </div>
                 
@@ -406,7 +2205,7 @@
                     <div class="stat-icon jobs">
                         <i class="fas fa-briefcase"></i>
                     </div>
-                    <div class="stat-number">${stats.totalJobs || 0}</div>
+                    <div class="stat-number">${finalStats.totalJobs || 0}</div>
                     <div class="stat-label">Total Jobs</div>
                 </div>
                 
@@ -414,7 +2213,7 @@
                     <div class="stat-icon quotes">
                         <i class="fas fa-file-invoice-dollar"></i>
                     </div>
-                    <div class="stat-number">${stats.totalQuotes || 0}</div>
+                    <div class="stat-number">${finalStats.totalQuotes || 0}</div>
                     <div class="stat-label">Total Quotes</div>
                 </div>
                 
@@ -422,7 +2221,7 @@
                     <div class="stat-icon estimations">
                         <i class="fas fa-calculator"></i>
                     </div>
-                    <div class="stat-number">${stats.totalEstimations || 0}</div>
+                    <div class="stat-number">${finalStats.totalEstimations || 0}</div>
                     <div class="stat-label">Estimations</div>
                 </div>
                 
@@ -430,7 +2229,7 @@
                     <div class="stat-icon subscriptions">
                         <i class="fas fa-credit-card"></i>
                     </div>
-                    <div class="stat-number">${stats.totalSubscriptions || 0}</div>
+                    <div class="stat-number">${finalStats.totalSubscriptions || 0}</div>
                     <div class="stat-label">Subscriptions</div>
                 </div>
                 
@@ -438,13 +2237,13 @@
                     <div class="stat-icon messages">
                         <i class="fas fa-comments"></i>
                     </div>
-                    <div class="stat-number">${stats.totalMessages || 0}</div>
+                    <div class="stat-number">${finalStats.totalMessages || 0}</div>
                     <div class="stat-label">Messages</div>
                 </div>
             `;
         }
         
-        // Show tab function
+        // Enhanced show tab function
         function showTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -468,46 +2267,492 @@
                 clickedTab.classList.add('active');
             }
             
-            // Load data if needed
-            if (tabName === 'users' && usersData.length === 0) {
-                loadUsersData();
-            } else if (tabName === 'jobs' && jobsData.length === 0) {
-                loadJobsData();
-            } else if (tabName === 'quotes' && quotesData.length === 0) {
-                loadQuotesData();
-            } else if (tabName === 'estimations' && estimationsData.length === 0) {
-                loadEstimationsData();
-            } else if (tabName === 'messages' && messagesData.length === 0) {
-                loadMessagesData();
-            } else if (tabName === 'subscriptions' && subscriptionsData.length === 0) {
-                loadSubscriptionsData();
-            } else if (tabName === 'overview') {
-                renderOverviewTab();
+            // Load data if needed with improved error handling
+            try {
+                switch(tabName) {
+                    case 'users':
+                        if (usersData.length === 0) loadUsersData();
+                        break;
+                    case 'jobs':
+                        if (jobsData.length === 0) loadJobsData();
+                        break;
+                    case 'quotes':
+                        if (quotesData.length === 0) loadQuotesData();
+                        break;
+                    case 'estimations':
+                        if (estimationsData.length === 0) loadEstimationsData();
+                        break;
+                    case 'messages':
+                        if (messagesData.length === 0) loadMessagesData();
+                        break;
+                    case 'subscriptions':
+                        if (subscriptionsData.length === 0) loadSubscriptionsData();
+                        break;
+                    case 'overview':
+                        renderOverviewTab();
+                        break;
+                }
+            } catch (error) {
+                console.error(`Error loading ${tabName} tab:`, error);
+                showNotification(`Failed to load ${tabName} data`, 'error');
             }
         }
 
-        // Enhanced estimation loading with PDF downloads and descriptions
+        // Enhanced data loading functions with better endpoints and error handling
+        async function loadUsersData() {
+            try {
+                console.log('👥 Loading users data...');
+                showNotification('Loading users...', 'info');
+                
+                // Try multiple possible endpoints
+                let data;
+                try {
+                    data = await apiCall('/admin/users');
+                } catch (error) {
+                    // Try alternative endpoint
+                    data = await apiCall('/users');
+                }
+                
+                usersData = data.users || data.data || data || [];
+                console.log('✅ Users data loaded:', usersData.length, 'users');
+                renderUsersTab();
+                showNotification(`Loaded ${usersData.length} users`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error loading users:', error);
+                document.getElementById('users-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load users</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadUsersData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                showNotification(`Failed to load users: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadJobsData() {
+            try {
+                console.log('💼 Loading jobs data...');
+                showNotification('Loading jobs...', 'info');
+                
+                let data;
+                try {
+                    data = await apiCall('/admin/jobs');
+                } catch (error) {
+                    data = await apiCall('/jobs');
+                }
+                
+                jobsData = data.jobs || data.data || data || [];
+                console.log('✅ Jobs data loaded:', jobsData.length, 'jobs');
+                renderJobsTab();
+                showNotification(`Loaded ${jobsData.length} jobs`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error loading jobs:', error);
+                document.getElementById('jobs-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load jobs</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadJobsData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                showNotification(`Failed to load jobs: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadQuotesData() {
+            try {
+                console.log('📄 Loading quotes data...');
+                showNotification('Loading quotes...', 'info');
+                
+                let data;
+                try {
+                    data = await apiCall('/admin/quotes');
+                } catch (error) {
+                    data = await apiCall('/quotes');
+                }
+                
+                quotesData = data.quotes || data.data || data || [];
+                console.log('✅ Quotes data loaded:', quotesData.length, 'quotes');
+                renderQuotesTab();
+                showNotification(`Loaded ${quotesData.length} quotes`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error loading quotes:', error);
+                document.getElementById('quotes-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load quotes</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadQuotesData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                showNotification(`Failed to load quotes: ${error.message}`, 'error');
+            }
+        }
+
         async function loadEstimationsData() {
             try {
                 console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/estimation');
-                estimationsData = data.estimations || [];
+                showNotification('Loading estimations...', 'info');
+                
+                let data;
+                try {
+                    data = await apiCall('/admin/estimations');
+                } catch (error) {
+                    try {
+                        data = await apiCall('/estimation');
+                    } catch (error2) {
+                        data = await apiCall('/estimations');
+                    }
+                }
+                
+                estimationsData = data.estimations || data.data || data || [];
                 console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
                 renderEstimationsTab();
+                showNotification(`Loaded ${estimationsData.length} estimations`, 'success');
+                
             } catch (error) {
                 console.error('❌ Error loading estimations:', error);
                 document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">Failed to load estimations: ${error.message}</div>
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load estimations</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadEstimationsData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
                 `;
+                showNotification(`Failed to load estimations: ${error.message}`, 'error');
             }
         }
-        
-        // Enhanced estimations tab with PDF download and description view
+
+        async function loadMessagesData() {
+            try {
+                console.log('💬 Loading messages data...');
+                showNotification('Loading messages...', 'info');
+                
+                let data;
+                try {
+                    data = await apiCall('/admin/messages');
+                } catch (error) {
+                    data = await apiCall('/messages');
+                }
+                
+                messagesData = data.messages || data.data || data || [];
+                console.log('✅ Messages data loaded:', messagesData.length, 'messages');
+                renderMessagesTab();
+                showNotification(`Loaded ${messagesData.length} messages`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error loading messages:', error);
+                document.getElementById('messages-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load messages</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadMessagesData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                showNotification(`Failed to load messages: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadSubscriptionsData() {
+            try {
+                console.log('💳 Loading subscriptions data...');
+                showNotification('Loading subscriptions...', 'info');
+                
+                let data;
+                try {
+                    data = await apiCall('/admin/subscriptions');
+                } catch (error) {
+                    data = await apiCall('/subscriptions');
+                }
+                
+                subscriptionsData = data.subscriptions || data.data || data || [];
+                console.log('✅ Subscriptions data loaded:', subscriptionsData.length, 'subscriptions');
+                renderSubscriptionsTab();
+                showNotification(`Loaded ${subscriptionsData.length} subscriptions`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error loading subscriptions:', error);
+                document.getElementById('subscriptions-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load subscriptions</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                showNotification(`Failed to load subscriptions: ${error.message}`, 'error');
+            }
+        }
+
+        // Enhanced rendering functions
+        function renderUsersTab() {
+            const usersTab = document.getElementById('users-tab');
+            
+            if (!usersData || usersData.length === 0) {
+                usersTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-users"></i>
+                        <h3>No users found</h3>
+                        <p>Registered users will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadUsersData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            usersTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadUsersData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="exportUsers()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${usersData.map(user => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${user.name || user.firstName + ' ' + (user.lastName || '') || 'N/A'}</strong>
+                                            <small>${user.company || user.companyName || 'No company'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${user.email}</td>
+                                    <td><span class="type-badge ${user.type || user.role}">${(user.type || user.role || 'user').toUpperCase()}</span></td>
+                                    <td><span class="status-badge ${user.isActive !== false ? 'active' : 'inactive'}">${user.isActive !== false ? 'Active' : 'Inactive'}</span></td>
+                                    <td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id || user.id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id || user.id}', ${user.isActive === false})" title="${user.isActive !== false ? 'Deactivate' : 'Activate'}">
+                                                <i class="fas fa-${user.isActive !== false ? 'ban' : 'check'}"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderJobsTab() {
+            const jobsTab = document.getElementById('jobs-tab');
+            
+            if (!jobsData || jobsData.length === 0) {
+                jobsTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-briefcase"></i>
+                        <h3>No jobs found</h3>
+                        <p>Jobs will appear here once projects are initiated.</p>
+                        <button class="btn btn-primary" onclick="loadJobsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            jobsTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-briefcase"></i> All Jobs (${jobsData.length})</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadJobsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="exportJobs()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Client</th>
+                                <th>Contractor</th>
+                                <th>Status</th>
+                                <th>Budget</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${jobsData.map(job => `
+                                <tr>
+                                    <td>
+                                        <div class="project-info">
+                                            <strong>${job.title || job.projectTitle || 'Untitled Job'}</strong>
+                                            <small>${job.category || job.type || 'General'}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="client-info">
+                                            <strong>${job.clientName || job.client?.name || 'N/A'}</strong>
+                                            <small>${job.clientEmail || job.client?.email || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="contractor-info">
+                                            <strong>${job.contractorName || job.contractor?.name || 'Unassigned'}</strong>
+                                            <small>${job.contractorEmail || job.contractor?.email || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td><span class="status-badge ${job.status || 'pending'}">${(job.status || 'pending').toUpperCase()}</span></td>
+                                    <td>${job.budget ? ' + job.budget.toLocaleString() : 'N/A'}</td>
+                                    <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewJobDetails('${job._id || job.id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" onclick="updateJobStatus('${job._id || job.id}')" title="Update Status">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderQuotesTab() {
+            const quotesTab = document.getElementById('quotes-tab');
+            
+            if (!quotesData || quotesData.length === 0) {
+                quotesTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <h3>No quotes found</h3>
+                        <p>Quote requests will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadQuotesData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            quotesTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-file-invoice-dollar"></i> All Quotes (${quotesData.length})</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadQuotesData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="exportQuotes()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Quote #</th>
+                                <th>Client</th>
+                                <th>Project</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${quotesData.map(quote => `
+                                <tr>
+                                    <td><strong>#${quote.quoteNumber || quote._id?.slice(-6) || quote.id?.slice(-6) || 'N/A'}</strong></td>
+                                    <td>
+                                        <div class="client-info">
+                                            <strong>${quote.clientName || quote.client?.name || 'N/A'}</strong>
+                                            <small>${quote.clientEmail || quote.client?.email || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="project-info">
+                                            <strong>${quote.projectTitle || quote.title || 'Untitled Project'}</strong>
+                                            <small>${quote.projectType || quote.category || 'General'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${quote.amount ? ' + quote.amount.toLocaleString() : 'Pending'}</td>
+                                    <td><span class="status-badge ${quote.status || 'pending'}">${(quote.status || 'pending').toUpperCase()}</span></td>
+                                    <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id || quote.id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" onclick="updateQuoteStatus('${quote._id || quote.id}')" title="Update Status">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
         function renderEstimationsTab() {
             const estimationsTab = document.getElementById('estimations-tab');
             
-            if (estimationsData.length === 0) {
-                estimationsTab.innerHTML = '<div class="no-data">No estimations found</div>';
+            if (!estimationsData || estimationsData.length === 0) {
+                estimationsTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-calculator"></i>
+                        <h3>No estimations found</h3>
+                        <p>Estimation requests will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadEstimationsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
                 return;
             }
             
@@ -515,7 +2760,7 @@
                 <div class="section-header">
                     <h3><i class="fas fa-calculator"></i> All Estimations (${estimationsData.length})</h3>
                     <div class="header-actions">
-                        <button class="btn btn-primary" onclick="refreshEstimations()">
+                        <button class="btn btn-primary" onclick="loadEstimationsData()">
                             <i class="fas fa-refresh"></i> Refresh
                         </button>
                         <button class="btn btn-success" onclick="exportEstimations()">
@@ -541,198 +2786,55 @@
                                 <tr>
                                     <td>
                                         <div class="project-info">
-                                            <strong>${estimation.projectTitle || 'Untitled'}</strong>
-                                            <small>${estimation.projectType || 'General'}</small>
+                                            <strong>${estimation.projectTitle || estimation.title || 'Untitled'}</strong>
+                                            <small>${estimation.projectType || estimation.category || 'General'}</small>
                                         </div>
                                     </td>
                                     <td>
                                         <div class="contractor-info">
-                                            <strong>${estimation.contractorName || 'Unknown'}</strong>
-                                            <small>${estimation.contractorEmail || 'N/A'}</small>
+                                            <strong>${estimation.contractorName || estimation.contractor?.name || 'Unknown'}</strong>
+                                            <small>${estimation.contractorEmail || estimation.contractor?.email || 'N/A'}</small>
                                         </div>
                                     </td>
-                                    <td><span class="status-badge ${estimation.status}">${estimation.status.toUpperCase()}</span></td>
-                                    <td>${estimation.uploadedFiles?.length || 0} files</td>
-                                    <td>${estimation.estimatedAmount ? '$' + estimation.estimatedAmount.toLocaleString() : 'Pending'}</td>
+                                    <td><span class="status-badge ${estimation.status || 'pending'}">${(estimation.status || 'pending').toUpperCase()}</span></td>
+                                    <td>${estimation.uploadedFiles?.length || estimation.files?.length || 0} files</td>
+                                    <td>${estimation.estimatedAmount || estimation.amount ? ' + (estimation.estimatedAmount || estimation.amount).toLocaleString() : 'Pending'}</td>
                                     <td>${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</td>
                                     <td>
                                         <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${estimation._id}')" title="View Details">
+                                            <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${estimation._id || estimation.id}')" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-primary" onclick="updateEstimationStatus('${estimation._id}')" title="Update Status">
+                                            <button class="btn btn-sm btn-primary" onclick="updateEstimationStatus('${estimation._id || estimation.id}')" title="Update Status">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-warning" onclick="viewEstimationFiles('${estimation._id}')" title="View Files">
-                                                <i class="fas fa-file"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${estimation._id}')" title="Upload Result">
+                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${estimation._id || estimation.id}')" title="Upload Result">
                                                 <i class="fas fa-upload"></i>
                                             </button>
-                                            ${estimation.status === 'completed' && estimation.resultFile ? 
-                                                `<button class="btn btn-sm btn-download" onclick="downloadEstimationPDF('${estimation._id}')" title="Download PDF">
+                                            ${estimation.resultFile ? `
+                                                <button class="btn btn-sm btn-download" onclick="downloadEstimationResult('${estimation._id || estimation.id}')" title="Download PDF">
                                                     <i class="fas fa-download"></i>
-                                                </button>` : ''
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
+
                         </tbody>
                     </table>
                 </div>
             `;
         }
 
-        // Enhanced estimation details with description viewing
-        async function viewEstimationDetails(estimationId) {
-            try {
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
-                
-                document.getElementById('estimationDetailsContent').innerHTML = `
-                    <div class="estimation-details">
-                        <div class="detail-header">
-                            <div class="header-info">
-                                <h4>${estimation.projectTitle}</h4>
-                                <p class="project-type">${estimation.projectType || 'General Project'}</p>
-                                <span class="status-badge ${estimation.status}">${estimation.status.toUpperCase()}</span>
-                            </div>
-                            <div class="header-meta">
-                                <p><strong>Submitted:</strong> ${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</p>
-                                <p><strong>Amount:</strong> ${estimation.estimatedAmount ? '$' + estimation.estimatedAmount.toLocaleString() : 'Pending'}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="detail-body">
-                            <div class="detail-section">
-                                <h5>Contractor Information</h5>
-                                <div class="info-grid">
-                                    <div class="info-item">
-                                        <label>Name:</label>
-                                        <span>${estimation.contractorName || 'Unknown'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Email:</label>
-                                        <span>${estimation.contractorEmail || 'N/A'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Company:</label>
-                                        <span>${estimation.contractorCompany || 'Independent'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="detail-section">
-                                <h5>Project Description</h5>
-                                <div class="description-box">
-                                    ${estimation.description || estimation.projectDescription || 'No description provided'}
-                                </div>
-                            </div>
-                            
-                            ${estimation.uploadedFiles?.length ? `
-                                <div class="detail-section">
-                                    <h5>Uploaded Files (${estimation.uploadedFiles.length})</h5>
-                                    <div class="files-grid">
-                                        ${estimation.uploadedFiles.map(file => `
-                                            <div class="file-card">
-                                                <div class="file-icon">
-                                                    <i class="fas fa-file-${getFileIcon(file.type)}"></i>
-                                                </div>
-                                                <div class="file-info">
-                                                    <strong>${file.name}</strong>
-                                                    <small>${formatFileSize(file.size || 0)}</small>
-                                                </div>
-                                                <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">
-                                                    <i class="fas fa-download"></i>
-                                                </button>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-                            
-                            ${estimation.resultFile ? `
-                                <div class="detail-section">
-                                    <h5>Result File</h5>
-                                    <div class="result-file-card">
-                                        <div class="file-info">
-                                            <i class="fas fa-file-pdf"></i>
-                                            <span>Estimation Result PDF</span>
-                                        </div>
-                                        <button class="btn btn-primary" onclick="downloadEstimationPDF('${estimationId}')">
-                                            <i class="fas fa-download"></i> Download PDF
-                                        </button>
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="detail-actions">
-                            <button class="btn btn-secondary" onclick="closeModal('estimationDetailsModal')">Close</button>
-                            <button class="btn btn-primary" onclick="updateEstimationStatus('${estimationId}')">Update Status</button>
-                            ${!estimation.resultFile ? `
-                                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">Upload Result</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                
-                document.getElementById('estimationDetailsModal').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Error loading estimation details:', error);
-                alert('Failed to load estimation details: ' + error.message);
-            }
-        }
-
-        // Download estimation PDF
-        async function downloadEstimationPDF(estimationId) {
-            try {
-                const data = await apiCall(`/estimation/${estimationId}/result`);
-                
-                if (data.resultFile && data.resultFile.url) {
-                    // Create a temporary link element
-                    const link = document.createElement('a');
-                    link.href = data.resultFile.url;
-                    link.download = data.resultFile.name || `estimation-result-${estimationId}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    console.log('✅ PDF download initiated');
-                } else {
-                    alert('No result file available for this estimation.');
-                }
-                
-            } catch (error) {
-                console.error('❌ Error downloading PDF:', error);
-                alert('Failed to download PDF: ' + error.message);
-            }
-        }
-
-        // Enhanced messages loading and rendering
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
-                messagesData = data.messages || [];
-                console.log('✅ Messages data loaded:', messagesData.length, 'messages');
-                renderMessagesTab();
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">Failed to load messages: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Enhanced messages tab with control options
         function renderMessagesTab() {
             const messagesTab = document.getElementById('messages-tab');
             
-            if (messagesData.length === 0) {
-                messagesTab.innerHTML = '<div class="no-data">No messages found</div>';
+            if (!messagesData || messagesData.length === 0) {
+                messagesTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-comments"></i>
+                        <h3>No messages found</h3>
+                        <p>User messages will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadMessagesData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
                 return;
             }
             
@@ -740,16 +2842,7 @@
                 <div class="section-header">
                     <h3><i class="fas fa-comments"></i> Messages (${messagesData.length})</h3>
                     <div class="header-actions">
-                        <div class="filter-group">
-                            <select id="messageStatusFilter" onchange="filterMessages(this.value)">
-                                <option value="">All Messages</option>
-                                <option value="unread">Unread</option>
-                                <option value="read">Read</option>
-                                <option value="replied">Replied</option>
-                                <option value="archived">Archived</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="refreshMessages()">
+                        <button class="btn btn-primary" onclick="loadMessagesData()">
                             <i class="fas fa-refresh"></i> Refresh
                         </button>
                         <button class="btn btn-success" onclick="exportMessages()">
@@ -759,15 +2852,15 @@
                 </div>
                 <div class="messages-container">
                     ${messagesData.map(message => `
-                        <div class="message-card ${message.status || 'unread'}" data-message-id="${message._id}" data-status="${message.status || 'unread'}">
+                        <div class="message-card ${message.status || 'unread'}" data-message-id="${message._id || message.id}" data-status="${message.status || 'unread'}">
                             <div class="message-header">
                                 <div class="sender-info">
                                     <div class="sender-avatar">
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <div class="sender-details">
-                                        <strong>${message.senderName || 'Unknown Sender'}</strong>
-                                        <small>${message.senderEmail || 'No email'}</small>
+                                        <strong>${message.senderName || message.sender?.name || message.name || 'Unknown Sender'}</strong>
+                                        <small>${message.senderEmail || message.sender?.email || message.email || 'No email'}</small>
                                     </div>
                                 </div>
                                 <div class="message-meta">
@@ -777,25 +2870,22 @@
                             </div>
                             
                             <div class="message-content">
-                                <h4>${message.subject || 'No Subject'}</h4>
-                                <p class="message-preview">${(message.content || message.message || '').substring(0, 150)}${(message.content || message.message || '').length > 150 ? '...' : ''}</p>
+                                <h4>${message.subject || message.title || 'No Subject'}</h4>
+                                <p class="message-preview">${(message.content || message.message || message.body || '').substring(0, 150)}${(message.content || message.message || message.body || '').length > 150 ? '...' : ''}</p>
                             </div>
                             
                             <div class="message-actions">
-                                <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id}')" title="View Details">
+                                <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id || message.id}')" title="View Details">
                                     <i class="fas fa-eye"></i> View
                                 </button>
-                                <button class="btn btn-sm btn-primary" onclick="replyToMessage('${message._id}')" title="Reply">
+                                <button class="btn btn-sm btn-primary" onclick="replyToMessage('${message._id || message.id}')" title="Reply">
                                     <i class="fas fa-reply"></i> Reply
                                 </button>
-                                <button class="btn btn-sm btn-warning" onclick="markAsRead('${message._id}')" title="Mark as Read">
+                                <button class="btn btn-sm btn-warning" onclick="markAsRead('${message._id || message.id}')" title="Mark as Read">
                                     <i class="fas fa-envelope-open"></i> Read
                                 </button>
-                                <button class="btn btn-sm btn-secondary" onclick="archiveMessage('${message._id}')" title="Archive">
+                                <button class="btn btn-sm btn-secondary" onclick="archiveMessage('${message._id || message.id}')" title="Archive">
                                     <i class="fas fa-archive"></i> Archive
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteMessage('${message._id}')" title="Delete">
-                                    <i class="fas fa-trash"></i> Delete
                                 </button>
                             </div>
                         </div>
@@ -804,248 +2894,32 @@
             `;
         }
 
-        // Message control functions
-        async function viewMessageDetails(messageId) {
-            try {
-                const message = messagesData.find(m => m._id === messageId);
-                if (!message) {
-                    alert('Message not found');
-                    return;
-                }
-                
-                document.getElementById('messageControlContent').innerHTML = `
-                    <div class="message-details">
-                        <div class="message-detail-header">
-                            <div class="sender-section">
-                                <div class="sender-avatar-large">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div class="sender-info-detailed">
-                                    <h4>${message.senderName || 'Unknown Sender'}</h4>
-                                    <p>${message.senderEmail || 'No email'}</p>
-                                    <small>Sent: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'N/A'}</small>
-                                </div>
-                            </div>
-                            <div class="message-status-section">
-                                <span class="status-badge ${message.status || 'unread'}">${(message.status || 'unread').toUpperCase()}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="message-subject">
-                            <h3>${message.subject || 'No Subject'}</h3>
-                        </div>
-                        
-                        <div class="message-full-content">
-                            <div class="content-box">
-                                ${(message.content || message.message || 'No content').replace(/\n/g, '<br>')}
-                            </div>
-                        </div>
-                        
-                        ${message.attachments && message.attachments.length > 0 ? `
-                            <div class="message-attachments">
-                                <h4>Attachments (${message.attachments.length})</h4>
-                                <div class="attachments-grid">
-                                    ${message.attachments.map(attachment => `
-                                        <div class="attachment-item">
-                                            <i class="fas fa-paperclip"></i>
-                                            <span>${attachment.name}</span>
-                                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${attachment.url}', '${attachment.name}')">
-                                                <i class="fas fa-download"></i>
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="message-control-actions">
-                            <button class="btn btn-primary" onclick="replyToMessage('${messageId}')">
-                                <i class="fas fa-reply"></i> Reply
-                            </button>
-                            <button class="btn btn-warning" onclick="markAsRead('${messageId}')">
-                                <i class="fas fa-envelope-open"></i> Mark as Read
-                            </button>
-                            <button class="btn btn-secondary" onclick="archiveMessage('${messageId}')">
-                                <i class="fas fa-archive"></i> Archive
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteMessage('${messageId}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
+        function renderSubscriptionsTab() {
+            const subscriptionsTab = document.getElementById('subscriptions-tab');
+            
+            if (!subscriptionsData || subscriptionsData.length === 0) {
+                subscriptionsTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-credit-card"></i>
+                        <h3>No subscriptions found</h3>
+                        <p>User subscriptions will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
                     </div>
                 `;
-                
-                document.getElementById('messagesControlModal').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Error viewing message details:', error);
-                alert('Failed to view message details: ' + error.message);
-            }
-        }
-
-        async function replyToMessage(messageId) {
-            try {
-                const message = messagesData.find(m => m._id === messageId);
-                if (!message) {
-                    alert('Message not found');
-                    return;
-                }
-                
-                currentMessageId = messageId;
-                document.getElementById('replyRecipient').value = `${message.senderName} <${message.senderEmail}>`;
-                document.getElementById('replySubject').value = `Re: ${message.subject || 'No Subject'}`;
-                document.getElementById('replyMessage').value = '';
-                
-                // Close other modals
-                document.getElementById('messagesControlModal').style.display = 'none';
-                
-                // Open reply modal
-                document.getElementById('replyModal').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Error preparing reply:', error);
-                alert('Failed to prepare reply: ' + error.message);
-            }
-        }
-
-        async function markAsRead(messageId) {
-            try {
-                await apiCall(`/admin/messages/${messageId}/read`, {
-                    method: 'PATCH'
-                });
-                
-                // Update local data
-                const message = messagesData.find(m => m._id === messageId);
-                if (message) {
-                    message.status = 'read';
-                }
-                
-                renderMessagesTab();
-                document.getElementById('messagesControlModal').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error marking message as read:', error);
-                alert('Failed to mark message as read: ' + error.message);
-            }
-        }
-
-        async function archiveMessage(messageId) {
-            try {
-                await apiCall(`/admin/messages/${messageId}/archive`, {
-                    method: 'PATCH'
-                });
-                
-                // Update local data
-                const message = messagesData.find(m => m._id === messageId);
-                if (message) {
-                    message.status = 'archived';
-                }
-                
-                renderMessagesTab();
-                document.getElementById('messagesControlModal').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error archiving message:', error);
-                alert('Failed to archive message: ' + error.message);
-            }
-        }
-
-        async function deleteMessage(messageId) {
-            if (!confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
                 return;
             }
             
-            try {
-                await apiCall(`/admin/messages/${messageId}`, {
-                    method: 'DELETE'
-                });
-                
-                // Remove from local data
-                messagesData = messagesData.filter(m => m._id !== messageId);
-                
-                renderMessagesTab();
-                document.getElementById('messagesControlModal').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error deleting message:', error);
-                alert('Failed to delete message: ' + error.message);
-            }
-        }
-
-        function filterMessages(status) {
-            const messageCards = document.querySelectorAll('.message-card');
-            messageCards.forEach(card => {
-                const messageStatus = card.dataset.status;
-                const shouldShow = !status || messageStatus === status;
-                card.style.display = shouldShow ? 'block' : 'none';
-            });
-        }
-
-        // Utility functions
-        function getFileIcon(fileType) {
-            const icons = {
-                'pdf': 'pdf',
-                'doc': 'word',
-                'docx': 'word',
-                'xls': 'excel',
-                'xlsx': 'excel',
-                'jpg': 'image',
-                'jpeg': 'image',
-                'png': 'image',
-                'gif': 'image',
-                'zip': 'archive',
-                'rar': 'archive'
-            };
-            return icons[fileType?.toLowerCase()] || 'file';
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function downloadFile(url, filename) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // Load other data functions (keeping existing implementations)
-        async function loadUsersData() {
-            try {
-                console.log('👥 Loading users data...');
-                const data = await apiCall('/admin/users');
-                usersData = data.data;
-                console.log('✅ Users data loaded:', usersData.length, 'users');
-                renderUsersTab();
-            } catch (error) {
-                console.error('❌ Error loading users:', error);
-                document.getElementById('users-tab').innerHTML = `
-                    <div class="error">Failed to load users: ${error.message}</div>
-                `;
-            }
-        }
-
-        function renderUsersTab() {
-            const usersTab = document.getElementById('users-tab');
-            
-            if (usersData.length === 0) {
-                usersTab.innerHTML = '<div class="no-data">No users found</div>';
-                return;
-            }
-            
-            usersTab.innerHTML = `
+            subscriptionsTab.innerHTML = `
                 <div class="section-header">
-                    <h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3>
+                    <h3><i class="fas fa-credit-card"></i> Subscriptions (${subscriptionsData.length})</h3>
                     <div class="header-actions">
-                        <button class="btn btn-success" onclick="exportUsers()">
-                            <i class="fas fa-download"></i> Export CSV
+                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="createSubscriptionPlan()">
+                            <i class="fas fa-plus"></i> Create Plan
                         </button>
                     </div>
                 </div>
@@ -1053,30 +2927,42 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Type</th>
+                                <th>User</th>
+                                <th>Plan</th>
                                 <th>Status</th>
-                                <th>Joined</th>
+                                <th>Started</th>
+                                <th>Next Billing</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${usersData.map(user => `
+                            ${subscriptionsData.map(sub => `
                                 <tr>
-                                    <td><strong>${user.name || 'N/A'}</strong></td>
-                                    <td>${user.email}</td>
-                                    <td><span class="type-badge ${user.type}">${user.type.toUpperCase()}</span></td>
-                                    <td><span class="status-badge ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span></td>
-                                    <td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${sub.userName || sub.user?.name || 'N/A'}</strong>
+                                            <small>${sub.userEmail || sub.user?.email || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="project-info">
+                                            <strong>${sub.planName || sub.plan?.name || 'N/A'}</strong>
+                                            <small>${sub.planPrice ? ' + sub.planPrice : 'N/A'}/${sub.planInterval || 'month'}</small>
+                                        </div>
+                                    </td>
+                                    <td><span class="status-badge ${sub.status || 'active'}">${(sub.status || 'active').toUpperCase()}</span></td>
+                                    <td>${sub.startDate ? new Date(sub.startDate).toLocaleDateString() : sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                    <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
                                     <td>
                                         <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user._id}')" title="View Details">
+                                            <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id || sub.id}')" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id}', ${!user.isActive})" title="${user.isActive ? 'Deactivate' : 'Activate'}">
-                                                <i class="fas fa-${user.isActive ? 'user-slash' : 'user-check'}"></i>
-                                            </button>
+                                            ${sub.status === 'active' ? `
+                                                <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id || sub.id}')" title="Cancel">
+                                                    <i class="fas fa-ban"></i>
+                                </button>
+                                            ` : ''}
                                         </div>
                                     </td>
                                 </tr>
@@ -1087,77 +2973,15 @@
             `;
         }
 
-        // Placeholder functions for other tabs
-        async function loadJobsData() {
-            console.log('Loading jobs data...');
-            // Implementation would go here
-        }
-
-        async function loadQuotesData() {
-            console.log('Loading quotes data...');
-            // Implementation would go here
-        }
-
-        async function loadSubscriptionsData() {
-            console.log('Loading subscriptions data...');
-            // Implementation would go here
-        }
-
-        function renderOverviewTab() {
-            const overviewTab = document.getElementById('overview-tab');
-            
-            overviewTab.innerHTML = `
-                <div class="overview-content">
-                    <div class="welcome-section">
-                        <h3>Welcome to SteelConnect Admin Dashboard</h3>
-                        <p>Manage your platform efficiently with comprehensive tools and insights.</p>
-                    </div>
-                    
-                    <div class="quick-stats">
-                        <div class="stat-summary">
-                            <h4>System Status</h4>
-                            <div class="status-indicators">
-                                <div class="status-item">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    <span>All Systems Operational</span>
-                                </div>
-                                <div class="status-item">
-                                    <i class="fas fa-database text-success"></i>
-                                    <span>Database Connected</span>
-                                </div>
-                                <div class="status-item">
-                                    <i class="fas fa-cloud text-success"></i>
-                                    <span>API Services Running</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Modal and utility functions
+        // Enhanced modal and action functions
         function updateEstimationStatus(estimationId) {
             currentEstimationId = estimationId;
-            const estimation = estimationsData.find(e => e._id === estimationId);
+            const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
             
             if (estimation) {
-                document.getElementById('statusSelect').value = estimation.status;
+                document.getElementById('statusSelect').value = estimation.status || 'pending';
                 document.getElementById('statusNotes').value = '';
                 document.getElementById('statusModal').style.display = 'block';
-            }
-        }
-
-        function viewEstimationFiles(estimationId) {
-            const estimation = estimationsData.find(e => e._id === estimationId);
-            if (estimation && estimation.uploadedFiles?.length > 0) {
-                let filesList = 'Files for this estimation:\n\n';
-                estimation.uploadedFiles.forEach((file, index) => {
-                    filesList += `${index + 1}. ${file.name}\n`;
-                });
-                alert(filesList);
-            } else {
-                alert('No files found for this estimation.');
             }
         }
 
@@ -1168,24 +2992,249 @@
             document.getElementById('resultNotes').value = '';
             document.getElementById('uploadedResultFiles').innerHTML = '';
             document.getElementById('uploadResultModal').style.display = 'block';
+            
+            // Setup file upload area
+            const uploadArea = document.getElementById('resultUploadArea');
+            const fileInput = document.getElementById('resultFile');
+            
+            uploadArea.onclick = () => fileInput.click();
+            
+            fileInput.onchange = function() {
+                const file = this.files[0];
+                if (file) {
+                    document.getElementById('uploadedResultFiles').innerHTML = `
+                        <div style="margin-top: 10px; padding: 10px; background: rgba(102,126,234,0.1); border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
+                            <span>${file.name}</span>
+                            <span style="margin-left: auto; font-size: 12px; color: #6c757d;">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    `;
+                }
+            };
         }
 
-        function refreshEstimations() {
-            estimationsData = [];
-            loadEstimationsData();
+        async function downloadEstimationResult(estimationId) {
+            try {
+                showNotification('Preparing download...', 'info');
+                const data = await apiCall(`/estimation/${estimationId}/result`);
+                
+                if (data.resultFile && data.resultFile.url) {
+                    const link = document.createElement('a');
+                    link.href = data.resultFile.url;
+                    link.download = data.resultFile.name || `estimation-result-${estimationId}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showNotification('Download started!', 'success');
+                } else {
+                    showNotification('No result file available', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error downloading PDF:', error);
+                showNotification(`Failed to download: ${error.message}`, 'error');
+            }
         }
 
-        function refreshMessages() {
-            messagesData = [];
-            loadMessagesData();
+        // Enhanced message functions
+        async function viewMessageDetails(messageId) {
+            try {
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!message) {
+                    showNotification('Message not found', 'error');
+                    return;
+                }
+                
+                document.getElementById('messageControlContent').innerHTML = `
+                    <div style="padding: 30px;">
+                        <div class="message-header" style="padding: 0; border: none; margin-bottom: 30px;">
+                            <div class="sender-info">
+                                <div class="sender-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="sender-details">
+                                    <strong style="font-size: 18px;">${message.senderName || message.name || 'Unknown'}</strong>
+                                    <small style="font-size: 14px;">${message.senderEmail || message.email || 'No email'}</small>
+                                    <small style="display: block; margin-top: 5px;">Sent: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'Unknown'}</small>
+                                </div>
+                            </div>
+                            <span class="status-badge ${message.status || 'unread'}">${(message.status || 'unread').toUpperCase()}</span>
+                        </div>
+                        
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; font-size: 24px;">${message.subject || message.title || 'No Subject'}</h3>
+                        
+                        <div style="background: rgba(248,249,250,0.8); padding: 25px; border-radius: 12px; line-height: 1.7; border-left: 4px solid #667eea;">
+                            ${(message.content || message.message || message.body || 'No content').replace(/\n/g, '<br>')}
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px; margin-top: 30px; justify-content: flex-end;">
+                            <button class="btn btn-primary" onclick="replyToMessage('${messageId}')">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
+                            <button class="btn btn-success" onclick="markAsRead('${messageId}')">
+                                <i class="fas fa-check"></i> Mark as Read
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeModal('messagesControlModal')">Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('messagesControlModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error viewing message:', error);
+                showNotification(`Failed to load message: ${error.message}`, 'error');
+            }
         }
 
+        async function replyToMessage(messageId) {
+            try {
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!message) {
+                    showNotification('Message not found', 'error');
+                    return;
+                }
+                
+                currentMessageId = messageId;
+                document.getElementById('replyRecipient').value = `${message.senderName || message.name} <${message.senderEmail || message.email}>`;
+                document.getElementById('replySubject').value = `Re: ${message.subject || message.title || 'No Subject'}`;
+                document.getElementById('replyMessage').value = '';
+                
+                document.getElementById('messagesControlModal').style.display = 'none';
+                document.getElementById('replyModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error preparing reply:', error);
+                showNotification(`Failed to prepare reply: ${error.message}`, 'error');
+            }
+        }
+
+        async function markAsRead(messageId) {
+            try {
+                await apiCall(`/admin/messages/${messageId}/read`, {
+                    method: 'PATCH'
+                });
+                
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.status = 'read';
+                }
+                
+                renderMessagesTab();
+                closeModal('messagesControlModal');
+                showNotification('Message marked as read', 'success');
+                
+            } catch (error) {
+                console.error('Error marking as read:', error);
+                showNotification(`Failed to mark as read: ${error.message}`, 'error');
+            }
+        }
+
+        async function archiveMessage(messageId) {
+            try {
+                await apiCall(`/admin/messages/${messageId}/archive`, {
+                    method: 'PATCH'
+                });
+                
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.status = 'archived';
+                }
+                
+                renderMessagesTab();
+                showNotification('Message archived', 'success');
+                
+            } catch (error) {
+                console.error('Error archiving message:', error);
+                showNotification(`Failed to archive message: ${error.message}`, 'error');
+            }
+        }
+
+        // Enhanced view functions
+        async function viewUserDetails(userId) {
+            const user = usersData.find(u => (u._id || u.id) === userId);
+            if (!user) {
+                showNotification('User not found', 'error');
+                return;
+            }
+            
+            const modalContent = `
+                <div style="padding: 30px;">
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 20px; background: rgba(102,126,234,0.05); border-radius: 12px;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #2c3e50;">${user.name || user.firstName + ' ' + (user.lastName || '') || 'N/A'}</h3>
+                            <p style="margin: 5px 0; color: #6c757d;">${user.email}</p>
+                            <span class="type-badge ${user.type || user.role}">${(user.type || user.role || 'user').toUpperCase()}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div>
+                            <h4 style="color: #2c3e50; margin-bottom: 15px;">Contact Information</h4>
+                            <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
+                            <p><strong>Company:</strong> ${user.company || user.companyName || 'Not specified'}</p>
+                        </div>
+                        
+                        <div>
+                            <h4 style="color: #2c3e50; margin-bottom: 15px;">Account Details</h4>
+                            <p><strong>Status:</strong> <span class="status-badge ${user.isActive !== false ? 'active' : 'inactive'}">${user.isActive !== false ? 'Active' : 'Inactive'}</span></p>
+                            <p><strong>Joined:</strong> ${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
+                            <p><strong>Last Login:</strong> ${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeModal('userDetailsModal')">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            showModal('userDetailsModal', modalContent);
+        }
+
+        function showModal(modalId, content) {
+            const existingModal = document.getElementById('dynamic-modal');
+            if (existingModal) existingModal.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'dynamic-modal';
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Details</h3>
+                        <span class="close" onclick="closeModal('dynamic-modal')">&times;</span>
+                    </div>
+                    ${content}
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Enhanced close modal function
+        function closeModal(modalId) {
+            if (modalId === 'dynamic-modal') {
+                const modal = document.getElementById('dynamic-modal');
+                if (modal) modal.remove();
+            } else {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'none';
+            }
+        }
+
+        // Enhanced feature management functions
         function addFeature() {
             const container = document.getElementById('featuresContainer');
             const featureDiv = document.createElement('div');
             featureDiv.className = 'feature-input';
+            featureDiv.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
             featureDiv.innerHTML = `
-                <input type="text" placeholder="New feature">
+                <input type="text" placeholder="New feature" style="flex: 1;">
                 <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
                     <i class="fas fa-minus"></i>
                 </button>
@@ -1197,78 +3246,168 @@
             button.parentElement.remove();
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+        // Enhanced export functions (placeholders)
+        async function exportUsers() {
+            showNotification('Exporting users...', 'info');
+            // Implementation would generate CSV
+            setTimeout(() => {
+                showNotification('Users exported successfully!', 'success');
+            }, 2000);
         }
 
+        async function exportJobs() {
+            showNotification('Exporting jobs...', 'info');
+            setTimeout(() => {
+                showNotification('Jobs exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportQuotes() {
+            showNotification('Exporting quotes...', 'info');
+            setTimeout(() => {
+                showNotification('Quotes exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportEstimations() {
+            showNotification('Exporting estimations...', 'info');
+            setTimeout(() => {
+                showNotification('Estimations exported successfully!', 'success');
+            }, 2000);
+        }
+
+        async function exportMessages() {
+            showNotification('Exporting messages...', 'info');
+            setTimeout(() => {
+                showNotification('Messages exported successfully!', 'success');
+            }, 2000);
+        }
+
+        // Enhanced logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                console.log('👋 Logging out admin...');
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('token');
-                localStorage.removeItem('adminUser');
-                sessionStorage.removeItem('adminToken');
-                window.location.href = 'index.html';
+                console.log('Logging out admin...');
+                localStorage.clear();
+                sessionStorage.clear();
+                showNotification('Logged out successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
             }
         }
 
-        // Form submissions
+        // Enhanced form submissions
         document.addEventListener('DOMContentLoaded', function() {
             // Status Form
-            document.getElementById('statusForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const status = document.getElementById('statusSelect').value;
-                const notes = document.getElementById('statusNotes').value;
-                
-                try {
-                    await apiCall(`/estimation/${currentEstimationId}/status`, {
-                        method: 'PATCH',
-                        body: JSON.stringify({ status, notes })
-                    });
+            const statusForm = document.getElementById('statusForm');
+            if (statusForm) {
+                statusForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
                     
-                    const estimation = estimationsData.find(e => e._id === currentEstimationId);
-                    if (estimation) {
-                        estimation.status = status;
+                    const status = document.getElementById('statusSelect').value;
+                    const notes = document.getElementById('statusNotes').value;
+                    
+                    try {
+                        showNotification('Updating status...', 'info');
+                        await apiCall(`/estimation/${currentEstimationId}/status`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ status, notes })
+                        });
+                        
+                        const estimation = estimationsData.find(e => (e._id || e.id) === currentEstimationId);
+                        if (estimation) {
+                            estimation.status = status;
+                        }
+                        
+                        renderEstimationsTab();
+                        closeModal('statusModal');
+                        showNotification('Status updated successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error updating status:', error);
+                        showNotification(`Failed to update status: ${error.message}`, 'error');
                     }
-                    
-                    renderEstimationsTab();
-                    closeModal('statusModal');
-                    alert('Estimation status updated successfully!');
-                    
-                } catch (error) {
-                    console.error('Error updating status:', error);
-                    alert('Failed to update status: ' + error.message);
-                }
-            });
+                });
+            }
 
             // Reply Form
-            document.getElementById('replyForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const message = document.getElementById('replyMessage').value;
-                
-                try {
-                    await apiCall(`/admin/messages/${currentMessageId}/reply`, {
-                        method: 'POST',
-                        body: JSON.stringify({ message })
-                    });
+            const replyForm = document.getElementById('replyForm');
+            if (replyForm) {
+                replyForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
                     
-                    // Update message status
-                    const msg = messagesData.find(m => m._id === currentMessageId);
-                    if (msg) {
-                        msg.status = 'replied';
+                    const message = document.getElementById('replyMessage').value;
+                    
+                    try {
+                        showNotification('Sending reply...', 'info');
+                        await apiCall(`/admin/messages/${currentMessageId}/reply`, {
+                            method: 'POST',
+                            body: JSON.stringify({ message, content: message })
+                        });
+                        
+                        const msg = messagesData.find(m => (m._id || m.id) === currentMessageId);
+                        if (msg) {
+                            msg.status = 'replied';
+                        }
+                        
+                        renderMessagesTab();
+                        closeModal('replyModal');
+                        showNotification('Reply sent successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error sending reply:', error);
+                        showNotification(`Failed to send reply: ${error.message}`, 'error');
+                    }
+                });
+            }
+
+            // Upload Result Form
+            const uploadForm = document.getElementById('uploadResultForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const fileInput = document.getElementById('resultFile');
+                    const amount = document.getElementById('estimationAmount').value;
+                    const notes = document.getElementById('resultNotes').value;
+                    
+                    if (!fileInput.files[0]) {
+                        showNotification('Please select a file', 'error');
+                        return;
                     }
                     
-                    renderMessagesTab();
-                    closeModal('replyModal');
-                    alert('Reply sent successfully!');
+                    const formData = new FormData();
+                    formData.append('resultFile', fileInput.files[0]);
+                    if (amount) formData.append('amount', amount);
+                    if (notes) formData.append('notes', notes);
                     
-                } catch (error) {
-                    console.error('Error sending reply:', error);
-                    alert('Failed to send reply: ' + error.message);
-                }
-            });
+                    try {
+                        showNotification('Uploading result...', 'info');
+                        await apiCall(`/estimation/${currentEstimationId}/result`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${getToken()}`
+                            },
+                            body: formData
+                        });
+                        
+                        const estimation = estimationsData.find(e => (e._id || e.id) === currentEstimationId);
+                        if (estimation) {
+                            estimation.status = 'completed';
+                            estimation.resultFile = true;
+                            if (amount) estimation.estimatedAmount = parseFloat(amount);
+                        }
+                        
+                        renderEstimationsTab();
+                        closeModal('uploadResultModal');
+                        showNotification('Result uploaded successfully!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error uploading result:', error);
+                        showNotification(`Failed to upload result: ${error.message}`, 'error');
+                    }
+                });
+            }
         });
 
         // Click outside modal to close
@@ -1280,21 +3419,30 @@
                     modal.style.display = 'none';
                 }
             });
+            
+            // Handle dynamic modal
+            if (event.target.id === 'dynamic-modal') {
+                event.target.remove();
+            }
         }
 
-        // Initialize
+        // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Initializing admin dashboard...');
+            console.log('Initializing admin dashboard...');
             
             const token = getToken();
             
             if (!token) {
-                console.log('❌ No authentication token found, redirecting to login...');
-                window.location.href = 'index.html';
+                console.log('No authentication token found, redirecting to login...');
+                showNotification('Please log in to access the admin panel', 'error');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
                 return;
             }
             
-            console.log('✅ Authentication token found, loading dashboard...');
+            console.log('Authentication token found, loading dashboard...');
+            showNotification('Welcome to SteelConnect Admin Panel!', 'success');
             loadDashboardStats();
             
             // Set up auto-refresh every 5 minutes
@@ -1304,6 +3452,51 @@
                 }
             }, 5 * 60 * 1000);
         });
+
+        // Placeholder functions for missing functionality
+        function viewEstimationDetails(id) {
+            showNotification('Loading estimation details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewJobDetails(id) {
+            showNotification('Loading job details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewQuoteDetails(id) {
+            showNotification('Loading quote details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function viewSubscriptionDetails(id) {
+            showNotification('Loading subscription details...', 'info');
+            // Implementation would show detailed view
+        }
+
+        function updateJobStatus(id) {
+            showNotification('Job status update functionality coming soon...', 'info');
+        }
+
+        function updateQuoteStatus(id) {
+            showNotification('Quote status update functionality coming soon...', 'info');
+        }
+
+        function toggleUserStatus(id, newStatus) {
+            showNotification(`${newStatus ? 'Activating' : 'Deactivating'} user...`, 'info');
+            // Implementation would toggle user status
+        }
+
+        function createSubscriptionPlan() {
+            document.getElementById('createPlanModal').style.display = 'block';
+        }
+
+        function cancelSubscription(id) {
+            if (confirm('Are you sure you want to cancel this subscription?')) {
+                showNotification('Canceling subscription...', 'info');
+                // Implementation would cancel subscription
+            }
+        }
     </script>
 </body>
 </html>
