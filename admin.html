@@ -98,7 +98,7 @@
 
         // --- CORE API & AUTH FUNCTIONS ---
         function getToken() {
-            return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('adminToken');
+            return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
         }
         
         function logout(confirmLogout = true) {
@@ -120,7 +120,10 @@
             if (!token) throw new Error('Authentication token not found.');
             
             const config = { headers: { 'Authorization': `Bearer ${token}` }, ...options };
-            if (!(options.body instanceof FormData)) {
+
+            // **FIX:** Only add Content-Type header if there's a body to send.
+            // This prevents sending it on GET requests, which can cause issues with some servers.
+            if (options.body && !(options.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
             }
             
@@ -136,7 +139,6 @@
                 throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
             }
             
-            // Handle empty responses
             const textResponse = await response.text();
             return textResponse ? JSON.parse(textResponse) : {};
         }
@@ -156,7 +158,6 @@
             }
 
             try {
-                console.log('📊 Loading dashboard statistics...');
                 const data = await apiCall('/admin/dashboard');
 
                 if (!data || !data.data) throw new Error("Received an invalid response from the server.");
@@ -214,13 +215,14 @@
             }
         }
         
-        async function loadDataAndRender(tabId, endpoint, dataArray, renderFunc, dataKey) {
+        async function loadDataAndRender(tabId, endpoint, dataArrayName, renderFunc, dataKey) {
             const tabElementId = `${tabId}-tab`;
             setContent(tabElementId, loadingSpinner);
             try {
                 console.log(`🔄 Loading ${tabId} data...`);
                 const response = await apiCall(endpoint);
-                window[dataArray] = response[dataKey] || response.data || [];
+                const data = response[dataKey] || response.data || [];
+                window[dataArrayName] = data; // Assign to global variable
                 renderFunc();
                 console.log(`✅ ${tabId} data loaded.`);
             } catch (error) {
@@ -237,11 +239,25 @@
         function loadSubscriptionsData() { /* special handling for multiple calls */ }
 
         function renderUsersTab() {
+             if (!Array.isArray(usersData)) return setContent('users-tab', loadingError("Invalid data format for users."));
              const content = usersData.length === 0 ? '<div class="no-data">No users found</div>' : `<h3><i class="fas fa-users"></i> All Users (${usersData.length})</h3><table><thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Joined</th></tr></thead><tbody>${usersData.map(u => `<tr><td><strong>${u.name||'N/A'}</strong></td><td>${u.email}</td><td><span class="user-type ${u.type}">${u.type}</span></td><td>${u.status||'Active'}</td><td>${new Date(u.createdAt).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`;
              setContent('users-tab', content);
         }
 
+        function renderJobsTab() {
+            if (!Array.isArray(jobsData)) return setContent('jobs-tab', loadingError("Invalid data format for jobs."));
+            const content = jobsData.length === 0 ? '<div class="no-data">No jobs found</div>' : `<h3><i class="fas fa-briefcase"></i> All Jobs (${jobsData.length})</h3><table><thead>...</thead><tbody>...</tbody></table>`;
+            setContent('jobs-tab', content);
+        }
+
+        function renderQuotesTab() {
+            if (!Array.isArray(quotesData)) return setContent('quotes-tab', loadingError("Invalid data format for quotes."));
+            const content = quotesData.length === 0 ? '<div class="no-data">No quotes found</div>' : `<h3><i class="fas fa-file-invoice-dollar"></i> All Quotes (${quotesData.length})</h3><table><thead>...</thead><tbody>...</tbody></table>`;
+            setContent('quotes-tab', content);
+        }
+
         function renderEstimationsTab() {
+            if (!Array.isArray(estimationsData)) return setContent('estimations-tab', loadingError("Invalid data format for estimations."));
             const content = estimationsData.length === 0 ? '<div class="no-data">No estimations found</div>' : `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3><i class="fas fa-calculator"></i> All Estimations (${estimationsData.length})</h3>
@@ -257,7 +273,7 @@
                         <td>${new Date(est.createdAt).toLocaleDateString()}</td>
                         <td>
                             <div class="actions">
-                                <button class="btn btn-sm" onclick="showEstimationFilesModal('${est._id}')" title="View/Download Files"><i class="fas fa-file-alt"></i></button>
+                                <button class="btn btn-sm btn-warning" onclick="showEstimationFilesModal('${est._id}')" title="View/Download Files"><i class="fas fa-file-alt"></i></button>
                                 <button class="btn btn-sm btn-info" onclick="viewEstimationMessages('${est._id}')" title="View Messages"><i class="fas fa-comments"></i></button>
                             </div>
                         </td>
@@ -267,21 +283,19 @@
         }
 
         function renderMessagesTab() {
-            // Render logic for messages...
+            if (!Array.isArray(messagesData)) return setContent('messages-tab', loadingError("Invalid data format for messages."));
+            const content = messagesData.length === 0 ? '<div class="no-data">No conversations found</div>' : `...`;
+            setContent('messages-tab', content);
         }
 
         // --- MODAL & ACTION FUNCTIONS ---
         function showEstimationFilesModal(estimationId) {
             const modal = document.getElementById('filesModal');
-            // Lazy load modal content
-            if (!modal.innerHTML) {
-                modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h3>Estimation Files</h3><span class="close" onclick="closeModal('filesModal')">&times;</span></div><div id="filesContent"></div></div>`;
-            }
+            if (!modal.innerHTML) modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h3>Estimation Files</h3><span class="close" onclick="closeModal('filesModal')">&times;</span></div><div id="filesContent"></div></div>`;
             const content = document.getElementById('filesContent');
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
 
             const estimation = estimationsData.find(e => e._id === estimationId);
-            
             if (!estimation || !estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                 content.innerHTML = '<div class="no-data">No files were uploaded for this estimation.</div>';
                 return;
@@ -289,26 +303,20 @@
 
             content.innerHTML = estimation.uploadedFiles.map(file => `
                 <div class="file-list-item">
-                    <div class="file-info-container">
-                        <i class="fas fa-file-alt"></i>
-                        <span class="file-name">${file.name}</span>
-                    </div>
-                    <a href="${file.url}" download="${file.name}" class="download-link" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-download"></i> Download
-                    </a>
+                    <div class="file-info-container"><i class="fas fa-file-alt"></i><span class="file-name">${file.name}</span></div>
+                    <a href="${file.url}" download="${file.name}" class="download-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> Download</a>
                 </div>`).join('');
         }
 
         async function viewEstimationMessages(estimationId) {
             const modal = document.getElementById('messagesModal');
-            if (!modal.innerHTML) {
-                modal.innerHTML = `<div class="modal-content large"><div class="modal-header"><h3 id="messagesModalTitle">Estimation Messages</h3><span class="close" onclick="closeModal('messagesModal')">&times;</span></div><div id="messagesContent"></div></div>`;
-            }
+            if (!modal.innerHTML) modal.innerHTML = `<div class="modal-content large"><div class="modal-header"><h3 id="messagesModalTitle"></h3><span class="close" onclick="closeModal('messagesModal')">&times;</span></div><div id="messagesContent"></div></div>`;
+            
+            document.getElementById('messagesModalTitle').textContent = 'Estimation Messages';
             const content = document.getElementById('messagesContent');
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             content.innerHTML = loadingSpinner;
             try {
-                // NOTE: This assumes a backend endpoint exists to fetch messages by estimation ID.
                 const data = await apiCall(`/admin/estimations/${estimationId}/messages`);
                 const messages = data.messages || [];
                 if (messages.length === 0) {
@@ -328,7 +336,7 @@
 
         window.onclick = function(event) {
             document.querySelectorAll('.modal').forEach(modal => {
-                if (event.target == modal) modal.style.display = 'none';
+                if (event.target === modal) modal.style.display = 'none';
             });
         }
     </script>
