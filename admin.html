@@ -1188,7 +1188,7 @@
                                             <small>${quote.projectType || quote.category || 'General'}</small>
                                         </div>
                                     </td>
-                                    <td>${quote.amount ? ' + quote.amount.toLocaleString() : 'Pending'}</td>
+                                    <td>${quote.amount ? `${quote.amount.toLocaleString()}` : 'Pending'}</td>
                                     <td><span class="status-badge ${quote.status || 'pending'}">${(quote.status || 'pending').toUpperCase()}</span></td>
                                     <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
                                     <td>
@@ -1291,7 +1291,7 @@
                                             ` : ''}
                                         </div>
                                     </td>
-                                    <td>${(estimation.estimatedAmount || estimation.amount) ? ' + (estimation.estimatedAmount || estimation.amount).toLocaleString() : 'Pending'}</td>
+                                    <td>${(estimation.estimatedAmount || estimation.amount) ? `${(estimation.estimatedAmount || estimation.amount).toLocaleString()}` : 'Pending'}</td>
                                     <td>${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</td>
                                     <td>
                                         <div class="action-group">
@@ -1482,7 +1482,7 @@
                                     <td>
                                         <div class="project-info">
                                             <strong>${sub.planName || sub.plan?.name || 'N/A'}</strong>
-                                            <small>${sub.planPrice ? ' + sub.planPrice : 'N/A'}/${sub.planInterval || 'month'}</small>
+                                            <small>${sub.planPrice ? `${sub.planPrice}` : 'N/A'}/${sub.planInterval || 'month'}</small>
                                         </div>
                                     </td>
                                     <td><span class="status-badge ${sub.status || 'active'}">${(sub.status || 'active').toUpperCase()}</span></td>
@@ -1701,8 +1701,7 @@ Estimation Details:
 Project: ${estimation.projectTitle || 'Untitled'}
 Contractor: ${estimation.contractorName || 'Unknown'}
 Status: ${estimation.status || 'pending'}
-Amount: ${estimation.estimatedAmount ? '
-                         + estimation.estimatedAmount.toLocaleString() : 'Pending'}
+Amount: ${estimation.estimatedAmount ? `${estimation.estimatedAmount.toLocaleString()}` : 'Pending'}
 Files: ${filesList}
 Submitted: ${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}
 Notes: ${estimation.notes || 'No notes provided'}
@@ -1851,7 +1850,7 @@ ${message.content || message.text || 'No content available'}
             });
         }
 
-        // Status form handler
+        // Status form handler - Initialize after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             const statusForm = document.getElementById('statusForm');
             if (statusForm) {
@@ -1887,4 +1886,3 @@ ${message.content || message.text || 'No content available'}
     </script>
 </body>
 </html>
-                        
