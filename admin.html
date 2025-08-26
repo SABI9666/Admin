@@ -542,9 +542,13 @@
                 Admin Dashboard
             </h1>
             <div class="header-actions">
+                <div id="authStatus" style="background: #dc3545; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; margin-right: 10px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>No Auth</span>
+                </div>
                 <div class="admin-badge" id="adminBadge">
                     <i class="fas fa-user-shield"></i>
-                    <span id="adminName">Loading...</span>
+                    <span id="adminName">Not Logged In</span>
                 </div>
                 <button class="btn btn-danger" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i>
@@ -847,7 +851,7 @@
             
             // Return the first non-null token
             for (const token of tokens) {
-                if (token && token !== 'null' && token !== 'undefined') {
+                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
                     console.log('Found token:', token.substring(0, 20) + '...');
                     return token;
                 }
@@ -857,13 +861,30 @@
             return null;
         }
         
+        // Redirect to login page
+        function redirectToLogin() {
+            showNotification('Please log in to access the admin panel', 'error');
+            
+            // Try different possible login pages
+            const possibleLoginPages = [
+                'index.html',
+                'login.html',
+                'admin-login.html',
+                '/',
+                '../index.html'
+            ];
+            
+            // Use the first one that exists or default to index.html
+            window.location.href = possibleLoginPages[0];
+        }
+        
         // Make authenticated API call
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
             
             if (!token) {
                 console.error('No authentication token available');
-                showNotification('Authentication required. Please log in.', 'error');
+                redirectToLogin();
                 throw new Error('No authentication token found');
             }
             
@@ -883,13 +904,10 @@
                 console.log(`API Response Status: ${response.status}`);
                 
                 if (response.status === 401) {
-                    console.error('Authentication failed - clearing all tokens');
+                    console.error('Authentication failed - token may be expired or invalid');
                     localStorage.clear();
                     sessionStorage.clear();
-                    showNotification('Session expired. Please log in again.', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
+                    redirectToLogin();
                     throw new Error('Authentication failed');
                 }
                 
@@ -904,8 +922,34 @@
                 return data;
                 
             } catch (error) {
+                if (error.message === 'Authentication failed') {
+                    // Don't log this as it's handled above
+                    throw error;
+                }
                 console.error('API Call failed:', error);
                 throw error;
+            }
+        }
+        
+        // Update authentication status indicator
+        function updateAuthStatus(isAuthenticated, userName = null) {
+            const authStatus = document.getElementById('authStatus');
+            const adminName = document.getElementById('adminName');
+            
+            if (isAuthenticated) {
+                authStatus.style.background = '#28a745';
+                authStatus.innerHTML = '<i class="fas fa-check-circle"></i> <span>Authenticated</span>';
+                
+                if (adminName && userName) {
+                    adminName.textContent = userName;
+                }
+            } else {
+                authStatus.style.background = '#dc3545';
+                authStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>No Auth</span>';
+                
+                if (adminName) {
+                    adminName.textContent = 'Not Logged In';
+                }
             }
         }
         
@@ -919,21 +963,32 @@
                 
                 console.log('✅ Dashboard data loaded:', dashboardData);
                 
-                // Update admin name
-                const adminName = document.getElementById('adminName');
-                if (adminName && dashboardData.adminUser) {
-                    adminName.textContent = dashboardData.adminUser.split('@')[0];
-                }
+                // Update auth status and admin name
+                updateAuthStatus(true, dashboardData.adminUser?.split('@')[0] || 'Admin');
                 
                 // Render stats cards
                 renderStatsGrid(dashboardData.stats);
                 
             } catch (error) {
                 console.error('❌ Error loading dashboard:', error);
+                updateAuthStatus(false);
+                
+                if (error.message === 'Authentication failed') {
+                    showLoginPrompt();
+                    return;
+                }
+                
                 document.getElementById('statsGrid').innerHTML = `
                     <div class="error">
                         <i class="fas fa-exclamation-triangle"></i>
                         Failed to load dashboard: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadDashboardStats()">
+                            <i class="fas fa-refresh"></i> Retry
+                        </button>
+                        <button class="btn btn-secondary" onclick="showLoginPrompt()">
+                            <i class="fas fa-key"></i> Re-authenticate
+                        </button>
                     </div>
                 `;
             }
@@ -2084,11 +2139,8 @@ ${message.content || message.text || 'No content available'}
             const token = getToken();
             
             if (!token) {
-                console.log('No authentication token found, redirecting to login...');
-                showNotification('Please log in to access the admin panel', 'error');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 2000);
+                console.log('No authentication token found');
+                showLoginPrompt();
                 return;
             }
             
@@ -2101,6 +2153,7 @@ ${message.content || message.text || 'No content available'}
             debugControls.innerHTML = `
                 <button onclick="debugTokenStorage()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Debug Tokens</button>
                 <button onclick="checkAuthStatus()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Test Auth</button>
+                <button onclick="showLoginPrompt()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Manual Login</button>
                 <button onclick="this.parentNode.style.display='none'" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Hide</button>
             `;
             document.body.appendChild(debugControls);
@@ -2114,6 +2167,113 @@ ${message.content || message.text || 'No content available'}
                 }
             }, 5 * 60 * 1000);
         });
+
+        // Show login prompt overlay
+        function showLoginPrompt() {
+            const loginOverlay = document.createElement('div');
+            loginOverlay.id = 'loginOverlay';
+            loginOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            `;
+            
+            loginOverlay.innerHTML = `
+                <div style="background: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 400px; margin: 20px;">
+                    <h2 style="margin-bottom: 20px; color: #333;">
+                        <i class="fas fa-lock"></i> Authentication Required
+                    </h2>
+                    <p style="margin-bottom: 20px; color: #666;">
+                        Please enter your admin authentication token:
+                    </p>
+                    <input type="password" id="manualTokenInput" placeholder="Paste your token here..." 
+                           style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px;">
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="setManualToken()" class="btn btn-success">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button onclick="redirectToLogin()" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt"></i> Go to Login Page
+                        </button>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 12px; color: #888;">
+                        Token will be stored securely in your browser
+                    </p>
+                </div>
+            `;
+            
+            document.body.appendChild(loginOverlay);
+            
+            // Focus on input
+            setTimeout(() => {
+                document.getElementById('manualTokenInput').focus();
+            }, 100);
+            
+            // Allow Enter key to submit
+            document.getElementById('manualTokenInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    setManualToken();
+                }
+            });
+        }
+
+        // Set manual token and try to authenticate
+        async function setManualToken() {
+            const tokenInput = document.getElementById('manualTokenInput');
+            const token = tokenInput.value.trim();
+            
+            if (!token) {
+                showNotification('Please enter a token', 'warning');
+                return;
+            }
+            
+            // Store token
+            localStorage.setItem('adminToken', token);
+            
+            try {
+                showNotification('Testing authentication...', 'info');
+                
+                // Test the token
+                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('Authentication successful!', 'success');
+                    
+                    // Remove login overlay
+                    const overlay = document.getElementById('loginOverlay');
+                    if (overlay) {
+                        overlay.remove();
+                    }
+                    
+                    // Start loading dashboard
+                    loadDashboardStats();
+                    
+                } else {
+                    localStorage.removeItem('adminToken');
+                    showNotification('Invalid token. Please check and try again.', 'error');
+                    tokenInput.value = '';
+                    tokenInput.focus();
+                }
+                
+            } catch (error) {
+                localStorage.removeItem('adminToken');
+                showNotification('Authentication test failed: ' + error.message, 'error');
+                tokenInput.value = '';
+                tokenInput.focus();
+            }
+        }
 
         // Modal event handlers
         window.onclick = function(event) {
