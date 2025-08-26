@@ -672,6 +672,37 @@
         </div>
     </div>
 
+    <!-- PDF Upload Modal -->
+    <div id="pdfUploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Estimation Result</h3>
+                <span class="close" onclick="closeModal('pdfUploadModal')">&times;</span>
+            </div>
+            <form id="pdfUploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="estimationResultFile">Select PDF File:</label>
+                    <input type="file" id="estimationResultFile" name="resultFile" accept=".pdf" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">Only PDF files are allowed (max 10MB)</small>
+                </div>
+                <div class="form-group">
+                    <label for="resultAmount">Estimated Amount ($):</label>
+                    <input type="number" id="resultAmount" name="amount" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="resultNotes">Additional Notes:</label>
+                    <textarea id="resultNotes" name="notes" placeholder="Add any additional notes about this estimation..."></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeModal('pdfUploadModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Upload Result
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         console.log('🏗️ SteelConnect Admin Dashboard loaded');
         
@@ -685,6 +716,81 @@
         let subscriptionsData = [];
         let subscriptionPlans = [];
         let currentEstimationId = null;
+        let currentUploadEstimationId = null;
+        
+        // Upload estimation result function
+        function uploadEstimationResult(estimationId) {
+            currentUploadEstimationId = estimationId;
+            document.getElementById('pdfUploadModal').style.display = 'block';
+        }
+
+        // Handle PDF upload for estimation results
+        async function handlePDFUpload(estimationId, formData) {
+            try {
+                showNotification('Uploading estimation result...', 'info');
+                
+                const token = getToken();
+                if (!token) {
+                    throw new Error('No authentication token found');
+                }
+                
+                const response = await fetch(`${API_BASE}/estimation/${estimationId}/result`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                        // Don't set Content-Type for FormData - browser sets it automatically with boundary
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} ${errorText}`);
+                }
+                
+                const data = await response.json();
+                showNotification('Estimation result uploaded successfully!', 'success');
+                
+                // Update the estimation in local data
+                const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
+                if (estimation) {
+                    estimation.resultFile = data.resultFile;
+                    estimation.status = 'completed';
+                    if (data.amount) estimation.estimatedAmount = data.amount;
+                }
+                
+                // Refresh the estimations tab
+                renderEstimationsTab();
+                closeModal('pdfUploadModal');
+                
+                return data;
+                
+            } catch (error) {
+                console.error('PDF upload error:', error);
+                showNotification(`Upload failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Enhanced file validation
+        function validatePDFFile(file) {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = ['application/pdf'];
+            
+            if (!file) {
+                throw new Error('Please select a file');
+            }
+            
+            if (!allowedTypes.includes(file.type)) {
+                throw new Error('Only PDF files are allowed');
+            }
+            
+            if (file.size > maxSize) {
+                throw new Error('File size must be less than 10MB');
+            }
+            
+            return true;
+        }
         
         // Add notification system
         function showNotification(message, type = 'info') {
@@ -1337,6 +1443,9 @@
                                             <button class="btn btn-sm btn-primary" onclick="updateEstimationStatus('${estimation._id || estimation.id}')" title="Update Status">
                                                 <i class="fas fa-edit"></i>
                                             </button>
+                                            <button class="btn btn-sm btn-warning" onclick="uploadEstimationResult('${estimation._id || estimation.id}')" title="Upload Result">
+                                                <i class="fas fa-upload"></i>
+                                            </button>
                                             ${estimation.resultFile || estimation.result ? `
                                                 <button class="btn btn-sm btn-success" onclick="downloadEstimationResult('${estimation._id || estimation.id}')" title="Download Result">
                                                     <i class="fas fa-file-download"></i>
@@ -1727,10 +1836,38 @@ Location: ${user.location || 'N/A'}
                 const action = newStatus ? 'Activating' : 'Deactivating';
                 showNotification(`${action} user...`, 'info');
                 
-                await apiCall(`/admin/users/${userId}/status`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ isActive: newStatus })
-                });
+                // Try different possible endpoints for user status update
+                const possibleEndpoints = [
+                    `/admin/users/${userId}/status`,
+                    `/admin/users/${userId}`,
+                    `/users/${userId}/status`,
+                    `/users/${userId}`
+                ];
+                
+                let success = false;
+                let lastError = null;
+                
+                for (const endpoint of possibleEndpoints) {
+                    try {
+                        await apiCall(endpoint, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ 
+                                isActive: newStatus,
+                                status: newStatus ? 'active' : 'inactive'
+                            })
+                        });
+                        success = true;
+                        break;
+                    } catch (error) {
+                        lastError = error;
+                        console.log(`Endpoint ${endpoint} failed, trying next...`);
+                        continue;
+                    }
+                }
+                
+                if (!success) {
+                    throw lastError;
+                }
                 
                 const user = usersData.find(u => (u._id || u.id) === userId);
                 if (user) {
@@ -1980,7 +2117,7 @@ ${message.content || message.text || 'No content available'}
 
         // Modal event handlers
         window.onclick = function(event) {
-            const modals = ['statusModal'];
+            const modals = ['statusModal', 'pdfUploadModal'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
                 if (event.target === modal) {
@@ -2018,6 +2155,45 @@ ${message.content || message.text || 'No content available'}
                     } catch (error) {
                         console.error('Error updating status:', error);
                         showNotification(`Failed to update status: ${error.message}`, 'error');
+                    }
+                });
+            }
+
+            // PDF Upload form handler
+            const pdfUploadForm = document.getElementById('pdfUploadForm');
+            if (pdfUploadForm) {
+                pdfUploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const fileInput = document.getElementById('estimationResultFile');
+                    const amountInput = document.getElementById('resultAmount');
+                    const notesInput = document.getElementById('resultNotes');
+                    
+                    try {
+                        const file = fileInput.files[0];
+                        validatePDFFile(file);
+                        
+                        const formData = new FormData();
+                        formData.append('resultFile', file);
+                        
+                        if (amountInput.value) {
+                            formData.append('amount', amountInput.value);
+                        }
+                        
+                        if (notesInput.value.trim()) {
+                            formData.append('notes', notesInput.value.trim());
+                        }
+                        
+                        formData.append('status', 'completed');
+                        
+                        await handlePDFUpload(currentUploadEstimationId, formData);
+                        
+                        // Reset form
+                        pdfUploadForm.reset();
+                        
+                    } catch (error) {
+                        console.error('PDF upload form error:', error);
+                        showNotification(`Upload failed: ${error.message}`, 'error');
                     }
                 });
             }
