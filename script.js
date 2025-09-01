@@ -550,6 +550,7 @@ async function renderAdminSubscriptions() {
                     </button>
                 </div>
                 
+                <!-- Subscription Plans Tab -->
                 <div id="plans-tab" class="tab-content active">
                     <div class="admin-section-header">
                         <div class="section-title">
@@ -603,6 +604,7 @@ async function renderAdminSubscriptions() {
                     </div>
                 </div>
                 
+                <!-- User Subscriptions Tab -->
                 <div id="users-tab" class="tab-content">
                     <div class="admin-section-header">
                         <div class="section-title">
@@ -675,6 +677,7 @@ async function renderAdminSubscriptions() {
                     ` : '<div class="empty-state"><i class="fas fa-users"></i><h3>No subscriptions found</h3><p>User subscriptions will appear here when they subscribe to plans.</p></div>'}
                 </div>
                 
+                <!-- Analytics Tab -->
                 <div id="analytics-tab" class="tab-content">
                     <div class="subscription-analytics">
                         <h3>Subscription Analytics</h3>
@@ -1490,7 +1493,7 @@ async function renderAdminEstimations() {
                     </thead>
                     <tbody>
                         ${estimations.map(est => `
-                            <tr data-estimation-id="${est.id}" data-status="${est.status}" data-contractor="${est.contractorName}">
+                            <tr data-estimation-id="${est._id}" data-status="${est.status}" data-contractor="${est.contractorName}">
                                 <td>
                                     <div class="project-info">
                                         <strong>${est.projectTitle}</strong>
@@ -1504,7 +1507,7 @@ async function renderAdminEstimations() {
                                     </div>
                                 </td>
                                 <td>
-                                    <select class="status-select" onchange="updateEstimationStatus('${est.id}', this.value)" data-current="${est.status}">
+                                    <select class="status-select" onchange="updateEstimationStatus('${est._id}', this.value)" data-current="${est.status}">
                                         <option value="pending" ${est.status === 'pending' ? 'selected' : ''}>Pending</option>
                                         <option value="in-progress" ${est.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
                                         <option value="completed" ${est.status === 'completed' ? 'selected' : ''}>Completed</option>
@@ -1515,7 +1518,7 @@ async function renderAdminEstimations() {
                                     <div class="file-info">
                                         <span class="file-count">${est.uploadedFiles?.length || 0} files</span>
                                         ${est.uploadedFiles?.length ? 
-                                            `<button class="btn btn-sm btn-link" onclick="viewEstimationFiles('${est.id}')" title="View Files">
+                                            `<button class="btn btn-sm btn-link" onclick="viewEstimationFiles('${est._id}')" title="View Files">
                                                 <i class="fas fa-paperclip"></i>
                                             </button>` : ''
                                         }
@@ -1524,27 +1527,27 @@ async function renderAdminEstimations() {
                                 <td>${formatDate(est.createdAt)}</td>
                                 <td>
                                     ${est.dueDate ? formatDate(est.dueDate) : 
-                                        `<button class="btn btn-sm btn-outline" onclick="setEstimationDueDate('${est.id}')">
+                                        `<button class="btn btn-sm btn-outline" onclick="setEstimationDueDate('${est._id}')">
                                             <i class="fas fa-calendar-plus"></i> Set
                                         </button>`
                                     }
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${est.id}')" title="View Details">
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationDetails('${est._id}')" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         ${est.status === 'pending' || est.status === 'in-progress' ? `
-                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${est.id}')" title="Upload Result">
+                                            <button class="btn btn-sm btn-success" onclick="uploadEstimationResult('${est._id}')" title="Upload Result">
                                                 <i class="fas fa-upload"></i>
                                             </button>
                                         ` : ''}
                                         ${est.resultFile ? `
-                                            <button class="btn btn-sm btn-primary" onclick="downloadEstimationResult('${est.id}')" title="Download Result">
+                                            <button class="btn btn-sm btn-primary" onclick="downloadEstimationResult('${est._id}')" title="Download Result">
                                                 <i class="fas fa-download"></i>
                                             </button>
                                         ` : ''}
-                                        <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est.id}')" title="Delete">
+                                        <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -1606,7 +1609,8 @@ async function updateEstimationStatus(estimationId, newStatus) {
 
 async function viewEstimationDetails(estimationId) {
     try {
-        const { estimation } = await apiCall(`/admin/estimations/${estimationId}`);
+        const data = await apiCall(`/admin/estimations/${estimationId}`);
+        const estimation = data.estimation;
         
         showModal('estimation-details-modal', `
             <div class="estimation-details-modal">
@@ -1639,10 +1643,10 @@ async function viewEstimationDetails(estimationId) {
                                 ${estimation.uploadedFiles.map(file => `
                                     <div class="file-item">
                                         <i class="fas fa-file"></i>
-                                        <span>${file.originalName}</span>
-                                        <a href="${API_BASE_URL}/admin/estimations/${estimationId}/files/${file.fileId}/download" target="_blank" class="btn btn-sm btn-link">
+                                        <span>${file.name}</span>
+                                        <button class="btn btn-sm btn-link" onclick="downloadFile('${file.url}', '${file.name}')">
                                             <i class="fas fa-download"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1667,8 +1671,8 @@ async function viewEstimationDetails(estimationId) {
 
 async function viewEstimationFiles(estimationId) {
     try {
-        const { estimation } = await apiCall(`/admin/estimations/${estimationId}`);
-        const files = estimation.uploadedFiles || [];
+        const data = await apiCall(`/admin/estimations/${estimationId}/files`);
+        const files = data.files;
         
         showModal('files-modal', `
             <div class="files-modal">
@@ -1677,17 +1681,17 @@ async function viewEstimationFiles(estimationId) {
                     ${files.map(file => `
                         <div class="file-card">
                             <div class="file-icon">
-                                <i class="fas fa-${getFileIcon(file.mimeType)}"></i>
+                                <i class="fas fa-${getFileIcon(file.type)}"></i>
                             </div>
                             <div class="file-info">
-                                <h4>${file.originalName}</h4>
-                                <p>${formatFileSize(file.fileSize)}</p>
-                                <small>Uploaded: ${formatDate(file.uploadDate)}</small>
+                                <h4>${file.name}</h4>
+                                <p>${formatFileSize(file.size)}</p>
+                                <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
                             </div>
                             <div class="file-actions">
-                                <a href="${API_BASE_URL}/admin/estimations/${estimationId}/files/${file.fileId}/download" target="_blank" class="btn btn-sm btn-primary">
+                                <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${file.name}')">
                                     <i class="fas fa-download"></i> Download
-                                </a>
+                                </button>
                             </div>
                         </div>
                     `).join('')}
@@ -1702,20 +1706,26 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-
-function getFileIcon(mimeType) {
-    if (!mimeType) return 'file';
-    if (mimeType.includes('pdf')) return 'file-pdf';
-    if (mimeType.includes('word')) return 'file-word';
-    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'file-excel';
-    if (mimeType.includes('image')) return 'file-image';
-    if (mimeType.includes('archive') || mimeType.includes('zip')) return 'file-archive';
-    return 'file-alt';
+function getFileIcon(fileType) {
+    const icons = {
+        'pdf': 'file-pdf',
+        'doc': 'file-word',
+        'docx': 'file-word',
+        'xls': 'file-excel',
+        'xlsx': 'file-excel',
+        'jpg': 'file-image',
+        'jpeg': 'file-image',
+        'png': 'file-image',
+        'gif': 'file-image',
+        'zip': 'file-archive',
+        'rar': 'file-archive',
+        'txt': 'file-alt'
+    };
+    return icons[fileType?.toLowerCase()] || 'file';
 }
 
-
 function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -1750,12 +1760,12 @@ async function uploadEstimationResult(estimationId) {
             <h3>Upload Estimation Result</h3>
             <form id="upload-result-form">
                 <div class="form-group">
-                    <label for="result-file">Select Result File (PDF only):</label>
-                    <input type="file" id="result-file" accept=".pdf" required>
+                    <label for="result-file">Select Result File:</label>
+                    <input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
                 </div>
                 <div class="form-group">
-                    <label for="result-amount">Estimated Amount (optional):</label>
-                    <input type="number" step="0.01" id="result-amount" placeholder="e.g., 15000.00" />
+                    <label for="result-notes">Notes (optional):</label>
+                    <textarea id="result-notes" placeholder="Add any notes about the estimation result..."></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">
@@ -1771,7 +1781,7 @@ async function uploadEstimationResult(estimationId) {
         e.preventDefault();
         
         const fileInput = document.getElementById('result-file');
-        const amount = document.getElementById('result-amount').value;
+        const notes = document.getElementById('result-notes').value;
         
         if (!fileInput.files[0]) {
             showNotification('Please select a file', 'error');
@@ -1780,13 +1790,10 @@ async function uploadEstimationResult(estimationId) {
         
         const formData = new FormData();
         formData.append('resultFile', fileInput.files[0]);
-        if (amount) {
-            formData.append('amount', amount);
-        }
+        formData.append('notes', notes);
         
         try {
-            // *** FIX #1: Corrected API endpoint ***
-            await apiCall(`/admin/estimations/${estimationId}/upload-result`, 'POST', formData, true);
+            await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
             showNotification('Estimation result uploaded successfully', 'success');
             closeModal();
             renderAdminEstimations();
@@ -1797,14 +1804,11 @@ async function uploadEstimationResult(estimationId) {
 }
 
 async function downloadEstimationResult(estimationId) {
-    // *** FIX #2: Corrected download logic ***
-    // This function now correctly points to the new backend download route.
-    // The backend handles the secure URL generation and redirect.
     try {
-        const downloadUrl = `${API_BASE_URL}/admin/estimations/${estimationId}/download-result`;
-        window.open(downloadUrl, '_blank');
+        const data = await apiCall(`/admin/estimations/${estimationId}/result`);
+        downloadFile(data.resultFile.url, data.resultFile.name);
     } catch (error) {
-        showNotification('Could not initiate download. Please try again.', 'error');
+        showNotification('Failed to download result file', 'error');
     }
 }
 
