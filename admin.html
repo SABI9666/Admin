@@ -120,9 +120,11 @@
 
         // --- AUTH & HELPERS ---
         function getToken() {
-            const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+            // Check for a more generic token name first
+            const token = localStorage.getItem('jwtToken') || localStorage.getItem('token') || localStorage.getItem('adminToken');
             if (!token) { 
-                window.location.href = 'index.html'; 
+                showAlert('Session expired or not found. Redirecting to login.', 'danger');
+                setTimeout(() => window.location.href = 'index.html', 2000); 
                 return null;
             }
             return token;
@@ -130,18 +132,25 @@
 
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
-            if (!token) return;
+            if (!token) return Promise.reject(new Error("No token found"));
+            
             const config = { headers: { 'Authorization': `Bearer ${token}` }, ...options };
             if (options.body && !(options.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
             }
+
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}`}));
                     throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
                 }
-                return await response.json();
+                // Handle cases where the response might be empty (e.g., a 204 No Content)
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return await response.json();
+                }
+                return {}; // Return an empty object for non-JSON responses
             } catch (error) {
                 console.error(`API call failed for ${endpoint}:`, error);
                 showAlert(`Error: ${error.message}`, 'danger');
@@ -180,15 +189,16 @@
         // --- DATA LOADING & RENDERING ---
         async function loadDashboardStats() {
             try {
-                const { data } = await apiCall('/admin/dashboard');
-                const stats = data.stats;
-                document.getElementById('adminName').textContent = stats.adminUser || 'Admin';
+                // The dashboard endpoint might return the whole object, not nested under "data"
+                const stats = await apiCall('/admin/dashboard'); 
+                const user = JSON.parse(localStorage.getItem('currentUser'));
+                document.getElementById('adminName').textContent = user.name || 'Admin';
                 document.getElementById('statsGrid').innerHTML = `
-                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${stats.totalUsers||0}</div><div class="stat-label">Total Users</div></div>
-                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${stats.totalJobs||0}</div><div class="stat-label">Total Jobs</div></div>
-                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${stats.totalQuotes||0}</div><div class="stat-label">Total Quotes</div></div>
-                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${stats.totalEstimations||0}</div><div class="stat-label">Total Estimations</div></div>
-                    <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${stats.totalMessages||0}</div><div class="stat-label">Total Messages</div></div>
+                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${stats.stats.totalUsers||0}</div><div class="stat-label">Total Users</div></div>
+                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${stats.stats.totalJobs||0}</div><div class="stat-label">Total Jobs</div></div>
+                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${stats.stats.totalQuotes||0}</div><div class="stat-label">Total Quotes</div></div>
+                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${stats.stats.totalEstimations||0}</div><div class="stat-label">Total Estimations</div></div>
+                    <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${stats.stats.totalMessages||0}</div><div class="stat-label">Total Messages</div></div>
                 `;
             } catch (e) { document.getElementById('statsGrid').innerHTML = `<div class="error">Failed to load stats.</div>`; }
         }
@@ -197,17 +207,17 @@
             const container = document.getElementById('users-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
-                const { data } = await apiCall('/admin/users');
-                if (!data?.length) { container.innerHTML = `<div class="no-data">No users found.</div>`; return; }
+                const { users } = await apiCall('/admin/users');
+                if (!users?.length) { container.innerHTML = `<div class="no-data">No users found.</div>`; return; }
                 container.innerHTML = `
                     <table>
                         <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
                         <tbody>
-                            ${data.map(u => `
+                            ${users.map(u => `
                                 <tr>
                                     <td>${u.name || 'N/A'}</td>
                                     <td>${u.email}</td>
-                                    <td><span class="type-badge ${u.type}">${u.type}</span></td>
+                                    <td><span class="type-badge ${u.type || u.role}">${u.type || u.role}</span></td>
                                     <td><span class="status-badge ${u.isActive ? 'active' : 'inactive'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
                                     <td>
                                         <div class="action-group">
@@ -241,13 +251,13 @@
             const container = document.getElementById('jobs-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
-                const { data } = await apiCall('/admin/jobs');
-                if (!data?.length) { container.innerHTML = `<div class="no-data">No jobs found.</div>`; return; }
+                const { jobs } = await apiCall('/admin/jobs');
+                if (!jobs?.length) { container.innerHTML = `<div class="no-data">No jobs found.</div>`; return; }
                 container.innerHTML = `
                     <table>
                         <thead><tr><th>Project Title</th><th>Contractor</th><th>Status</th><th>Created On</th></tr></thead>
                         <tbody>
-                        ${data.map(job => `
+                        ${jobs.map(job => `
                             <tr>
                                 <td>${job.projectTitle || 'N/A'}</td>
                                 <td>${job.contractorName || 'N/A'}</td>
@@ -264,13 +274,13 @@
             const container = document.getElementById('quotes-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
-                const { data } = await apiCall('/admin/quotes');
-                if (!data?.length) { container.innerHTML = `<div class="no-data">No quotes found.</div>`; return; }
+                const { quotes } = await apiCall('/admin/quotes');
+                if (!quotes?.length) { container.innerHTML = `<div class="no-data">No quotes found.</div>`; return; }
                 container.innerHTML = `
                     <table>
                          <thead><tr><th>Project</th><th>Contractor</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
                          <tbody>
-                            ${data.map(q => `
+                            ${quotes.map(q => `
                                 <tr>
                                     <td>${q.jobTitle || 'N/A'}</td>
                                     <td>${q.contractorName || 'N/A'}</td>
@@ -288,13 +298,13 @@
             const container = document.getElementById('messages-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
-                const { data } = await apiCall('/admin/messages');
-                if (!data?.length) { container.innerHTML = `<div class="no-data">No messages found.</div>`; return; }
+                const { messages } = await apiCall('/admin/messages');
+                if (!messages?.length) { container.innerHTML = `<div class="no-data">No messages found.</div>`; return; }
                 container.innerHTML = `
                     <table>
                         <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Date</th></tr></thead>
                         <tbody>
-                        ${data.map(msg => `
+                        ${messages.map(msg => `
                             <tr>
                                 <td>${msg.name}</td>
                                 <td>${msg.email}</td>
@@ -326,7 +336,9 @@
                                         ${e.uploadedFiles?.length || 0} File(s)
                                         <button class="btn btn-sm btn-info" onclick="viewEstimationFiles('${e.id}')" title="View Files"><i class="fas fa-eye"></i></button>
                                     </td>
-                                    <td>${e.resultUrl ? `<a href="${API_BASE}${e.resultUrl}" target="_blank" class="btn btn-sm">View PDF</a>` : 'Not Uploaded'}</td>
+                                    <td>
+                                        ${e.resultFile ? `<a href="${API_BASE}/admin/estimations/${e.id}/download-result" target="_blank" class="btn btn-sm">View PDF</a>` : 'Not Uploaded'}
+                                    </td>
                                     <td>
                                         <div class="action-group">
                                             <button class="btn btn-sm btn-warning" onclick="openStatusModal('${e.id}', '${e.status}')" title="Update Status"><i class="fas fa-edit"></i></button>
@@ -345,15 +357,17 @@
             filesList.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             document.getElementById('filesModal').style.display = 'block';
             try {
-                const { files } = await apiCall(`/admin/estimations/${estimationId}/files`);
+                // Fetch the full estimation object which contains the files array
+                const { estimation } = await apiCall(`/admin/estimations/${estimationId}`);
+                const files = estimation.uploadedFiles;
                 if (files?.length) {
                     filesList.innerHTML = files.map(file => 
                         `<div class="file-item">
                             <div class="file-info">
-                                <div class="file-name">${file.name}</div>
-                                <div class="file-meta">Uploaded: ${new Date(file.createdAt).toLocaleString()}</div>
+                                <div class="file-name">${file.originalName}</div>
+                                <div class="file-meta">Uploaded: ${new Date(file.uploadDate).toLocaleString()}</div>
                             </div>
-                            <a href="${API_BASE}${file.url}" target="_blank" download class="btn btn-sm btn-info">
+                            <a href="${API_BASE}/admin/estimations/${estimationId}/files/${file.fileId}/download" target="_blank" class="btn btn-sm btn-info">
                                 <i class="fas fa-download"></i> Download
                             </a>
                         </div>`
@@ -416,9 +430,10 @@
         
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
-            getToken(); // Initial check to redirect if not logged in
-            loadDashboardStats();
-            showTab('users');
+            if (getToken()) { // Only proceed if a token exists
+                loadDashboardStats();
+                showTab('users');
+            }
         });
 
         window.onclick = (event) => {
