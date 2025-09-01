@@ -14,7 +14,7 @@
         .header h1 { color: #333; font-size: 28px; display: flex; align-items: center; gap: 10px; }
         .header-actions { display: flex; align-items: center; gap: 20px; }
         .admin-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; }
-        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.3s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
         .btn:hover { background: #0056b3; }
         .btn-danger { background: #dc3545; }
         .btn-danger:hover { background: #c82333; }
@@ -46,7 +46,7 @@
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
         th { background: #f8f9fa; font-weight: 600; color: #495057; }
         tr:hover { background: #f8f9fa; }
-        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; color: white; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; color: white; text-transform: capitalize; }
         .status-badge.pending { background: #ffc107; color: #333; }
         .status-badge.in-progress { background: #17a2b8; }
         .status-badge.completed { background: #28a745; }
@@ -69,6 +69,15 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
+        .file-list { max-height: 400px; overflow-y: auto; }
+        .file-item { padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .file-info { flex: 1; }
+        .file-name { font-weight: 500; margin-bottom: 4px; }
+        .file-meta { font-size: 12px; color: #666; }
+        .file-actions { display: flex; gap: 8px; }
+        .alert { padding: 12px; border-radius: 4px; margin-bottom: 15px; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     </style>
 </head>
 <body>
@@ -102,7 +111,7 @@
 
     <div id="statusModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Update Status</h3><span class="close" onclick="closeModal('statusModal')">&times;</span></div><form id="statusForm"><div class="form-group"><label for="statusSelect">Status:</label><select id="statusSelect" required><option value="pending">Pending</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="rejected">Rejected</option></select></div><button type="submit" class="btn btn-success">Update</button></form></div></div>
     <div id="pdfUploadModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Upload Result</h3><span class="close" onclick="closeModal('pdfUploadModal')">&times;</span></div><form id="pdfUploadForm"><div class="form-group"><label for="estimationResultFile">Select PDF File:</label><input type="file" id="estimationResultFile" name="resultFile" accept=".pdf" required></div><div class="form-group"><label for="resultAmount">Est. Amount ($):</label><input type="number" id="resultAmount" name="amount" min="0" step="0.01"></div><button type="submit" class="btn btn-success">Upload</button></form></div></div>
-    <div id="filesModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Estimation Files</h3><span class="close" onclick="closeModal('filesModal')">&times;</span></div><div id="filesList"></div></div></div>
+    <div id="filesModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Estimation Files</h3><span class="close" onclick="closeModal('filesModal')">&times;</span></div><div id="filesList" class="file-list"><div class="loading"><div class="spinner"></div></div></div></div></div>
 
     <script>
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
@@ -112,7 +121,10 @@
         // --- AUTH & HELPERS ---
         function getToken() {
             const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
-            if (!token) { window.location.href = 'index.html'; }
+            if (!token) { 
+                window.location.href = 'index.html'; 
+                return null;
+            }
             return token;
         }
 
@@ -126,17 +138,25 @@
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, config);
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}`}));
                     throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
                 }
                 return await response.json();
             } catch (error) {
-                console.error(`API call failed:`, error);
-                alert(`Error: ${error.message}`);
+                console.error(`API call failed for ${endpoint}:`, error);
+                showAlert(`Error: ${error.message}`, 'danger');
                 throw error;
             }
         }
         
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
         function logout() {
             localStorage.clear();
             window.location.href = 'index.html';
@@ -164,11 +184,11 @@
                 const stats = data.stats;
                 document.getElementById('adminName').textContent = stats.adminUser || 'Admin';
                 document.getElementById('statsGrid').innerHTML = `
-                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${stats.totalUsers||0}</div><div class="stat-label">Users</div></div>
-                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${stats.totalJobs||0}</div><div class="stat-label">Jobs</div></div>
-                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${stats.totalQuotes||0}</div><div class="stat-label">Quotes</div></div>
-                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${stats.totalEstimations||0}</div><div class="stat-label">Estimations</div></div>
-                    <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${stats.totalMessages||0}</div><div class="stat-label">Messages</div></div>
+                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${stats.totalUsers||0}</div><div class="stat-label">Total Users</div></div>
+                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${stats.totalJobs||0}</div><div class="stat-label">Total Jobs</div></div>
+                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${stats.totalQuotes||0}</div><div class="stat-label">Total Quotes</div></div>
+                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${stats.totalEstimations||0}</div><div class="stat-label">Total Estimations</div></div>
+                    <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${stats.totalMessages||0}</div><div class="stat-label">Total Messages</div></div>
                 `;
             } catch (e) { document.getElementById('statsGrid').innerHTML = `<div class="error">Failed to load stats.</div>`; }
         }
@@ -193,7 +213,7 @@
                                         <div class="action-group">
                                             <button class="btn btn-sm ${u.isActive ? 'btn-danger' : 'btn-success'}" 
                                                     onclick="toggleUserStatus('${u.id}', ${!u.isActive})" 
-                                                    title="${u.isActive ? 'Deactivate' : 'Activate'}">
+                                                    title="${u.isActive ? 'Deactivate' : 'Activate'} User">
                                                 <i class="fas fa-${u.isActive ? 'ban' : 'check'}"></i>
                                             </button>
                                         </div>
@@ -204,7 +224,6 @@
             } catch (e) { container.innerHTML = `<div class="error">Failed to load users.</div>`; }
         }
         
-        // FIX: Added function to activate/deactivate users
         async function toggleUserStatus(userId, newStatus) {
             const action = newStatus ? 'activate' : 'deactivate';
             if (!confirm(`Are you sure you want to ${action} this user?`)) return;
@@ -213,11 +232,9 @@
                     method: 'PATCH',
                     body: JSON.stringify({ isActive: newStatus }),
                 });
-                alert(`User ${action}d successfully.`);
+                showAlert(`User ${action}d successfully.`, 'success');
                 loadUsersData(); // Refresh the list
-            } catch(e) {
-                alert(`Failed to ${action} user.`);
-            }
+            } catch(e) { /* Error alert is handled by apiCall */ }
         }
         
         async function loadJobsData() {
@@ -226,25 +243,67 @@
             try {
                 const { data } = await apiCall('/admin/jobs');
                 if (!data?.length) { container.innerHTML = `<div class="no-data">No jobs found.</div>`; return; }
-                container.innerHTML = `<table>...</table>`; // Your table rendering
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Project Title</th><th>Contractor</th><th>Status</th><th>Created On</th></tr></thead>
+                        <tbody>
+                        ${data.map(job => `
+                            <tr>
+                                <td>${job.projectTitle || 'N/A'}</td>
+                                <td>${job.contractorName || 'N/A'}</td>
+                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
+                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>`;
             } catch (e) { container.innerHTML = `<div class="error">Failed to load jobs.</div>`; }
         }
+
         async function loadQuotesData() {
             const container = document.getElementById('quotes-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
                 const { data } = await apiCall('/admin/quotes');
                 if (!data?.length) { container.innerHTML = `<div class="no-data">No quotes found.</div>`; return; }
-                container.innerHTML = `<table>...</table>`; // Your table rendering
+                container.innerHTML = `
+                    <table>
+                         <thead><tr><th>Project</th><th>Contractor</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                         <tbody>
+                            ${data.map(q => `
+                                <tr>
+                                    <td>${q.jobTitle || 'N/A'}</td>
+                                    <td>${q.contractorName || 'N/A'}</td>
+                                    <td>$${q.amount ? q.amount.toFixed(2) : 'N/A'}</td>
+                                    <td><span class="status-badge ${q.status}">${q.status}</span></td>
+                                    <td>${new Date(q.createdAt).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                         </tbody>
+                    </table>`;
             } catch (e) { container.innerHTML = `<div class="error">Failed to load quotes.</div>`; }
         }
+
         async function loadMessagesData() {
             const container = document.getElementById('messages-tab');
             container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
             try {
                 const { data } = await apiCall('/admin/messages');
                 if (!data?.length) { container.innerHTML = `<div class="no-data">No messages found.</div>`; return; }
-                container.innerHTML = `<table>...</table>`; // Your table rendering
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Date</th></tr></thead>
+                        <tbody>
+                        ${data.map(msg => `
+                            <tr>
+                                <td>${msg.name}</td>
+                                <td>${msg.email}</td>
+                                <td>${msg.subject || 'No Subject'}</td>
+                                <td>${new Date(msg.createdAt).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>`;
             } catch (e) { container.innerHTML = `<div class="error">Failed to load messages.</div>`; }
         }
 
@@ -256,7 +315,7 @@
                 if (!estimations?.length) { container.innerHTML = `<div class="no-data">No estimations found.</div>`; return; }
                 container.innerHTML = `
                     <table>
-                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
                         <tbody>
                             ${estimations.map(e => `
                                 <tr>
@@ -264,13 +323,14 @@
                                     <td>${e.contractorName || 'N/A'}</td>
                                     <td><span class="status-badge ${e.status}">${e.status}</span></td>
                                     <td>
-                                        ${e.uploadedFiles?.length || 0} 
-                                        <button class="btn btn-sm" onclick="viewEstimationFiles('${e.id}')" title="View Files"><i class="fas fa-eye"></i></button>
+                                        ${e.uploadedFiles?.length || 0} File(s)
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationFiles('${e.id}')" title="View Files"><i class="fas fa-eye"></i></button>
                                     </td>
+                                    <td>${e.resultUrl ? `<a href="${API_BASE}${e.resultUrl}" target="_blank" class="btn btn-sm">View PDF</a>` : 'Not Uploaded'}</td>
                                     <td>
                                         <div class="action-group">
-                                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${e.id}')"><i class="fas fa-edit"></i></button>
-                                            <button class="btn btn-sm btn-success" onclick="openUploadModal('${e.id}')"><i class="fas fa-upload"></i></button>
+                                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${e.id}', '${e.status}')" title="Update Status"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-sm btn-success" onclick="openUploadModal('${e.id}')" title="Upload Result"><i class="fas fa-upload"></i></button>
                                         </div>
                                     </td>
                                 </tr>`).join('')}
@@ -280,36 +340,55 @@
         }
 
         // --- ESTIMATION ACTIONS ---
-        // FIX: Corrected function to handle download link generation
         async function viewEstimationFiles(estimationId) {
+            const filesList = document.getElementById('filesList');
+            filesList.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            document.getElementById('filesModal').style.display = 'block';
             try {
                 const { files } = await apiCall(`/admin/estimations/${estimationId}/files`);
-                const filesList = document.getElementById('filesList');
                 if (files?.length) {
                     filesList.innerHTML = files.map(file => 
-                        // Construct the full URL for the anchor tag
-                        `<p><a href="${API_BASE}${file.url}" target="_blank" download>${file.name}</a></p>`
+                        `<div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-meta">Uploaded: ${new Date(file.createdAt).toLocaleString()}</div>
+                            </div>
+                            <a href="${API_BASE}${file.url}" target="_blank" download class="btn btn-sm btn-info">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>`
                     ).join('');
                 } else {
-                    filesList.innerHTML = '<p>No files uploaded.</p>';
+                    filesList.innerHTML = '<p class="no-data">No files were uploaded for this estimation.</p>';
                 }
-                document.getElementById('filesModal').style.display = 'block';
-            } catch (e) { alert('Could not load files.'); }
+            } catch (e) { 
+                filesList.innerHTML = `<div class="error">Could not load files.</div>`;
+            }
         }
         
         async function handlePDFUpload(estimationId, formData) {
             try {
                 await apiCall(`/admin/estimations/${estimationId}/upload-result`, { method: 'POST', body: formData });
-                alert('Result uploaded successfully!');
+                showAlert('Result uploaded successfully!');
                 closeModal('pdfUploadModal');
                 loadEstimationsData();
-            } catch (e) { console.error('Upload error:', e); }
+            } catch (e) { /* Error alert is handled by apiCall */ }
         }
 
         // --- MODAL & FORM HANDLERS ---
-        function openStatusModal(id) { currentEstimationId = id; document.getElementById('statusModal').style.display = 'block'; }
-        function openUploadModal(id) { currentUploadEstimationId = id; document.getElementById('pdfUploadModal').style.display = 'block'; }
-        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        function openStatusModal(id, currentStatus) { 
+            currentEstimationId = id; 
+            document.getElementById('statusSelect').value = currentStatus;
+            document.getElementById('statusModal').style.display = 'block'; 
+        }
+        function openUploadModal(id) { 
+            currentUploadEstimationId = id; 
+            document.getElementById('pdfUploadForm').reset();
+            document.getElementById('pdfUploadModal').style.display = 'block'; 
+        }
+        function closeModal(modalId) { 
+            document.getElementById(modalId).style.display = 'none'; 
+        }
 
         document.getElementById('statusForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -318,17 +397,17 @@
                     method: 'PATCH',
                     body: JSON.stringify({ status: document.getElementById('statusSelect').value }),
                 });
-                alert('Status updated!');
+                showAlert('Status updated!');
                 closeModal('statusModal');
                 loadEstimationsData();
-            } catch(e) { alert('Failed to update status.'); }
+            } catch(e) { /* Error alert is handled by apiCall */ }
         });
 
         document.getElementById('pdfUploadForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const fileInput = document.getElementById('estimationResultFile');
             const amountInput = document.getElementById('resultAmount');
-            if (!fileInput.files.length) return alert('Please select a file.');
+            if (!fileInput.files.length) return showAlert('Please select a file.', 'danger');
             const formData = new FormData();
             formData.append('resultFile', fileInput.files[0]);
             if(amountInput.value) formData.append('amount', amountInput.value);
@@ -337,12 +416,15 @@
         
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
+            getToken(); // Initial check to redirect if not logged in
             loadDashboardStats();
             showTab('users');
         });
 
         window.onclick = (event) => {
-            if (event.target.classList.contains('modal')) event.target.style.display = "none";
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
         }
     </script>
 </body>
