@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Your existing CSS styles go here */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: white; padding: 20px 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { color: #333; font-size: 28px; display: flex; align-items: center; gap: 10px; }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .admin-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; }
+        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.3s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-info { background: #17a2b8; }
+        .btn-info:hover { background: #138496; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+        .stat-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 24px; color: white; }
+        .stat-icon.users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-icon.jobs { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-icon.quotes { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
+        .stat-icon.messages { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #333; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .stat-label { color: #666; font-size: 14px; font-weight: 500; }
+        .section { background: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section h2 { margin-bottom: 20px; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        .tabs { display: flex; margin-bottom: 30px; border-bottom: 2px solid #e9ecef; }
+        .tab { padding: 12px 24px; background: none; border: none; cursor: pointer; border-bottom: 3px solid transparent; font-size: 16px; font-weight: 500; color: #666; }
+        .tab.active { border-bottom-color: #007bff; color: #007bff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6; vertical-align: middle; }
+        th { background: #f8f9fa; font-weight: 600; color: #495057; }
+        tr:hover { background: #f8f9fa; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; color: white; text-transform: capitalize; }
+        .status-badge.pending { background: #ffc107; color: #333; }
+        .status-badge.in-progress { background: #17a2b8; }
+        .status-badge.completed { background: #28a745; }
+        .status-badge.rejected { background: #dc3545; }
+        .status-badge.active { background: #28a745; }
+        .status-badge.inactive { background: #dc3545; }
+        .type-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .type-badge.contractor { background: #28a745; color: white; }
+        .type-badge.designer { background: #007bff; color: white; }
+        .loading { text-align: center; padding: 60px; color: #666; }
+        .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; }
+        .no-data { text-align: center; padding: 40px; color: #666; font-style: italic; }
+        .action-group { display: flex; gap: 5px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 10% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
+        .file-list { max-height: 400px; overflow-y: auto; }
+        .file-item { padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .file-info { flex: 1; }
+        .file-name { font-weight: 500; margin-bottom: 4px; }
+        .file-meta { font-size: 12px; color: #666; }
+        .file-actions { display: flex; gap: 8px; }
+        .alert { padding: 12px; border-radius: 4px; margin-bottom: 15px; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+            <div class="header-actions">
+                <div class="admin-badge"><i class="fas fa-user-shield"></i> <span id="adminName">Loading...</span></div>
+                <button class="btn btn-danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"><div class="loading"><div class="spinner"></div></div></div>
+
+        <div class="section">
+            <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('users')">Users</button>
+                <button class="tab" onclick="showTab('jobs')">Jobs</button>
+                <button class="tab" onclick="showTab('quotes')">Quotes</button>
+                <button class="tab" onclick="showTab('estimations')">Estimations</button>
+                <button class="tab" onclick="showTab('messages')">Messages</button>
+            </div>
+            <div id="users-tab" class="tab-content active"><div class="loading"><div class="spinner"></div></div></div>
+            <div id="jobs-tab" class="tab-content"><div class="loading"><div class="spinner"></div></div></div>
+            <div id="quotes-tab" class="tab-content"><div class="loading"><div class="spinner"></div></div></div>
+            <div id="estimations-tab" class="tab-content"><div class="loading"><div class="spinner"></div></div></div>
+            <div id="messages-tab" class="tab-content"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <div id="statusModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Update Status</h3><span class="close" onclick="closeModal('statusModal')">&times;</span></div><form id="statusForm"><div class="form-group"><label for="statusSelect">Status:</label><select id="statusSelect" required><option value="pending">Pending</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="rejected">Rejected</option></select></div><button type="submit" class="btn btn-success">Update</button></form></div></div>
+    <div id="pdfUploadModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Upload Result</h3><span class="close" onclick="closeModal('pdfUploadModal')">&times;</span></div><form id="pdfUploadForm"><div class="form-group"><label for="estimationResultFile">Select PDF File:</label><input type="file" id="estimationResultFile" name="resultFile" accept=".pdf" required></div><div class="form-group"><label for="resultAmount">Est. Amount ($):</label><input type="number" id="resultAmount" name="amount" min="0" step="0.01"></div><button type="submit" class="btn btn-success">Upload</button></form></div></div>
+    <div id="filesModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Estimation Files</h3><span class="close" onclick="closeModal('filesModal')">&times;</span></div><div id="filesList" class="file-list"><div class="loading"><div class="spinner"></div></div></div></div></div>
+
+    <script>
+        const API_BASE = 'https://steelconnect-backend.onrender.com/api';
+        let currentEstimationId = null;
+        let currentUploadEstimationId = null;
+
+        // --- AUTH & HELPERS ---
+        function getToken() {
+            const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+            if (!token) { 
+                window.location.href = 'index.html'; 
+                return null;
+            }
+            return token;
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            const token = getToken();
+            if (!token) return;
+            const config = { headers: { 'Authorization': `Bearer ${token}` }, ...options };
+            if (options.body && !(options.body instanceof FormData)) {
+                config.headers['Content-Type'] = 'application/json';
+            }
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}`}));
+                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`API call failed for ${endpoint}:`, error);
+                showAlert(`Error: ${error.message}`, 'danger');
+                throw error;
+            }
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+        
+        // --- TABS ---
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content, .tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`.tab[onclick*="'${tabName}'"]`).classList.add('active');
+            const loadFunc = {
+                users: loadUsersData,
+                jobs: loadJobsData,
+                quotes: loadQuotesData,
+                estimations: loadEstimationsData,
+                messages: loadMessagesData,
+            };
+            if (loadFunc[tabName]) loadFunc[tabName]();
+        }
+        
+        // --- DATA LOADING & RENDERING ---
+        async function loadDashboardStats() {
+            try {
+                const { data } = await apiCall('/admin/dashboard');
+                const stats = data.stats;
+                document.getElementById('adminName').textContent = stats.adminUser || 'Admin';
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-card"><div class="stat-icon users"><i class="fas fa-users"></i></div><div class="stat-number">${stats.totalUsers||0}</div><div class="stat-label">Total Users</div></div>
+                    <div class="stat-card"><div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div><div class="stat-number">${stats.totalJobs||0}</div><div class="stat-label">Total Jobs</div></div>
+                    <div class="stat-card"><div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-number">${stats.totalQuotes||0}</div><div class="stat-label">Total Quotes</div></div>
+                    <div class="stat-card"><div class="stat-icon estimations"><i class="fas fa-calculator"></i></div><div class="stat-number">${stats.totalEstimations||0}</div><div class="stat-label">Total Estimations</div></div>
+                    <div class="stat-card"><div class="stat-icon messages"><i class="fas fa-comments"></i></div><div class="stat-number">${stats.totalMessages||0}</div><div class="stat-label">Total Messages</div></div>
+                `;
+            } catch (e) { document.getElementById('statsGrid').innerHTML = `<div class="error">Failed to load stats.</div>`; }
+        }
+        
+        async function loadUsersData() {
+            const container = document.getElementById('users-tab');
+            container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            try {
+                const { data } = await apiCall('/admin/users');
+                if (!data?.length) { container.innerHTML = `<div class="no-data">No users found.</div>`; return; }
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${data.map(u => `
+                                <tr>
+                                    <td>${u.name || 'N/A'}</td>
+                                    <td>${u.email}</td>
+                                    <td><span class="type-badge ${u.type}">${u.type}</span></td>
+                                    <td><span class="status-badge ${u.isActive ? 'active' : 'inactive'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm ${u.isActive ? 'btn-danger' : 'btn-success'}" 
+                                                    onclick="toggleUserStatus('${u.id}', ${!u.isActive})" 
+                                                    title="${u.isActive ? 'Deactivate' : 'Activate'} User">
+                                                <i class="fas fa-${u.isActive ? 'ban' : 'check'}"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) { container.innerHTML = `<div class="error">Failed to load users.</div>`; }
+        }
+        
+        async function toggleUserStatus(userId, newStatus) {
+            const action = newStatus ? 'activate' : 'deactivate';
+            if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+            try {
+                await apiCall(`/admin/users/${userId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ isActive: newStatus }),
+                });
+                showAlert(`User ${action}d successfully.`, 'success');
+                loadUsersData(); // Refresh the list
+            } catch(e) { /* Error alert is handled by apiCall */ }
+        }
+        
+        async function loadJobsData() {
+            const container = document.getElementById('jobs-tab');
+            container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            try {
+                const { data } = await apiCall('/admin/jobs');
+                if (!data?.length) { container.innerHTML = `<div class="no-data">No jobs found.</div>`; return; }
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Project Title</th><th>Contractor</th><th>Status</th><th>Created On</th></tr></thead>
+                        <tbody>
+                        ${data.map(job => `
+                            <tr>
+                                <td>${job.projectTitle || 'N/A'}</td>
+                                <td>${job.contractorName || 'N/A'}</td>
+                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
+                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) { container.innerHTML = `<div class="error">Failed to load jobs.</div>`; }
+        }
+
+        async function loadQuotesData() {
+            const container = document.getElementById('quotes-tab');
+            container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            try {
+                const { data } = await apiCall('/admin/quotes');
+                if (!data?.length) { container.innerHTML = `<div class="no-data">No quotes found.</div>`; return; }
+                container.innerHTML = `
+                    <table>
+                         <thead><tr><th>Project</th><th>Contractor</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                         <tbody>
+                            ${data.map(q => `
+                                <tr>
+                                    <td>${q.jobTitle || 'N/A'}</td>
+                                    <td>${q.contractorName || 'N/A'}</td>
+                                    <td>$${q.amount ? q.amount.toFixed(2) : 'N/A'}</td>
+                                    <td><span class="status-badge ${q.status}">${q.status}</span></td>
+                                    <td>${new Date(q.createdAt).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                         </tbody>
+                    </table>`;
+            } catch (e) { container.innerHTML = `<div class="error">Failed to load quotes.</div>`; }
+        }
+
+        async function loadMessagesData() {
+            const container = document.getElementById('messages-tab');
+            container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            try {
+                const { data } = await apiCall('/admin/messages');
+                if (!data?.length) { container.innerHTML = `<div class="no-data">No messages found.</div>`; return; }
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Date</th></tr></thead>
+                        <tbody>
+                        ${data.map(msg => `
+                            <tr>
+                                <td>${msg.name}</td>
+                                <td>${msg.email}</td>
+                                <td>${msg.subject || 'No Subject'}</td>
+                                <td>${new Date(msg.createdAt).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) { container.innerHTML = `<div class="error">Failed to load messages.</div>`; }
+        }
+
+        async function loadEstimationsData() {
+            const container = document.getElementById('estimations-tab');
+            container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            try {
+                const { estimations } = await apiCall('/admin/estimations');
+                if (!estimations?.length) { container.innerHTML = `<div class="no-data">No estimations found.</div>`; return; }
+                container.innerHTML = `
+                    <table>
+                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${estimations.map(e => `
+                                <tr>
+                                    <td>${e.projectTitle || 'N/A'}</td>
+                                    <td>${e.contractorName || 'N/A'}</td>
+                                    <td><span class="status-badge ${e.status}">${e.status}</span></td>
+                                    <td>
+                                        ${e.uploadedFiles?.length || 0} File(s)
+                                        <button class="btn btn-sm btn-info" onclick="viewEstimationFiles('${e.id}')" title="View Files"><i class="fas fa-eye"></i></button>
+                                    </td>
+                                    <td>${e.resultUrl ? `<a href="${API_BASE}${e.resultUrl}" target="_blank" class="btn btn-sm">View PDF</a>` : 'Not Uploaded'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-warning" onclick="openStatusModal('${e.id}', '${e.status}')" title="Update Status"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-sm btn-success" onclick="openUploadModal('${e.id}')" title="Upload Result"><i class="fas fa-upload"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) { container.innerHTML = `<div class="error">Failed to load estimations.</div>`; }
+        }
+
+        // --- ESTIMATION ACTIONS ---
+        async function viewEstimationFiles(estimationId) {
+            const filesList = document.getElementById('filesList');
+            filesList.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+            document.getElementById('filesModal').style.display = 'block';
+            try {
+                const { files } = await apiCall(`/admin/estimations/${estimationId}/files`);
+                if (files?.length) {
+                    filesList.innerHTML = files.map(file => 
+                        `<div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${file.name}</div>
+                                <div class="file-meta">Uploaded: ${new Date(file.createdAt).toLocaleString()}</div>
+                            </div>
+                            <a href="${API_BASE}${file.url}" target="_blank" download class="btn btn-sm btn-info">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>`
+                    ).join('');
+                } else {
+                    filesList.innerHTML = '<p class="no-data">No files were uploaded for this estimation.</p>';
+                }
+            } catch (e) { 
+                filesList.innerHTML = `<div class="error">Could not load files.</div>`;
+            }
+        }
+        
+        async function handlePDFUpload(estimationId, formData) {
+            try {
+                await apiCall(`/admin/estimations/${estimationId}/upload-result`, { method: 'POST', body: formData });
+                showAlert('Result uploaded successfully!');
+                closeModal('pdfUploadModal');
+                loadEstimationsData();
+            } catch (e) { /* Error alert is handled by apiCall */ }
+        }
+
+        // --- MODAL & FORM HANDLERS ---
+        function openStatusModal(id, currentStatus) { 
+            currentEstimationId = id; 
+            document.getElementById('statusSelect').value = currentStatus;
+            document.getElementById('statusModal').style.display = 'block'; 
+        }
+        function openUploadModal(id) { 
+            currentUploadEstimationId = id; 
+            document.getElementById('pdfUploadForm').reset();
+            document.getElementById('pdfUploadModal').style.display = 'block'; 
+        }
+        function closeModal(modalId) { 
+            document.getElementById(modalId).style.display = 'none'; 
+        }
+
+        document.getElementById('statusForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await apiCall(`/admin/estimations/${currentEstimationId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: document.getElementById('statusSelect').value }),
+                });
+                showAlert('Status updated!');
+                closeModal('statusModal');
+                loadEstimationsData();
+            } catch(e) { /* Error alert is handled by apiCall */ }
+        });
+
+        document.getElementById('pdfUploadForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('estimationResultFile');
+            const amountInput = document.getElementById('resultAmount');
+            if (!fileInput.files.length) return showAlert('Please select a file.', 'danger');
+            const formData = new FormData();
+            formData.append('resultFile', fileInput.files[0]);
+            if(amountInput.value) formData.append('amount', amountInput.value);
+            handlePDFUpload(currentUploadEstimationId, formData);
+        });
+        
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            getToken(); // Initial check to redirect if not logged in
+            loadDashboardStats();
+            showTab('users');
+        });
+
+        window.onclick = (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
