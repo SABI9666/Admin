@@ -3,232 +3,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - SteelConnect</title>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <link rel="stylesheet" href="style.css">
-    
+    <title>SteelConnect - Admin Login</title>
     <style>
-        /* Inline critical admin styles */
-        .admin-body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        #admin-panel-container {
-            display: none; /* Initially hidden */
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .admin-sidebar {
-            width: 280px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-
-        .admin-main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .login-prompt-container {
-            display: none;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        .login-prompt-box {
+        
+        .login-container {
             background: white;
             padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .logo {
             text-align: center;
-            max-width: 400px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
         }
-
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            max-width: 400px;
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
         }
-
-        .loading-spinner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 50px;
+        
+        .form-group {
+            margin-bottom: 20px;
         }
-
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .loading {
+            background: #e7f3ff;
+            color: #0c5460;
+            border: 1px solid #b8daff;
+        }
+        
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
         }
-
+        
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
         }
     </style>
 </head>
-<body class="admin-body">
-
-    <div id="admin-panel-container">
-        <aside class="admin-sidebar">
-            <div class="admin-sidebar-header">
-                <div class="logo">SteelConnect</div>
-                <span class="admin-tag">Admin Panel</span>
+<body>
+    <div class="login-container">
+        <div class="logo">🏗️ SteelConnect</div>
+        <div class="subtitle">Admin Portal</div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Admin Email</label>
+                <input type="email" id="email" value="admin@steelconnect.com" required autocomplete="username">
             </div>
             
-            <nav class="admin-nav">
-                <a href="#" class="admin-nav-link active" data-section="dashboard">
-                    <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
-                </a>
-                <a href="#" class="admin-nav-link" data-section="users">
-                    <i class="fas fa-users fa-fw"></i> User Management
-                </a>
-                <a href="#" class="admin-nav-link" data-section="quotes">
-                    <i class="fas fa-file-invoice-dollar fa-fw"></i> Quotes Overview
-                </a>
-                <a href="#" class="admin-nav-link" data-section="system-stats">
-                    <i class="fas fa-server fa-fw"></i> System Stats
-                </a>
-            </nav>
+            <div class="form-group">
+                <label for="password">Admin Password</label>
+                <input type="password" id="password" required autocomplete="current-password">
+            </div>
             
-            <div class="admin-sidebar-footer">
-                <div id="admin-user-info" class="user-info-small">
-                    </div>
-                <button id="admin-logout-btn" class="btn btn-danger">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </aside>
-
-        <main class="admin-main-content">
-            <header class="admin-header">
-                <h1 id="admin-section-title">Dashboard</h1>
-                <div class="admin-header-actions">
-                    </div>
-            </header>
-            
-            <div id="admin-content-area" class="admin-content-area">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <div id="admin-login-prompt" class="login-prompt-container">
-        <div class="login-prompt-box">
-            <i class="fas fa-shield-alt login-prompt-icon" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
-            <h2>Admin Access Required</h2>
-            <p>You must be logged in as an administrator to view this page.</p>
-            <div style="margin-top: 25px;">
-                <a href="index.html" class="btn btn-primary" style="margin-right: 10px;">
-                    <i class="fas fa-home"></i> Return to Homepage
-                </a>
-                <a href="login.html" class="btn btn-secondary">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </a>
-            </div>
+            <button type="submit" class="btn" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Login to Admin Panel
+            </button>
+        </form>
+        
+        <div id="messageArea"></div>
+        
+        <div class="footer">
+            SteelConnect Admin System v2.0
         </div>
     </div>
 
-    <div id="notification-container" class="notification-container"></div>
-
     <script>
-        // Configuration - Update this with your actual backend URL
-        window.ADMIN_CONFIG = {
-            // FIXED: Added the required /api path to the end of the URL.
-            API_BASE_URL: 'https://steelconnect-backend.onrender.com/api',
-            DEBUG_MODE: false // Set to true for development
-        };
-
-        // Debug logging
-        function debugLog(message, data = null) {
-            if (window.ADMIN_CONFIG.DEBUG_MODE) {
-                console.log('[ADMIN DEBUG]', message, data);
-            }
+        console.log('🏗️ SteelConnect Admin Login loaded');
+        
+        // Show message to user
+        function showMessage(text, type = 'error') {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="message ${type}">${text}</div>`;
         }
-
-        // Initialize admin page when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('DOM Content Loaded - Initializing Admin Page');
+        
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            const adminPanel = document.getElementById('admin-panel-container');
-            const loginPrompt = document.getElementById('admin-login-prompt');
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
             
-            if (adminPanel && loginPrompt) {
-                debugLog('Admin elements found, starting initialization...');
+            // Validation
+            if (!email || !password) {
+                showMessage('❌ Please enter both email and password', 'error');
+                return;
+            }
+            
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+            showMessage('🔄 Authenticating admin credentials...', 'loading');
+            
+            try {
+                console.log('🔐 Attempting admin login for:', email);
                 
-                // Small delay to ensure all scripts are loaded
-                setTimeout(() => {
-                    if (typeof initializeAdminPage === 'function') {
-                        debugLog('Calling initializeAdminPage function');
-                        initializeAdminPage();
-                    } else {
-                        console.error('initializeAdminPage function not found - check script.js');
-                        // Fallback - show login prompt
-                        loginPrompt.style.display = 'flex';
-                        adminPanel.style.display = 'none';
+                const response = await fetch('https://steelconnect-backend.onrender.com/api/auth/login/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                console.log('📡 Login response status:', response.status);
+                const data = await response.json();
+                console.log('📋 Login response data:', data);
+                
+                if (response.ok && data.success && data.token) {
+                    // SUCCESS! Save the token properly
+                    console.log('✅ Admin login successful!');
+                    
+                    // Save token to multiple storage locations
+                    localStorage.setItem('adminToken', data.token);
+                    localStorage.setItem('token', data.token);
+                    sessionStorage.setItem('adminToken', data.token);
+                    
+                    // Save user info
+                    if (data.user) {
+                        localStorage.setItem('adminUser', JSON.stringify(data.user));
                     }
-                }, 100);
-            } else {
-                console.error('Admin panel elements not found');
+                    
+                    console.log('💾 Token saved to browser storage');
+                    
+                    // Show success message
+                    showMessage(`✅ Welcome ${data.user.name || 'Admin'}! Redirecting to dashboard...`, 'success');
+                    
+                    // Redirect to admin panel after short delay
+                    setTimeout(() => {
+                        console.log('🚀 Redirecting to admin dashboard...');
+                        window.location.href = 'admin.html';
+                    }, 1500);
+                    
+                } else {
+                    // Login failed
+                    console.error('❌ Login failed:', data.error || 'Unknown error');
+                    showMessage(`❌ Login Failed: ${data.error || 'Invalid credentials'}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('🚨 Login error:', error);
+                showMessage(`❌ Connection Error: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Panel';
             }
         });
-
-        // Error handler for script loading
-        window.addEventListener('error', function(e) {
-            console.error('Script error:', e.error);
-            // Show login prompt as fallback
-            const loginPrompt = document.getElementById('admin-login-prompt');
-            const adminPanel = document.getElementById('admin-panel-container');
-            if (loginPrompt && adminPanel) {
-                loginPrompt.style.display = 'flex';
-                adminPanel.style.display = 'none';
-            }
-        });
-
-        // Network connectivity check
-        function checkBackendConnection() {
-            const apiUrl = window.ADMIN_CONFIG.API_BASE_URL;
+        
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const existingToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
             
-            // The health check should now correctly point to your base URL without /api
-            fetch(`${apiUrl.replace('/api', '')}/health`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Health check failed');
-                    return response.json();
+            if (existingToken) {
+                console.log('🔍 Existing token found, checking validity...');
+                showMessage('🔍 Existing session found. Checking authentication...', 'loading');
+                
+                // Test the token
+                fetch('https://steelconnect-backend.onrender.com/api/admin/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${existingToken}`,
+                        'Content-Type': 'application/json'
+                    }
                 })
-                .then(data => {
-                    debugLog('Backend connection successful', data);
+                .then(response => {
+                    if (response.ok) {
+                        console.log('✅ Existing session valid, redirecting...');
+                        showMessage('✅ Valid session found! Redirecting to dashboard...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'admin.html';
+                        }, 1000);
+                    } else {
+                        console.log('❌ Existing session invalid, please login');
+                        showMessage('⚠️ Previous session expired. Please login again.', 'error');
+                        // Clear invalid tokens
+                        localStorage.removeItem('adminToken');
+                        localStorage.removeItem('token');
+                        sessionStorage.removeItem('adminToken');
+                    }
                 })
                 .catch(error => {
-                    console.warn('Backend connection failed:', error);
+                    console.log('❌ Session check failed:', error);
+                    showMessage('⚠️ Please login to continue.', 'error');
                 });
+            }
+        });
+        
+        // Auto-focus password field if email is pre-filled
+        if (document.getElementById('email').value) {
+            document.getElementById('password').focus();
         }
-
-        // Check connection on load
-        setTimeout(checkBackendConnection, 2000);
     </script>
-
-    <script src="script.js"></script>
 </body>
 </html>
