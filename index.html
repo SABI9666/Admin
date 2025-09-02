@@ -135,19 +135,29 @@
         </main>
     </div>
 
-    <div id="admin-login-prompt" class="login-prompt-container">
+    <div id="login-form-container" class="login-prompt-container" style="display: none;">
         <div class="login-prompt-box">
-            <i class="fas fa-shield-alt login-prompt-icon" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
-            <h2>Admin Access Required</h2>
-            <p>You must be logged in as an administrator to view this page.</p>
-            <div style="margin-top: 25px;">
-                <a href="index.html" class="btn btn-primary" style="margin-right: 10px;">
-                    <i class="fas fa-home"></i> Return to Homepage
-                </a>
-                <a href="/" class="btn btn-secondary">
+            <form id="admin-login-form">
+                <i class="fas fa-shield-alt login-prompt-icon" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
+                <h2>Admin Login</h2>
+                <p style="margin-bottom: 25px;">Please enter your credentials to continue.</p>
+                
+                <div style="text-align: left; margin-bottom: 15px;">
+                    <label for="email" style="font-weight: 500; display: block; margin-bottom: 5px;">Email</label>
+                    <input type="email" id="email" name="email" required 
+                           style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;">
+                </div>
+                
+                <div style="text-align: left; margin-bottom: 25px;">
+                    <label for="password" style="font-weight: 500; display: block; margin-bottom: 5px;">Password</label>
+                    <input type="password" id="password" name="password" required 
+                           style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px;">
                     <i class="fas fa-sign-in-alt"></i> Login
-                </a>
-            </div>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -156,7 +166,6 @@
     <script>
         // Configuration - Update this with your actual backend URL
         window.ADMIN_CONFIG = {
-            // FIXED: Added the required /api path to the end of the URL.
             API_BASE_URL: 'https://steelconnect-backend.onrender.com/api',
             DEBUG_MODE: false // Set to true for development
         };
@@ -173,9 +182,9 @@
             debugLog('DOM Content Loaded - Initializing Admin Page');
             
             const adminPanel = document.getElementById('admin-panel-container');
-            const loginPrompt = document.getElementById('admin-login-prompt');
+            const loginForm = document.getElementById('login-form-container'); // Changed from loginPrompt
             
-            if (adminPanel && loginPrompt) {
+            if (adminPanel && loginForm) {
                 debugLog('Admin elements found, starting initialization...');
                 
                 // Small delay to ensure all scripts are loaded
@@ -185,24 +194,24 @@
                         initializeAdminPage();
                     } else {
                         console.error('initializeAdminPage function not found - check script.js');
-                        // Fallback - show login prompt
-                        loginPrompt.style.display = 'flex';
+                        // Fallback - show login form
+                        loginForm.style.display = 'flex';
                         adminPanel.style.display = 'none';
                     }
                 }, 100);
             } else {
-                console.error('Admin panel elements not found');
+                console.error('Admin panel or login form elements not found');
             }
         });
 
         // Error handler for script loading
         window.addEventListener('error', function(e) {
             console.error('Script error:', e.error);
-            // Show login prompt as fallback
-            const loginPrompt = document.getElementById('admin-login-prompt');
+            // Show login form as fallback
+            const loginForm = document.getElementById('login-form-container');
             const adminPanel = document.getElementById('admin-panel-container');
-            if (loginPrompt && adminPanel) {
-                loginPrompt.style.display = 'flex';
+            if (loginForm && adminPanel) {
+                loginForm.style.display = 'flex';
                 adminPanel.style.display = 'none';
             }
         });
@@ -211,7 +220,6 @@
         function checkBackendConnection() {
             const apiUrl = window.ADMIN_CONFIG.API_BASE_URL;
             
-            // The health check should now correctly point to your base URL without /api
             fetch(`${apiUrl.replace('/api', '')}/health`)
                 .then(response => {
                     if (!response.ok) throw new Error('Health check failed');
