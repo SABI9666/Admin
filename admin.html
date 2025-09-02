@@ -566,11 +566,11 @@
             <form id="loginForm">
                 <div class="login-form-group">
                     <label for="adminEmailInput">Email</label>
-                    <input type="email" id="adminEmailInput" placeholder="Enter your email" required>
+                    <input type="email" id="adminEmailInput" placeholder="Enter your email" required value="admin@steelconnect.com" autocomplete="email">
                 </div>
                 <div class="login-form-group">
                     <label for="adminPasswordInput">Password</label>
-                    <input type="password" id="adminPasswordInput" placeholder="Enter your password" required>
+                    <input type="password" id="adminPasswordInput" placeholder="Enter your password" required value="SteelAdmin123!" autocomplete="current-password">
                 </div>
                 <button type="submit" class="login-btn">
                     <i class="fas fa-sign-in-alt"></i> Login
@@ -996,9 +996,297 @@
         }
         
         // --- DATA LOADING & RENDERING (TABS) ---
-        // Placeholder for other data loading and rendering functions
-        // To save space, the full render functions are not repeated here.
-        // Assume they exist below as in the original file.
+        
+        // Data loading functions
+        async function loadUsersData() {
+            try {
+                console.log('Loading users data...');
+                const data = await apiCall('/admin/users');
+                usersData = data.data || data.users || [];
+                renderUsersTab();
+            } catch (error) {
+                document.getElementById('users-tab').innerHTML = `<div class="error">Failed to load users: ${error.message}</div>`;
+            }
+        }
+
+        async function loadJobsData() {
+            try {
+                const data = await apiCall('/admin/jobs');
+                jobsData = data.data || data.jobs || [];
+                renderJobsTab();
+            } catch (error) {
+                document.getElementById('jobs-tab').innerHTML = `<div class="error">Failed to load jobs: ${error.message}</div>`;
+            }
+        }
+
+        async function loadQuotesData() {
+            try {
+                const data = await apiCall('/admin/quotes');
+                quotesData = data.data || data.quotes || [];
+                renderQuotesTab();
+            } catch (error) {
+                document.getElementById('quotes-tab').innerHTML = `<div class="error">Failed to load quotes: ${error.message}</div>`;
+            }
+        }
+
+        async function loadEstimationsData() {
+            try {
+                const data = await apiCall('/admin/estimations');
+                estimationsData = data.estimations || data.data || [];
+                renderEstimationsTab();
+            } catch (error) {
+                document.getElementById('estimations-tab').innerHTML = `<div class="error">Failed to load estimations: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadMessagesData() {
+             try {
+                const data = await apiCall('/admin/messages');
+                messagesData = data.data || data.messages || [];
+                renderMessagesTab();
+            } catch (error) {
+                document.getElementById('messages-tab').innerHTML = `<div class="error">Failed to load messages: ${error.message}</div>`;
+            }
+        }
+
+        async function loadSubscriptionsData() {
+             try {
+                const data = await apiCall('/admin/subscriptions');
+                subscriptionsData = data.data || data.subscriptions || [];
+                renderSubscriptionsTab();
+            } catch (error) {
+                document.getElementById('subscriptions-tab').innerHTML = `<div class="error">Failed to load subscriptions: ${error.message}</div>`;
+            }
+        }
+
+        // Tab management
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`[onclick*="showTab('${tabName}')"]`).classList.add('active');
+            
+            if (tabName === 'users' && usersData.length === 0) loadUsersData();
+            else if (tabName === 'jobs' && jobsData.length === 0) loadJobsData();
+            else if (tabName === 'quotes' && quotesData.length === 0) loadQuotesData();
+            else if (tabName === 'estimations' && estimationsData.length === 0) loadEstimationsData();
+            else if (tabName === 'messages' && messagesData.length === 0) loadMessagesData();
+            else if (tabName === 'subscriptions' && subscriptionsData.length === 0) loadSubscriptionsData();
+            else if (tabName === 'overview') renderOverviewTab();
+        }
+
+        // Render functions
+        function renderUsersTab() {
+            const target = document.getElementById('users-tab');
+            if (!usersData || usersData.length === 0) {
+                target.innerHTML = `<div class="no-data">No users found.</div>`; return;
+            }
+            target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${usersData.map(user => {
+                                const userName = user.name || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Unknown');
+                                const isActive = user.isActive !== false;
+                                return `<tr>
+                                    <td>${userName}</td>
+                                    <td>${user.email}</td>
+                                    <td><span class="type-badge ${user.type || 'user'}">${user.type || 'user'}</span></td>
+                                    <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
+                                    <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id}', ${!isActive})">
+                                            <i class="fas fa-${isActive ? 'ban' : 'check'}"></i>
+                                        </button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+        
+        function renderJobsTab() {
+             const target = document.getElementById('jobs-tab');
+             if (!jobsData || jobsData.length === 0) {
+                target.innerHTML = `<div class="no-data">No jobs found.</div>`; return;
+            }
+             target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Title</th><th>Client</th><th>Contractor</th><th>Status</th><th>Budget</th><th>Created</th></tr></thead>
+                        <tbody>
+                            ${jobsData.map(job => `<tr>
+                                <td>${job.title || 'Untitled'}</td>
+                                <td>${job.client?.name || 'N/A'}</td>
+                                <td>${job.contractor?.name || 'Unassigned'}</td>
+                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
+                                <td>${job.budget ? '$' + job.budget.toLocaleString() : 'N/A'}</td>
+                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderQuotesTab() {
+            const target = document.getElementById('quotes-tab');
+            if (!quotesData || quotesData.length === 0) {
+                target.innerHTML = `<div class="no-data">No quotes found.</div>`; return;
+            }
+            target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                         <thead><tr><th>Project</th><th>Client</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead>
+                        <tbody>
+                            ${quotesData.map(quote => `<tr>
+                                <td>${quote.projectTitle || 'Untitled'}</td>
+                                <td>${quote.client?.name || 'N/A'}</td>
+                                <td>${quote.amount ? '$' + quote.amount.toLocaleString() : 'Pending'}</td>
+                                <td><span class="status-badge ${quote.status}">${quote.status}</span></td>
+                                <td>${new Date(quote.createdAt).toLocaleDateString()}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderEstimationsTab() {
+            const target = document.getElementById('estimations-tab');
+            if (!estimationsData || estimationsData.length === 0) {
+                target.innerHTML = `<div class="no-data">No estimations found.</div>`; return;
+            }
+            target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Amount</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${estimationsData.map(est => `<tr>
+                                <td>${est.projectTitle || 'Untitled'}</td>
+                                <td>${est.contractor?.name || 'N/A'}</td>
+                                <td><span class="status-badge ${est.status}">${est.status}</span></td>
+                                <td>${est.uploadedFiles?.length || 0} files</td>
+                                <td>${est.estimatedAmount ? '$' + est.estimatedAmount.toLocaleString() : 'Pending'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="uploadEstimationResult('${est._id}')" title="Upload Result">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderMessagesTab() {
+            const target = document.getElementById('messages-tab');
+            if (!messagesData || messagesData.length === 0) {
+                target.innerHTML = `<div class="no-data">No messages found.</div>`; return;
+            }
+            target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>From</th><th>Subject</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                             ${messagesData.map(msg => `<tr>
+                                <td>${msg.senderName || 'Anonymous'}</td>
+                                <td>${msg.subject || 'No Subject'}</td>
+                                <td><span class="type-badge ${msg.type || 'general'}">${msg.type || 'general'}</span></td>
+                                <td><span class="status-badge ${msg.isRead ? 'read' : 'unread'}">${msg.isRead ? 'Read' : 'Unread'}</span></td>
+                                <td>${new Date(msg.createdAt).toLocaleDateString()}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderSubscriptionsTab() {
+            const target = document.getElementById('subscriptions-tab');
+            if (!subscriptionsData || subscriptionsData.length === 0) {
+                target.innerHTML = `<div class="no-data">No subscriptions found.</div>`; return;
+            }
+            target.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                         <thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Next Billing</th></tr></thead>
+                        <tbody>
+                            ${subscriptionsData.map(sub => `<tr>
+                                <td>${sub.user?.name || 'N/A'}</td>
+                                <td>${sub.planName || 'N/A'}</td>
+                                <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
+                                <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderOverviewTab() {
+            const overviewTab = document.getElementById('overview-tab');
+            const stats = dashboardData.stats || {};
+            overviewTab.innerHTML = `
+                <div class="success"><h3><i class="fas fa-check-circle"></i> System Status: All Systems Operational</h3></div>
+                <div style="margin-top: 20px;"><h4>Database Summary:</h4>
+                    <ul style="list-style-position: inside; padding-left: 10px;">
+                        <li>Total Users: ${stats.totalUsers || 0}</li>
+                        <li>Total Jobs: ${stats.totalJobs || 0}</li>
+                        <li>Total Quotes: ${stats.totalQuotes || 0}</li>
+                        <li>Total Estimations: ${stats.totalEstimations || 0}</li>
+                    </ul>
+                </div>`;
+        }
+        
+        // --- ACTION FUNCTIONS ---
+        async function toggleUserStatus(userId, newStatus) {
+            try {
+                showNotification(`Updating user...`, 'info');
+                await apiCall(`/admin/users/${userId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ isActive: newStatus })
+                });
+                showNotification(`User status updated`, 'success');
+                loadUsersData(); // Refresh the list
+            } catch (error) {
+                showNotification(`Failed to update user: ${error.message}`, 'error');
+            }
+        }
+
+        function uploadEstimationResult(estimationId) {
+            currentUploadEstimationId = estimationId;
+            document.getElementById('pdfUploadModal').style.display = 'block';
+        }
+        
+        async function handlePDFUpload(estimationId, formData) {
+            try {
+                showNotification('Uploading result...', 'info');
+                const token = getToken();
+                const response = await fetch(`${API_BASE}/admin/estimations/${estimationId}/result`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (!response.ok) throw new Error(await response.text());
+                
+                showNotification('Upload successful!', 'success');
+                closeModal('pdfUploadModal');
+                loadEstimationsData(); // Refresh list
+            } catch (error) {
+                showNotification(`Upload failed: ${error.message}`, 'error');
+            }
+        }
+
+        function validatePDFFile(file) {
+            if (!file) throw new Error('Please select a file');
+            if (file.type !== 'application/pdf') throw new Error('Only PDF files are allowed');
+            if (file.size > 10 * 1024 * 1024) throw new Error('File size must be less than 10MB');
+            return true;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
 
         // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', function() {
@@ -1085,300 +1373,6 @@
                 }
             });
         }
-        
-        // --- Full Data Loading & Rendering Functions (from original file) ---
-
-        // Data loading functions
-        async function loadUsersData() {
-            try {
-                console.log('Loading users data...');
-                const data = await apiCall('/admin/users');
-                usersData = data.data || data.users || [];
-                renderUsersTab();
-            } catch (error) {
-                document.getElementById('users-tab').innerHTML = `<div class="error">Failed to load users: ${error.message}</div>`;
-            }
-        }
-
-        async function loadJobsData() {
-            try {
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.data || data.jobs || [];
-                renderJobsTab();
-            } catch (error) {
-                document.getElementById('jobs-tab').innerHTML = `<div class="error">Failed to load jobs: ${error.message}</div>`;
-            }
-        }
-
-        async function loadQuotesData() {
-            try {
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.data || data.quotes || [];
-                renderQuotesTab();
-            } catch (error) {
-                document.getElementById('quotes-tab').innerHTML = `<div class="error">Failed to load quotes: ${error.message}</div>`;
-            }
-        }
-
-        async function loadEstimationsData() {
-            try {
-                const data = await apiCall('/admin/estimations');
-                estimationsData = data.estimations || data.data || [];
-                renderEstimationsTab();
-            } catch (error) {
-                document.getElementById('estimations-tab').innerHTML = `<div class="error">Failed to load estimations: ${error.message}</div>`;
-            }
-        }
-        
-        async function loadMessagesData() {
-             try {
-                const data = await apiCall('/admin/messages');
-                messagesData = data.data || data.messages || [];
-                renderMessagesTab();
-            } catch (error) {
-                document.getElementById('messages-tab').innerHTML = `<div class="error">Failed to load messages: ${error.message}</div>`;
-            }
-        }
-
-        async function loadSubscriptionsData() {
-             try {
-                const data = await apiCall('/admin/subscriptions');
-                subscriptionsData = data.data || data.subscriptions || [];
-                renderSubscriptionsTab();
-            } catch (error) {
-                document.getElementById('subscriptions-tab').innerHTML = `<div class="error">Failed to load subscriptions: ${error.message}</div>`;
-            }
-        }
-
-        // Tab management
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            document.querySelector(`[onclick*="showTab('${tabName}')"]`).classList.add('active');
-            
-            if (tabName === 'users' && usersData.length === 0) loadUsersData();
-            else if (tabName === 'jobs' && jobsData.length === 0) loadJobsData();
-            else if (tabName === 'quotes' && quotesData.length === 0) loadQuotesData();
-            else if (tabName === 'estimations' && estimationsData.length === 0) loadEstimationsData();
-            else if (tabName === 'messages' && messagesData.length === 0) loadMessagesData();
-            else if (tabName === 'subscriptions' && subscriptionsData.length === 0) loadSubscriptionsData();
-            else if (tabName === 'overview') renderOverviewTab();
-        }
-
-        // Render functions (simplified for brevity, assume full implementation from original)
-        function renderUsersTab() {
-            const target = document.getElementById('users-tab');
-            if (!usersData || usersData.length === 0) {
-                target.innerHTML = `<div class="no-data">No users found.</div>`; return;
-            }
-            target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            ${usersData.map(user => {
-                                const userName = user.name || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Unknown');
-                                const isActive = user.isActive !== false;
-                                return `<tr>
-                                    <td>${userName}</td>
-                                    <td>${user.email}</td>
-                                    <td><span class="type-badge ${user.type || 'user'}">${user.type || 'user'}</span></td>
-                                    <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
-                                    <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${user._id}', ${!isActive})">
-                                            <i class="fas fa-${isActive ? 'ban' : 'check'}"></i>
-                                        </button>
-                                    </td>
-                                </tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-        
-        function renderJobsTab() {
-             const target = document.getElementById('jobs-tab');
-             if (!jobsData || jobsData.length === 0) {
-                target.innerHTML = `<div class="no-data">No jobs found.</div>`; return;
-            }
-             target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead><tr><th>Title</th><th>Client</th><th>Contractor</th><th>Status</th><th>Budget</th><th>Created</th></tr></thead>
-                        <tbody>
-                            ${jobsData.map(job => `<tr>
-                                <td>${job.title || 'Untitled'}</td>
-                                <td>${job.client?.name || 'N/A'}</td>
-                                <td>${job.contractor?.name || 'Unassigned'}</td>
-                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
-                                <td>${job.budget || 'N/A'}</td>
-                                <td>${new Date(job.createdAt).toLocaleDateString()}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-
-        function renderQuotesTab() {
-            const target = document.getElementById('quotes-tab');
-            if (!quotesData || quotesData.length === 0) {
-                target.innerHTML = `<div class="no-data">No quotes found.</div>`; return;
-            }
-            target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                         <thead><tr><th>Project</th><th>Client</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead>
-                        <tbody>
-                            ${quotesData.map(quote => `<tr>
-                                <td>${quote.projectTitle || 'Untitled'}</td>
-                                <td>${quote.client?.name || 'N/A'}</td>
-                                <td>${quote.amount || 'Pending'}</td>
-                                <td><span class="status-badge ${quote.status}">${quote.status}</span></td>
-                                <td>${new Date(quote.createdAt).toLocaleDateString()}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-
-        function renderEstimationsTab() {
-            const target = document.getElementById('estimations-tab');
-            if (!estimationsData || estimationsData.length === 0) {
-                target.innerHTML = `<div class="no-data">No estimations found.</div>`; return;
-            }
-            target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Amount</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            ${estimationsData.map(est => `<tr>
-                                <td>${est.projectTitle || 'Untitled'}</td>
-                                <td>${est.contractor?.name || 'N/A'}</td>
-                                <td><span class="status-badge ${est.status}">${est.status}</span></td>
-                                <td>${est.uploadedFiles?.length || 0} files</td>
-                                <td>${est.estimatedAmount || 'Pending'}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="uploadEstimationResult('${est._id}')">
-                                        <i class="fas fa-upload"></i>
-                                    </button>
-                                </td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-
-        function renderMessagesTab() {
-            const target = document.getElementById('messages-tab');
-            if (!messagesData || messagesData.length === 0) {
-                target.innerHTML = `<div class="no-data">No messages found.</div>`; return;
-            }
-            target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead><tr><th>From</th><th>Subject</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
-                        <tbody>
-                             ${messagesData.map(msg => `<tr>
-                                <td>${msg.senderName || 'Anonymous'}</td>
-                                <td>${msg.subject || 'No Subject'}</td>
-                                <td><span class="type-badge ${msg.type || 'general'}">${msg.type || 'general'}</span></td>
-                                <td><span class="status-badge ${msg.isRead ? 'read' : 'unread'}">${msg.isRead ? 'Read' : 'Unread'}</span></td>
-                                <td>${new Date(msg.createdAt).toLocaleDateString()}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-
-        function renderSubscriptionsTab() {
-            const target = document.getElementById('subscriptions-tab');
-            if (!subscriptionsData || subscriptionsData.length === 0) {
-                target.innerHTML = `<div class="no-data">No subscriptions found.</div>`; return;
-            }
-            target.innerHTML = `
-                <div class="table-container">
-                    <table class="data-table">
-                         <thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Next Billing</th></tr></thead>
-                        <tbody>
-                            ${subscriptionsData.map(sub => `<tr>
-                                <td>${sub.user?.name || 'N/A'}</td>
-                                <td>${sub.planName || 'N/A'}</td>
-                                <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
-                                <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-
-        function renderOverviewTab() {
-            const overviewTab = document.getElementById('overview-tab');
-            const stats = dashboardData.stats || {};
-            overviewTab.innerHTML = `
-                <div class="success"><h3><i class="fas fa-check-circle"></i> System Status: All Systems Operational</h3></div>
-                <div style="margin-top: 20px;"><h4>Database Summary:</h4>
-                    <ul>
-                        <li>Total Users: ${stats.totalUsers || 0}</li>
-                        <li>Total Jobs: ${stats.totalJobs || 0}</li>
-                        <li>Total Quotes: ${stats.totalQuotes || 0}</li>
-                        <li>Total Estimations: ${stats.totalEstimations || 0}</li>
-                    </ul>
-                </div>`;
-        }
-        
-        // --- ACTION FUNCTIONS ---
-        async function toggleUserStatus(userId, newStatus) {
-            try {
-                showNotification(`Updating user...`, 'info');
-                await apiCall(`/admin/users/${userId}/status`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ isActive: newStatus })
-                });
-                showNotification(`User status updated`, 'success');
-                loadUsersData(); // Refresh the list
-            } catch (error) {
-                showNotification(`Failed to update user: ${error.message}`, 'error');
-            }
-        }
-
-        function uploadEstimationResult(estimationId) {
-            currentUploadEstimationId = estimationId;
-            document.getElementById('pdfUploadModal').style.display = 'block';
-        }
-        
-        async function handlePDFUpload(estimationId, formData) {
-            try {
-                showNotification('Uploading result...', 'info');
-                const token = getToken();
-                const response = await fetch(`${API_BASE}/admin/estimations/${estimationId}/result`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                if (!response.ok) throw new Error(await response.text());
-                
-                showNotification('Upload successful!', 'success');
-                closeModal('pdfUploadModal');
-                loadEstimationsData(); // Refresh list
-            } catch (error) {
-                showNotification(`Upload failed: ${error.message}`, 'error');
-            }
-        }
-
-        function validatePDFFile(file) {
-            if (!file) throw new Error('Please select a file');
-            if (file.type !== 'application/pdf') throw new Error('Only PDF files are allowed');
-            if (file.size > 10 * 1024 * 1024) throw new Error('File size must be less than 10MB');
-            return true;
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
     </script>
 </body>
 </html>
