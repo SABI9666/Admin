@@ -77,51 +77,17 @@
             background: #0056b3;
         }
         
-        .btn-danger {
-            background: #dc3545;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .btn-success {
-            background: #28a745;
-        }
-        
-        .btn-success:hover {
-            background: #218838;
-        }
-        
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
-        }
-        
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-        
-        .btn-info {
-            background: #17a2b8;
-        }
-        
-        .btn-info:hover {
-            background: #138496;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-        
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 12px;
-        }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-info { background: #17a2b8; }
+        .btn-info:hover { background: #138496; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
         
         .stats-grid {
             display: grid;
@@ -139,9 +105,7 @@
             transition: transform 0.3s;
         }
         
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
+        .stat-card:hover { transform: translateY(-2px); }
         
         .stat-icon {
             width: 60px;
@@ -160,11 +124,9 @@
         .stat-icon.quotes { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
         .stat-icon.contractors { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
         .stat-icon.designers { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .stat-icon.active { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-        .stat-icon.completed { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; }
         .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
         .stat-icon.messages { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #333; }
-        .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); color: white; }
+        .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); }
         
         .stat-number {
             font-size: 36px;
@@ -227,7 +189,6 @@
             display: block;
         }
 
-        /* Enhanced section headers */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -249,7 +210,6 @@
             margin: 0;
         }
 
-        /* Enhanced table styles */
         .table-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -293,28 +253,6 @@
         .data-table tbody tr:hover {
             background: rgba(102, 126, 234, 0.05);
             transform: translateX(5px);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        tr:hover {
-            background: #f8f9fa;
         }
         
         .status-badge {
@@ -494,6 +432,25 @@
             resize: vertical;
             min-height: 100px;
         }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            max-width: 350px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .notification.notification-success { background: #28a745; color: white; }
+        .notification.notification-error { background: #dc3545; color: white; }
+        .notification.notification-warning { background: #ffc107; color: #333; }
+        .notification.notification-info { background: #007bff; color: white; }
         
         @media (max-width: 768px) {
             .header {
@@ -511,8 +468,8 @@
                 white-space: nowrap;
             }
             
-            table {
-                font-size: 14px;
+            .table-container {
+                overflow-x: auto;
             }
             
             .modal-content {
@@ -708,7 +665,7 @@
     </div>
 
     <script>
-        console.log('🏗️ SteelConnect Admin Dashboard loaded');
+        console.log('SteelConnect Admin Dashboard loaded');
         
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
         let dashboardData = {};
@@ -718,85 +675,127 @@
         let estimationsData = [];
         let messagesData = [];
         let subscriptionsData = [];
-        let subscriptionPlans = [];
         let currentEstimationId = null;
         let currentUploadEstimationId = null;
         
-        // Upload estimation result function
-        function uploadEstimationResult(estimationId) {
-            currentUploadEstimationId = estimationId;
-            document.getElementById('pdfUploadModal').style.display = 'block';
+        // Enhanced token management
+        function getToken() {
+            const possibleKeys = [
+                'adminToken',
+                'token', 
+                'authToken',
+                'jwtToken',
+                'accessToken'
+            ];
+            
+            for (const key of possibleKeys) {
+                const token = localStorage.getItem(key);
+                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
+                    console.log(`Found token in localStorage.${key}:`, token.substring(0, 20) + '...');
+                    return token;
+                }
+            }
+            
+            for (const key of possibleKeys) {
+                const token = sessionStorage.getItem(key);
+                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
+                    console.log(`Found token in sessionStorage.${key}:`, token.substring(0, 20) + '...');
+                    return token;
+                }
+            }
+            
+            console.log('No valid token found in storage');
+            return null;
         }
 
-        // Handle PDF upload for estimation results
-        async function handlePDFUpload(estimationId, formData) {
+        function storeToken(token) {
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('jwtToken', token);
+            sessionStorage.setItem('adminToken', token);
+            console.log('Token stored successfully');
+        }
+
+        function clearAllTokens() {
+            const keys = ['adminToken', 'token', 'authToken', 'jwtToken', 'accessToken'];
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+            console.log('All tokens cleared');
+        }
+
+        async function validateToken(token) {
             try {
-                showNotification('Uploading estimation result...', 'info');
-                
-                const token = getToken();
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-                
-                const response = await fetch(`${API_BASE}/estimation/${estimationId}/result`, {
-                    method: 'POST',
+                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                    method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`
-                        // Don't set Content-Type for FormData - browser sets it automatically with boundary
-                    },
-                    body: formData
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
+                
+                return response.ok;
+            } catch (error) {
+                console.error('Token validation failed:', error);
+                return false;
+            }
+        }
+
+        // Enhanced API call function
+        async function apiCall(endpoint, options = {}) {
+            const token = getToken();
+            
+            if (!token) {
+                console.error('No authentication token available');
+                showLoginPrompt();
+                throw new Error('No authentication token found');
+            }
+            
+            const config = {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                ...options
+            };
+            
+            const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+            const url = `${API_BASE}${cleanEndpoint}`;
+            
+            console.log(`Making API call to: ${url}`);
+            
+            try {
+                const response = await fetch(url, config);
+                
+                console.log(`API Response Status: ${response.status}`);
+                
+                if (response.status === 401) {
+                    console.error('Authentication failed - token may be expired or invalid');
+                    clearAllTokens();
+                    showLoginPrompt();
+                    throw new Error('Authentication failed');
+                }
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Upload failed: ${response.status} ${errorText}`);
+                    console.error(`API Error: ${response.status} - ${errorText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
                 }
                 
                 const data = await response.json();
-                showNotification('Estimation result uploaded successfully!', 'success');
-                
-                // Update the estimation in local data
-                const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
-                if (estimation) {
-                    estimation.resultFile = data.resultFile;
-                    estimation.status = 'completed';
-                    if (data.amount) estimation.estimatedAmount = data.amount;
-                }
-                
-                // Refresh the estimations tab
-                renderEstimationsTab();
-                closeModal('pdfUploadModal');
-                
+                console.log(`API Response:`, data);
                 return data;
                 
             } catch (error) {
-                console.error('PDF upload error:', error);
-                showNotification(`Upload failed: ${error.message}`, 'error');
+                if (error.message === 'Authentication failed') {
+                    throw error;
+                }
+                console.error('API Call failed:', error);
                 throw error;
             }
         }
-
-        // Enhanced file validation
-        function validatePDFFile(file) {
-            const maxSize = 10 * 1024 * 1024; // 10MB
-            const allowedTypes = ['application/pdf'];
-            
-            if (!file) {
-                throw new Error('Please select a file');
-            }
-            
-            if (!allowedTypes.includes(file.type)) {
-                throw new Error('Only PDF files are allowed');
-            }
-            
-            if (file.size > maxSize) {
-                throw new Error('File size must be less than 10MB');
-            }
-            
-            return true;
-        }
         
-        // Add notification system
+        // Notification system
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `notification notification-${type}`;
@@ -836,102 +835,8 @@
                 }, 300);
             }, 4000);
         }
-
-        // Get authentication token
-        function getToken() {
-            // Check all possible token storage locations
-            const tokens = [
-                localStorage.getItem('adminToken'),
-                localStorage.getItem('token'),
-                localStorage.getItem('authToken'),
-                sessionStorage.getItem('adminToken'),
-                sessionStorage.getItem('token'),
-                sessionStorage.getItem('authToken')
-            ];
-            
-            // Return the first non-null token
-            for (const token of tokens) {
-                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
-                    console.log('Found token:', token.substring(0, 20) + '...');
-                    return token;
-                }
-            }
-            
-            console.log('No valid token found in storage');
-            return null;
-        }
         
-        // Redirect to login page
-        function redirectToLogin() {
-            showNotification('Please log in to access the admin panel', 'error');
-            
-            // Try different possible login pages
-            const possibleLoginPages = [
-                'index.html',
-                'login.html',
-                'admin-login.html',
-                '/',
-                '../index.html'
-            ];
-            
-            // Use the first one that exists or default to index.html
-            window.location.href = possibleLoginPages[0];
-        }
-        
-        // Make authenticated API call
-        async function apiCall(endpoint, options = {}) {
-            const token = getToken();
-            
-            if (!token) {
-                console.error('No authentication token available');
-                redirectToLogin();
-                throw new Error('No authentication token found');
-            }
-            
-            const config = {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                ...options
-            };
-            
-            console.log(`Making API call to: ${API_BASE}${endpoint}`);
-            
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, config);
-                
-                console.log(`API Response Status: ${response.status}`);
-                
-                if (response.status === 401) {
-                    console.error('Authentication failed - token may be expired or invalid');
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    redirectToLogin();
-                    throw new Error('Authentication failed');
-                }
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`API Error: ${response.status} - ${errorText}`);
-                    throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log(`API Response:`, data);
-                return data;
-                
-            } catch (error) {
-                if (error.message === 'Authentication failed') {
-                    // Don't log this as it's handled above
-                    throw error;
-                }
-                console.error('API Call failed:', error);
-                throw error;
-            }
-        }
-        
-        // Update authentication status indicator
+        // Authentication status update
         function updateAuthStatus(isAuthenticated, userName = null) {
             const authStatus = document.getElementById('authStatus');
             const adminName = document.getElementById('adminName');
@@ -956,21 +861,18 @@
         // Load dashboard stats
         async function loadDashboardStats() {
             try {
-                console.log('📊 Loading dashboard statistics...');
+                console.log('Loading dashboard statistics...');
                 
                 const data = await apiCall('/admin/dashboard');
-                dashboardData = data.data;
+                dashboardData = data.data || data;
                 
-                console.log('✅ Dashboard data loaded:', dashboardData);
+                console.log('Dashboard data loaded:', dashboardData);
                 
-                // Update auth status and admin name
                 updateAuthStatus(true, dashboardData.adminUser?.split('@')[0] || 'Admin');
-                
-                // Render stats cards
                 renderStatsGrid(dashboardData.stats);
                 
             } catch (error) {
-                console.error('❌ Error loading dashboard:', error);
+                console.error('Error loading dashboard:', error);
                 updateAuthStatus(false);
                 
                 if (error.message === 'Authentication failed') {
@@ -1065,7 +967,116 @@
             `;
         }
         
-        // Show tab function
+        // Data loading functions
+        async function loadUsersData() {
+            try {
+                console.log('Loading users data...');
+                const data = await apiCall('/admin/users');
+                usersData = data.data || data.users || [];
+                console.log('Users data loaded:', usersData.length, 'users');
+                renderUsersTab();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('users-tab').innerHTML = `
+                    <div class="error">Failed to load users: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadUsersData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadJobsData() {
+            try {
+                console.log('Loading jobs data...');
+                const data = await apiCall('/admin/jobs');
+                jobsData = data.data || data.jobs || [];
+                console.log('Jobs data loaded:', jobsData.length, 'jobs');
+                renderJobsTab();
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                document.getElementById('jobs-tab').innerHTML = `
+                    <div class="error">Failed to load jobs: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadJobsData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadQuotesData() {
+            try {
+                console.log('Loading quotes data...');
+                const data = await apiCall('/admin/quotes');
+                quotesData = data.data || data.quotes || [];
+                console.log('Quotes data loaded:', quotesData.length, 'quotes');
+                renderQuotesTab();
+            } catch (error) {
+                console.error('Error loading quotes:', error);
+                document.getElementById('quotes-tab').innerHTML = `
+                    <div class="error">Failed to load quotes: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadQuotesData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadEstimationsData() {
+            try {
+                console.log('Loading estimations data...');
+                const data = await apiCall('/admin/estimations');
+                estimationsData = data.estimations || data.data || [];
+                console.log('Estimations data loaded:', estimationsData.length, 'estimations');
+                renderEstimationsTab();
+            } catch (error) {
+                console.error('Error loading estimations:', error);
+                document.getElementById('estimations-tab').innerHTML = `
+                    <div class="error">Failed to load estimations: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadEstimationsData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadMessagesData() {
+            try {
+                console.log('Loading messages data...');
+                const data = await apiCall('/admin/messages');
+                messagesData = data.data || data.messages || [];
+                console.log('Messages data loaded:', messagesData.length, 'conversations');
+                renderMessagesTab();
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messages-tab').innerHTML = `
+                    <div class="error">Failed to load messages: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadMessagesData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadSubscriptionsData() {
+            try {
+                console.log('Loading subscriptions data...');
+                const data = await apiCall('/admin/subscriptions');
+                subscriptionsData = data.data || data.subscriptions || [];
+                console.log('Subscriptions data loaded:', subscriptionsData.length, 'subscriptions');
+                renderSubscriptionsTab();
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+                document.getElementById('subscriptions-tab').innerHTML = `
+                    <div class="error">Failed to load subscriptions: ${error.message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadSubscriptionsData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Tab management
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -1103,23 +1114,7 @@
             }
         }
         
-        // Load users data
-        async function loadUsersData() {
-            try {
-                console.log('👥 Loading users data...');
-                const data = await apiCall('/admin/users');
-                usersData = data.data;
-                console.log('✅ Users data loaded:', usersData.length, 'users');
-                renderUsersTab();
-            } catch (error) {
-                console.error('❌ Error loading users:', error);
-                document.getElementById('users-tab').innerHTML = `
-                    <div class="error">Failed to load users: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Render users tab
+        // Render functions
         function renderUsersTab() {
             const usersTab = document.getElementById('users-tab');
             
@@ -1199,24 +1194,7 @@
                 </div>
             `;
         }
-        
-        // Load jobs data
-        async function loadJobsData() {
-            try {
-                console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
-                jobsData = data.data;
-                console.log('✅ Jobs data loaded:', jobsData.length, 'jobs');
-                renderJobsTab();
-            } catch (error) {
-                console.error('❌ Error loading jobs:', error);
-                document.getElementById('jobs-tab').innerHTML = `
-                    <div class="error">Failed to load jobs: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Render jobs tab  
+
         function renderJobsTab() {
             const jobsTab = document.getElementById('jobs-tab');
             
@@ -1296,10 +1274,10 @@
                                         <td>${createdDate}</td>
                                         <td>
                                             <div class="action-group">
-                                                <button class="btn btn-sm btn-info" onclick="viewDetails('${jobId}', 'job')" title="View Details">
+                                                <button class="btn btn-sm btn-info" onclick="viewJobDetails('${jobId}')" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-warning" onclick="updateStatus('${jobId}', 'job')" title="Update Status">
+                                                <button class="btn btn-sm btn-warning" onclick="updateJobStatus('${jobId}')" title="Update Status">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </div>
@@ -1312,24 +1290,7 @@
                 </div>
             `;
         }
-        
-        // Load quotes data
-        async function loadQuotesData() {
-            try {
-                console.log('💰 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
-                quotesData = data.data;
-                console.log('✅ Quotes data loaded:', quotesData.length, 'quotes');
-                renderQuotesTab();
-            } catch (error) {
-                console.error('❌ Error loading quotes:', error);
-                document.getElementById('quotes-tab').innerHTML = `
-                    <div class="error">Failed to load quotes: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Render quotes tab
+
         function renderQuotesTab() {
             const quotesTab = document.getElementById('quotes-tab');
             
@@ -1390,10 +1351,10 @@
                                     <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</td>
                                     <td>
                                         <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${quote._id || quote.id}', 'quote')" title="View Details">
+                                            <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id || quote.id}')" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-warning" onclick="updateStatus('${quote._id || quote.id}', 'quote')" title="Update Status">
+                                            <button class="btn btn-sm btn-warning" onclick="updateQuoteStatus('${quote._id || quote.id}')" title="Update Status">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                         </div>
@@ -1405,24 +1366,7 @@
                 </div>
             `;
         }
-        
-        // Load estimations data
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/estimation');
-                estimationsData = data.estimations || [];
-                console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
-                renderEstimationsTab();
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">Failed to load estimations: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Render estimations tab with download functionality
+
         function renderEstimationsTab() {
             const estimationsTab = document.getElementById('estimations-tab');
             
@@ -1515,113 +1459,7 @@
                 </div>
             `;
         }
-        
-        // Load messages data
-        async function loadMessagesData() {
-            try {
-                console.log('💬 Loading messages data...');
-                const data = await apiCall('/messages');
-                messagesData = data.data || data.messages || [];
-                console.log('✅ Messages data loaded:', messagesData.length, 'conversations');
-                renderMessagesTab();
-            } catch (error) {
-                console.error('❌ Error loading messages:', error);
-                document.getElementById('messages-tab').innerHTML = `
-                    <div class="error">
-                        <strong>Failed to load messages</strong><br>
-                        ${error.message}<br><br>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-refresh"></i> Retry
-                        </button>
-                        <button class="btn btn-secondary" onclick="checkAuthStatus()">
-                            <i class="fas fa-key"></i> Check Auth
-                        </button>
-                    </div>
-                `;
-            }
-        }
-        
-        // Load estimations data with better error handling
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/estimation');
-                estimationsData = data.estimations || data.data || [];
-                console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
-                renderEstimationsTab();
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">
-                        <strong>Failed to load estimations</strong><br>
-                        ${error.message}<br><br>
-                        <button class="btn btn-primary" onclick="loadEstimationsData()">
-                            <i class="fas fa-refresh"></i> Retry
-                        </button>
-                        <button class="btn btn-secondary" onclick="checkAuthStatus()">
-                            <i class="fas fa-key"></i> Check Auth
-                        </button>
-                    </div>
-                `;
-            }
-        }
 
-        // Add authentication status checker
-        async function checkAuthStatus() {
-            const token = getToken();
-            
-            if (!token) {
-                showNotification('No authentication token found. Please log in again.', 'error');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 2000);
-                return;
-            }
-
-            try {
-                showNotification('Checking authentication...', 'info');
-                const response = await fetch(`${API_BASE}/admin/dashboard`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    showNotification('Authentication is valid', 'success');
-                    console.log('Auth check passed - token is valid');
-                } else {
-                    showNotification(`Authentication failed: ${response.status} ${response.statusText}`, 'error');
-                    console.error('Auth check failed:', response.status, response.statusText);
-                    
-                    if (response.status === 401) {
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 2000);
-                    }
-                }
-            } catch (error) {
-                console.error('Auth check error:', error);
-                showNotification('Authentication check failed', 'error');
-            }
-        }
-
-        // Add debug function to check all stored tokens
-        function debugTokenStorage() {
-            console.log('=== Token Storage Debug ===');
-            console.log('localStorage.adminToken:', localStorage.getItem('adminToken'));
-            console.log('localStorage.token:', localStorage.getItem('token'));
-            console.log('localStorage.authToken:', localStorage.getItem('authToken'));
-            console.log('sessionStorage.adminToken:', sessionStorage.getItem('adminToken'));
-            console.log('sessionStorage.token:', sessionStorage.getItem('token'));
-            console.log('sessionStorage.authToken:', sessionStorage.getItem('authToken'));
-            console.log('Current token being used:', getToken());
-            console.log('=== End Debug ===');
-        }
-        
-        // Render messages tab
         function renderMessagesTab() {
             const messagesTab = document.getElementById('messages-tab');
             
@@ -1695,32 +1533,7 @@
                 </div>
             `;
         }
-        
-        // Load subscriptions data
-        async function loadSubscriptionsData() {
-            try {
-                console.log('💳 Loading subscriptions data...');
-                const [subscriptionsResponse, plansResponse] = await Promise.all([
-                    apiCall('/admin/subscriptions'),
-                    apiCall('/admin/subscription-plans')
-                ]);
-                
-                subscriptionsData = subscriptionsResponse.subscriptions || [];
-                subscriptionPlans = plansResponse.plans || [];
-                
-                console.log('✅ Subscriptions data loaded:', subscriptionsData.length, 'subscriptions');
-                console.log('✅ Plans data loaded:', subscriptionPlans.length, 'plans');
-                
-                renderSubscriptionsTab();
-            } catch (error) {
-                console.error('❌ Error loading subscriptions:', error);
-                document.getElementById('subscriptions-tab').innerHTML = `
-                    <div class="error">Failed to load subscriptions: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // Render subscriptions tab
+
         function renderSubscriptionsTab() {
             const subscriptionsTab = document.getElementById('subscriptions-tab');
             
@@ -1771,7 +1584,7 @@
                                     <td>
                                         <div class="project-info">
                                             <strong>${sub.planName || sub.plan?.name || 'N/A'}</strong>
-                                            <small>${sub.planPrice ? `${sub.planPrice}` : 'N/A'}/${sub.planInterval || 'month'}</small>
+                                            <small>${sub.planPrice || 'N/A'}/${sub.planInterval || 'month'}</small>
                                         </div>
                                     </td>
                                     <td><span class="status-badge ${sub.status || 'active'}">${(sub.status || 'active').toUpperCase()}</span></td>
@@ -1779,7 +1592,7 @@
                                     <td>${sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : 'N/A'}</td>
                                     <td>
                                         <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDetails('${sub._id || sub.id}', 'subscription')" title="View Details">
+                                            <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id || sub.id}')" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                             ${sub.status === 'active' ? `
@@ -1796,8 +1609,7 @@
                 </div>
             `;
         }
-        
-        // Render overview tab
+
         function renderOverviewTab() {
             const overviewTab = document.getElementById('overview-tab');
             
@@ -1858,7 +1670,7 @@
             `;
         }
 
-        // Enhanced action functions with proper error handling
+        // Action functions
         async function viewUserDetails(userId) {
             try {
                 showNotification('Loading user details...', 'info');
@@ -1891,38 +1703,13 @@ Location: ${user.location || 'N/A'}
                 const action = newStatus ? 'Activating' : 'Deactivating';
                 showNotification(`${action} user...`, 'info');
                 
-                // Try different possible endpoints for user status update
-                const possibleEndpoints = [
-                    `/admin/users/${userId}/status`,
-                    `/admin/users/${userId}`,
-                    `/users/${userId}/status`,
-                    `/users/${userId}`
-                ];
-                
-                let success = false;
-                let lastError = null;
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        await apiCall(endpoint, {
-                            method: 'PATCH',
-                            body: JSON.stringify({ 
-                                isActive: newStatus,
-                                status: newStatus ? 'active' : 'inactive'
-                            })
-                        });
-                        success = true;
-                        break;
-                    } catch (error) {
-                        lastError = error;
-                        console.log(`Endpoint ${endpoint} failed, trying next...`);
-                        continue;
-                    }
-                }
-                
-                if (!success) {
-                    throw lastError;
-                }
+                await apiCall(`/admin/users/${userId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ 
+                        isActive: newStatus,
+                        status: newStatus ? 'active' : 'inactive'
+                    })
+                });
                 
                 const user = usersData.find(u => (u._id || u.id) === userId);
                 if (user) {
@@ -1938,11 +1725,10 @@ Location: ${user.location || 'N/A'}
             }
         }
 
-        // Enhanced estimation file download functionality
         async function downloadEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing file download...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}/files`);
+                const data = await apiCall(`/admin/estimations/${estimationId}/files`);
                 
                 if (!data.files || data.files.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
@@ -1961,7 +1747,6 @@ Location: ${user.location || 'N/A'}
                         link.click();
                         document.body.removeChild(link);
                         
-                        // Add small delay between downloads
                         if (i < data.files.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 500));
                         }
@@ -1976,18 +1761,16 @@ Location: ${user.location || 'N/A'}
             }
         }
 
-        // Enhanced estimation result download
         async function downloadEstimationResult(estimationId) {
             try {
                 showNotification('Downloading estimation result...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}/result`);
+                const data = await apiCall(`/admin/estimations/${estimationId}/result`);
                 
                 if (!data.resultFile || !data.resultFile.url) {
                     showNotification('No result file available for download', 'warning');
                     return;
                 }
                 
-                // Create download link
                 const link = document.createElement('a');
                 link.href = data.resultFile.url;
                 link.download = data.resultFile.name || 'estimation_result.pdf';
@@ -2004,11 +1787,101 @@ Location: ${user.location || 'N/A'}
             }
         }
 
-        // View estimation details with enhanced file information
+        function uploadEstimationResult(estimationId) {
+            currentUploadEstimationId = estimationId;
+            document.getElementById('pdfUploadModal').style.display = 'block';
+        }
+
+        async function handlePDFUpload(estimationId, formData) {
+            try {
+                showNotification('Uploading estimation result...', 'info');
+                
+                const token = getToken();
+                if (!token) {
+                    throw new Error('No authentication token found');
+                }
+                
+                const response = await fetch(`${API_BASE}/admin/estimations/${estimationId}/result`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} ${errorText}`);
+                }
+                
+                const data = await response.json();
+                showNotification('Estimation result uploaded successfully!', 'success');
+                
+                const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
+                if (estimation) {
+                    estimation.resultFile = data.resultFile;
+                    estimation.status = 'completed';
+                    if (data.amount) estimation.estimatedAmount = data.amount;
+                }
+                
+                renderEstimationsTab();
+                closeModal('pdfUploadModal');
+                
+                return data;
+                
+            } catch (error) {
+                console.error('PDF upload error:', error);
+                showNotification(`Upload failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        function validatePDFFile(file) {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = ['application/pdf'];
+            
+            if (!file) {
+                throw new Error('Please select a file');
+            }
+            
+            if (!allowedTypes.includes(file.type)) {
+                throw new Error('Only PDF files are allowed');
+            }
+            
+            if (file.size > maxSize) {
+                throw new Error('File size must be less than 10MB');
+            }
+            
+            return true;
+        }
+
+        // Modal functions
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+        }
+
+        // Generic action functions
+        function viewJobDetails(id) {
+            showNotification('Job details functionality coming soon...', 'info');
+        }
+
+        function updateJobStatus(id) {
+            showNotification('Job status update functionality coming soon...', 'info');
+        }
+
+        function viewQuoteDetails(id) {
+            showNotification('Quote details functionality coming soon...', 'info');
+        }
+
+        function updateQuoteStatus(id) {
+            showNotification('Quote status update functionality coming soon...', 'info');
+        }
+
         async function viewEstimationDetails(estimationId) {
             try {
                 showNotification('Loading estimation details...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}`);
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
                 
                 const estimation = data.estimation;
                 const filesList = estimation.uploadedFiles?.map(file => file.name).join(', ') || 'No files';
@@ -2033,27 +1906,9 @@ Notes: ${estimation.notes || 'No notes provided'}
             }
         }
 
-        // Generic action functions
-        function viewDetails(id, type) {
-            showNotification(`Loading ${type} details...`, 'info');
-        }
-
-        function updateStatus(id, type) {
-            currentEstimationId = id;
-            document.getElementById('statusModal').style.display = 'block';
-        }
-
         function updateEstimationStatus(id) {
             currentEstimationId = id;
             document.getElementById('statusModal').style.display = 'block';
-        }
-
-        function replyToMessage(id) {
-            showNotification('Reply functionality coming soon...', 'info');
-        }
-
-        function markAsRead(id) {
-            showNotification('Message marked as read', 'success');
         }
 
         async function viewMessageDetails(messageId) {
@@ -2084,19 +1939,24 @@ ${message.content || message.text || 'No content available'}
             }
         }
 
+        function replyToMessage(id) {
+            showNotification('Reply functionality coming soon...', 'info');
+        }
+
+        function markAsRead(id) {
+            showNotification('Message marked as read', 'success');
+        }
+
+        function viewSubscriptionDetails(id) {
+            showNotification('Subscription details functionality coming soon...', 'info');
+        }
+
         function cancelSubscription(id) {
             if (confirm('Are you sure you want to cancel this subscription?')) {
                 showNotification('Subscription cancelled', 'success');
             }
         }
 
-        // Modal functions
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) modal.style.display = 'none';
-        }
-
-        // Refresh functions
         function refreshAllData() {
             console.log('Refreshing all admin data...');
             loadDashboardStats();
@@ -2116,12 +1976,10 @@ ${message.content || message.text || 'No content available'}
             showNotification('All systems operational!', 'success');
         }
 
-        // Logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 console.log('Logging out admin...');
-                localStorage.clear();
-                sessionStorage.clear();
+                clearAllTokens();
                 showNotification('Logged out successfully', 'success');
                 setTimeout(() => {
                     window.location.href = 'index.html';
@@ -2129,46 +1987,59 @@ ${message.content || message.text || 'No content available'}
             }
         }
 
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing admin dashboard...');
-            
-            // Debug token storage on load
-            debugTokenStorage();
-            
+        function debugTokenStorage() {
+            console.log('=== Token Storage Debug ===');
+            console.log('localStorage.adminToken:', localStorage.getItem('adminToken'));
+            console.log('localStorage.token:', localStorage.getItem('token'));
+            console.log('localStorage.authToken:', localStorage.getItem('authToken'));
+            console.log('sessionStorage.adminToken:', sessionStorage.getItem('adminToken'));
+            console.log('sessionStorage.token:', sessionStorage.getItem('token'));
+            console.log('sessionStorage.authToken:', sessionStorage.getItem('authToken'));
+            console.log('Current token being used:', getToken());
+            console.log('=== End Debug ===');
+        }
+
+        async function checkAuthStatus() {
             const token = getToken();
             
             if (!token) {
-                console.log('No authentication token found');
-                showLoginPrompt();
+                showNotification('No authentication token found. Please log in again.', 'error');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
                 return;
             }
-            
-            console.log('Authentication token found, loading dashboard...');
-            showNotification('Welcome to SteelConnect Admin Panel!', 'success');
-            
-            // Add buttons to manually check auth and debug
-            const debugControls = document.createElement('div');
-            debugControls.style.cssText = 'position: fixed; top: 10px; left: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px;';
-            debugControls.innerHTML = `
-                <button onclick="debugTokenStorage()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Debug Tokens</button>
-                <button onclick="checkAuthStatus()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Test Auth</button>
-                <button onclick="showLoginPrompt()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Manual Login</button>
-                <button onclick="this.parentNode.style.display='none'" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Hide</button>
-            `;
-            document.body.appendChild(debugControls);
-            
-            loadDashboardStats();
-            
-            // Set up auto-refresh every 5 minutes
-            setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    loadDashboardStats();
-                }
-            }, 5 * 60 * 1000);
-        });
 
-        // Show login prompt overlay
+            try {
+                showNotification('Checking authentication...', 'info');
+                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    showNotification('Authentication is valid', 'success');
+                    console.log('Auth check passed - token is valid');
+                } else {
+                    showNotification(`Authentication failed: ${response.status} ${response.statusText}`, 'error');
+                    console.error('Auth check failed:', response.status, response.statusText);
+                    
+                    if (response.status === 401) {
+                        clearAllTokens();
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                showNotification('Authentication check failed', 'error');
+            }
+        }
+
+        // Login prompt function
         function showLoginPrompt() {
             const loginOverlay = document.createElement('div');
             loginOverlay.id = 'loginOverlay';
@@ -2186,45 +2057,101 @@ ${message.content || message.text || 'No content available'}
             `;
             
             loginOverlay.innerHTML = `
-                <div style="background: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 400px; margin: 20px;">
+                <div style="background: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 20px;">
                     <h2 style="margin-bottom: 20px; color: #333;">
-                        <i class="fas fa-lock"></i> Authentication Required
+                        <i class="fas fa-lock"></i> Admin Authentication Required
                     </h2>
                     <p style="margin-bottom: 20px; color: #666;">
-                        Please enter your admin authentication token:
+                        Please enter your admin authentication token or login credentials:
                     </p>
-                    <input type="password" id="manualTokenInput" placeholder="Paste your token here..." 
-                           style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px;">
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button onclick="setManualToken()" class="btn btn-success">
-                            <i class="fas fa-sign-in-alt"></i> Login
-                        </button>
-                        <button onclick="redirectToLogin()" class="btn btn-secondary">
-                            <i class="fas fa-external-link-alt"></i> Go to Login Page
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4>Option 1: Direct Token Entry</h4>
+                        <input type="password" id="manualTokenInput" placeholder="Paste your admin token here..." 
+                               style="width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <button onclick="setManualToken()" class="btn btn-success" style="margin-right: 10px;">
+                            <i class="fas fa-sign-in-alt"></i> Login with Token
                         </button>
                     </div>
+                    
+                    <div style="border-top: 1px solid #eee; padding-top: 20px;">
+                        <h4>Option 2: Admin Login</h4>
+                        <input type="email" id="adminEmailInput" placeholder="Admin email..." 
+                               style="width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <input type="password" id="adminPasswordInput" placeholder="Admin password..." 
+                               style="width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <button onclick="performAdminLogin()" class="btn btn-primary" style="margin-right: 10px;">
+                            <i class="fas fa-user-shield"></i> Admin Login
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button onclick="redirectToLogin()" class="btn btn-secondary">
+                            <i class="fas fa-external-link-alt"></i> Go to Main Login Page
+                        </button>
+                    </div>
+                    
                     <p style="margin-top: 20px; font-size: 12px; color: #888;">
-                        Token will be stored securely in your browser
+                        Your credentials will be stored securely in your browser
                     </p>
                 </div>
             `;
             
             document.body.appendChild(loginOverlay);
             
-            // Focus on input
             setTimeout(() => {
                 document.getElementById('manualTokenInput').focus();
             }, 100);
-            
-            // Allow Enter key to submit
-            document.getElementById('manualTokenInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    setManualToken();
-                }
-            });
         }
 
-        // Set manual token and try to authenticate
+        async function performAdminLogin() {
+            const email = document.getElementById('adminEmailInput').value.trim();
+            const password = document.getElementById('adminPasswordInput').value.trim();
+            
+            if (!email || !password) {
+                showNotification('Please enter both email and password', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('Logging in...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/login/admin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Login failed');
+                }
+                
+                const data = await response.json();
+                
+                if (!data.token) {
+                    throw new Error('No token received from server');
+                }
+                
+                storeToken(data.token);
+                
+                showNotification('Login successful!', 'success');
+                
+                const overlay = document.getElementById('loginOverlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+                
+                loadDashboardStats();
+                
+            } catch (error) {
+                console.error('Admin login error:', error);
+                showNotification(`Login failed: ${error.message}`, 'error');
+            }
+        }
+
         async function setManualToken() {
             const tokenInput = document.getElementById('manualTokenInput');
             const token = tokenInput.value.trim();
@@ -2234,60 +2161,95 @@ ${message.content || message.text || 'No content available'}
                 return;
             }
             
-            // Store token
-            localStorage.setItem('adminToken', token);
-            
             try {
                 showNotification('Testing authentication...', 'info');
                 
-                // Test the token
-                const response = await fetch(`${API_BASE}/admin/dashboard`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const isValid = await validateToken(token);
                 
-                if (response.ok) {
+                if (isValid) {
+                    storeToken(token);
                     showNotification('Authentication successful!', 'success');
                     
-                    // Remove login overlay
                     const overlay = document.getElementById('loginOverlay');
                     if (overlay) {
                         overlay.remove();
                     }
                     
-                    // Start loading dashboard
                     loadDashboardStats();
                     
                 } else {
-                    localStorage.removeItem('adminToken');
                     showNotification('Invalid token. Please check and try again.', 'error');
                     tokenInput.value = '';
                     tokenInput.focus();
                 }
                 
             } catch (error) {
-                localStorage.removeItem('adminToken');
+                console.error('Token validation error:', error);
                 showNotification('Authentication test failed: ' + error.message, 'error');
                 tokenInput.value = '';
                 tokenInput.focus();
             }
         }
 
-        // Modal event handlers
-        window.onclick = function(event) {
-            const modals = ['statusModal', 'pdfUploadModal'];
-            modals.forEach(modalId => {
-                const modal = document.getElementById(modalId);
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
+        function redirectToLogin() {
+            showNotification('Redirecting to login page...', 'info');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
         }
 
-        // Status form handler - Initialize after DOM is loaded
+        // Initialize on page load
+        async function initializeAuth() {
+            const isAuthenticated = await checkAuthenticationStatus();
+            
+            if (isAuthenticated) {
+                console.log('User is authenticated, loading dashboard...');
+                loadDashboardStats();
+            } else {
+                console.log('User is not authenticated, showing login prompt...');
+                showLoginPrompt();
+            }
+        }
+
+        async function checkAuthenticationStatus() {
+            const token = getToken();
+            
+            if (!token) {
+                console.log('No token found');
+                return false;
+            }
+            
+            const isValid = await validateToken(token);
+            
+            if (!isValid) {
+                console.log('Token is invalid, clearing storage');
+                clearAllTokens();
+                return false;
+            }
+            
+            console.log('Token is valid');
+            return true;
+        }
+
+        // Event handlers
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Admin panel initializing...');
+            
+            initializeAuth();
+            
+            // Debug controls
+            const debugControls = document.createElement('div');
+            debugControls.style.cssText = 'position: fixed; top: 10px; left: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px;';
+            debugControls.innerHTML = `
+                <button onclick="debugTokenStorage()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Debug Tokens</button>
+                <button onclick="checkAuthStatus()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Test Auth</button>
+                <button onclick="showLoginPrompt()" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Login</button>
+                <button onclick="clearAllTokens(); location.reload();" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Clear & Reload</button>
+                <button onclick="this.parentNode.style.display='none'" style="margin: 2px; padding: 4px 8px; font-size: 11px;">Hide</button>
+            `;
+            document.body.appendChild(debugControls);
+
+            // Status form handler
             const statusForm = document.getElementById('statusForm');
             if (statusForm) {
                 statusForm.addEventListener('submit', async function(e) {
@@ -2298,7 +2260,7 @@ ${message.content || message.text || 'No content available'}
                     
                     try {
                         showNotification('Updating status...', 'info');
-                        await apiCall(`/estimation/${currentEstimationId}/status`, {
+                        await apiCall(`/admin/estimations/${currentEstimationId}/status`, {
                             method: 'PATCH',
                             body: JSON.stringify({ status, notes })
                         });
@@ -2348,7 +2310,6 @@ ${message.content || message.text || 'No content available'}
                         
                         await handlePDFUpload(currentUploadEstimationId, formData);
                         
-                        // Reset form
                         pdfUploadForm.reset();
                         
                     } catch (error) {
@@ -2358,6 +2319,17 @@ ${message.content || message.text || 'No content available'}
                 });
             }
         });
+
+        // Modal click outside to close
+        window.onclick = function(event) {
+            const modals = ['statusModal', 'pdfUploadModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
     </script>
 </body>
 </html>
