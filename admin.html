@@ -6,7 +6,6 @@
     <title>SteelConnect - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Base Styles */
         :root {
             --primary-color: #667eea;
             --secondary-color: #764ba2;
@@ -27,8 +26,6 @@
             color: var(--text-color);
             overflow-x: hidden;
         }
-
-        /* Login Container */
         .login-prompt-container {
             display: flex;
             align-items: center;
@@ -37,68 +34,44 @@
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         }
         .login-prompt-box {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
+            background: white; padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center;
+            max-width: 400px; width: 90%;
         }
         .login-prompt-box h2 { font-size: 24px; margin-bottom: 10px; }
         .login-prompt-box p { color: #64748b; }
-        .login-prompt-box .btn { width: 100%; padding: 15px; background: var(--primary-color); border-radius: 8px; border: none; font-size: 16px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; color: white; cursor: pointer; transition: background 0.3s; }
+        .login-prompt-box .btn {
+            width: 100%; padding: 15px; background: var(--primary-color);
+            border-radius: 8px; border: none; font-size: 16px;
+            display: inline-flex; justify-content: center; align-items: center;
+            gap: 8px; color: white; cursor: pointer; transition: background 0.3s;
+        }
         .login-prompt-box .btn:hover { background: var(--secondary-color); }
         .login-prompt-box .btn:disabled { background: #94a3b8; cursor: not-allowed; }
-
-        /* Admin Panel Layout */
-        #admin-panel-container {
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+        #admin-panel-container { display: flex; height: 100vh; overflow: hidden; }
         .admin-sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            transition: width 0.3s;
+            width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text);
+            display: flex; flex-direction: column; padding: 20px; transition: width 0.3s;
         }
         .admin-sidebar-header { text-align: center; margin-bottom: 30px; }
         .admin-sidebar-header .logo { font-size: 28px; font-weight: bold; color: white; }
         .admin-sidebar-header .admin-tag { font-size: 12px; color: var(--primary-color); }
-        
         .admin-nav .admin-nav-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            color: var(--sidebar-text);
-            text-decoration: none;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            transition: background 0.3s, color 0.3s;
+            display: flex; align-items: center; padding: 12px 15px; color: var(--sidebar-text);
+            text-decoration: none; border-radius: 8px; margin-bottom: 5px; transition: all 0.3s;
         }
         .admin-nav .admin-nav-link i { margin-right: 15px; width: 20px; text-align: center; }
         .admin-nav .admin-nav-link:hover { background: #334155; color: var(--sidebar-active); }
         .admin-nav .admin-nav-link.active { background: var(--primary-color); color: var(--sidebar-active); font-weight: 600; }
-        
         .admin-main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            background: var(--header-bg);
-            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 30px; background: var(--header-bg); border-bottom: 1px solid var(--border-color);
         }
         .admin-header h1 { font-size: 24px; }
         .header-actions { display: flex; align-items: center; gap: 20px; }
         .admin-badge { display: flex; align-items: center; gap: 10px; }
         #admin-content-area { padding: 30px; overflow-y: auto; }
-
-        /* General Components */
         .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-danger:hover { background: #c82333; }
@@ -106,30 +79,23 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         .btn-sm { padding: 5px 10px; font-size: 12px; }
-        
         .loading-spinner { text-align: center; padding: 60px; }
         .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .table-container { background: white; border-radius: 8px; box-shadow: var(--shadow); overflow-x: auto; }
         .data-table { width: 100%; border-collapse: collapse; }
         .data-table th, .data-table td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
         .data-table th { background: #f8fafc; font-weight: 600; }
         .data-table tbody tr:hover { background: #f1f5f9; }
-        
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; color: white; display: inline-block; }
         .status-badge.pending, .status-badge.needed { background: #ffc107; color: #333; }
         .status-badge.completed, .status-badge.active { background: #28a745; }
-        .status-badge.inactive { background: #dc3545; }
-
-        /* Notification & Modal */
+        .status-badge.inactive, .status-badge.rejected { background: #dc3545; }
         .notification-container { position: fixed; top: 20px; right: 20px; z-index: 10001; }
         .notification { padding: 15px 20px; border-radius: 8px; box-shadow: var(--shadow); color: white; margin-bottom: 10px; }
         .notification.notification-success { background: #28a745; }
         .notification.notification-error { background: #dc3545; }
         .notification.notification-info { background: #17a2b8; }
-        
         .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -184,7 +150,7 @@
         </main>
     </div>
 
-    <!-- Login Form (Initially Visible) -->
+    <!-- Login Form -->
     <div id="login-form-container" class="login-prompt-container">
         <div class="login-prompt-box">
             <form id="admin-login-form">
@@ -199,7 +165,7 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;">
                 </div>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </button>
             </form>
@@ -217,7 +183,7 @@
             <form id="upload-result-form">
                 <input type="hidden" id="upload-estimation-id">
                 <div class="form-group">
-                    <label for="resultFile">Result File (PDF, DOCX, XLSX)</label>
+                    <label for="resultFile">Result File (PDF, DOCX, etc.)</label>
                     <input type="file" id="resultFile" name="resultFile" required>
                 </div>
                 <div class="form-group">
@@ -240,9 +206,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Configuration ---
     const API_BASE_URL = 'https://steelconnect-backend.onrender.com/api';
     let currentData = { users: [], estimations: [], jobs: [], quotes: [] };
 
+    // --- DOM Elements ---
     const loginContainer = document.getElementById('login-form-container');
     const adminPanel = document.getElementById('admin-panel-container');
     const contentArea = document.getElementById('admin-content-area');
@@ -254,8 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('notification-container');
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
-        const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
-        notification.innerHTML = `<i class="fas fa-${icons[type]}"></i> ${message}`;
+        notification.textContent = message;
         container.appendChild(notification);
         setTimeout(() => notification.remove(), 5000);
     };
@@ -263,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiCall = async (endpoint, method = 'GET', body = null, isFormData = false) => {
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            showNotification('Authentication token not found. Please log in.', 'error');
             showLoginView();
             throw new Error('No token');
         }
@@ -283,10 +249,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        if (response.status === 401) {
+             showNotification('Session expired. Please log in again.', 'error');
+             showLoginView();
+             throw new Error('Unauthorized');
+        }
         const responseData = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const errorMsg = responseData.message || responseData.error || `HTTP error! Status: ${response.status}`;
-            throw new Error(errorMsg);
+            throw new Error(responseData.error || responseData.message || 'An API error occurred');
         }
         return responseData;
     };
@@ -303,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSection(section);
     };
 
-    // --- Rendering ---
+    // --- Rendering Functions ---
     const renderSection = (section) => {
         navLinks.forEach(link => link.classList.toggle('active', link.dataset.section === section));
         const sectionName = section.charAt(0).toUpperCase() + section.slice(1);
@@ -315,12 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
             jobs: renderJobs,
             quotes: renderQuotes
         };
-
-        if (renderMap[section]) {
-            renderMap[section]();
-        } else {
-            contentArea.innerHTML = `<h3>${sectionName} - Coming Soon</h3>`;
-        }
+        if (renderMap[section]) renderMap[section]();
     };
 
     const renderEstimations = async () => {
@@ -329,27 +294,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await apiCall('/admin/estimations');
             currentData.estimations = data.estimations || [];
             if (currentData.estimations.length === 0) {
-                contentArea.innerHTML = '<div class="no-data"><h3>No estimation requests found.</h3></div>';
+                contentArea.innerHTML = '<h3>No estimation requests found.</h3>';
                 return;
             }
             contentArea.innerHTML = `
                 <div class="table-container">
                     <table class="data-table">
                         <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            ${currentData.estimations.map(est => `
-                                <tr>
-                                    <td>${est.projectTitle}</td>
-                                    <td>${est.contractorName}<br><small>${est.contractorEmail}</small></td>
-                                    <td><span class="status-badge ${est.status}">${est.status}</span></td>
-                                    <td>${est.uploadedFiles?.length > 0 ? `<button class="btn btn-sm btn-info" onclick="window.downloadFiles('${est._id}')"><i class="fas fa-download"></i> ${est.uploadedFiles.length} File(s)</button>` : 'No files'}</td>
-                                    <td>${est.resultFile ? `<span class="status-badge completed">Uploaded</span>` : `<span class="status-badge pending">Needed</span>`}</td>
-                                    <td><button class="btn btn-sm btn-success" onclick="window.openUploadModal('${est._id}')"><i class="fas fa-upload"></i> Upload Result</button></td>
-                                </tr>`).join('')}
-                        </tbody>
+                        <tbody>${currentData.estimations.map(est => `
+                            <tr>
+                                <td>${est.projectTitle}</td>
+                                <td>${est.contractorName}<br><small>${est.contractorEmail}</small></td>
+                                <td><span class="status-badge ${est.status}">${est.status}</span></td>
+                                <td>${est.uploadedFiles?.length > 0 ? `<button class="btn btn-sm btn-info" onclick="window.downloadFiles('${est._id}')"><i class="fas fa-download"></i> ${est.uploadedFiles.length} File(s)</button>` : 'No files'}</td>
+                                <td>${est.resultFile ? `<span class="status-badge completed">Uploaded</span>` : `<span class="status-badge pending">Needed</span>`}</td>
+                                <td><button class="btn btn-sm btn-success" onclick="window.openUploadModal('${est._id}')"><i class="fas fa-upload"></i> Upload Result</button></td>
+                            </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
-        } catch (error) { contentArea.innerHTML = '<div class="error">Failed to load estimations.</div>'; }
+        } catch (error) { contentArea.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`; }
     };
     
     const renderUsers = async () => {
@@ -357,27 +320,21 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const data = await apiCall('/admin/users');
             currentData.users = data.data || [];
-             if (currentData.users.length === 0) {
-                contentArea.innerHTML = '<div class="no-data"><h3>No users found.</h3></div>';
-                return;
-            }
             contentArea.innerHTML = `
                 <div class="table-container">
                     <table class="data-table">
                          <thead><tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-                         <tbody>
-                            ${currentData.users.map(user => `
-                                <tr>
-                                    <td>${user.name}</td>
-                                    <td>${user.email}</td>
-                                    <td>${user.type}</td>
-                                    <td><span class="status-badge ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span></td>
-                                    <td><button class="btn btn-sm btn-warning" onclick="window.toggleUserStatus('${user._id}', ${!user.isActive})">${user.isActive ? 'Deactivate' : 'Activate'}</button></td>
-                                </tr>`).join('')}
-                         </tbody>
+                         <tbody>${currentData.users.map(user => `
+                            <tr>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.type}</td>
+                                <td><span class="status-badge ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span></td>
+                                <td><button class="btn btn-sm" onclick="window.toggleUserStatus('${user._id}', ${!user.isActive})">${user.isActive ? 'Deactivate' : 'Activate'}</button></td>
+                            </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
-        } catch (error) { contentArea.innerHTML = '<div class="error">Failed to load users.</div>'; }
+        } catch (error) { contentArea.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`; }
     };
 
     const renderJobs = async () => {
@@ -385,27 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
          try {
             const data = await apiCall('/admin/jobs');
             currentData.jobs = data.data || [];
-            if (currentData.jobs.length === 0) {
-                contentArea.innerHTML = '<div class="no-data"><h3>No jobs found.</h3></div>';
-                return;
-            }
             contentArea.innerHTML = `
                 <div class="table-container">
                     <table class="data-table">
-                         <thead><tr><th>Title</th><th>Client</th><th>Contractor</th><th>Status</th><th>Budget</th></tr></thead>
-                         <tbody>
-                            ${currentData.jobs.map(job => `
-                                <tr>
-                                    <td>${job.title}</td>
-                                    <td>${job.clientName}</td>
-                                    <td>${job.contractorName || 'Unassigned'}</td>
-                                    <td><span class="status-badge ${job.status}">${job.status}</span></td>
-                                    <td>${job.budget}</td>
-                                </tr>`).join('')}
-                         </tbody>
+                         <thead><tr><th>Title</th><th>Client</th><th>Assigned To</th><th>Status</th><th>Budget</th></tr></thead>
+                         <tbody>${currentData.jobs.map(job => `
+                            <tr>
+                                <td>${job.title}</td>
+                                <td>${job.clientName}</td>
+                                <td>${job.contractorName || 'Unassigned'}</td>
+                                <td><span class="status-badge ${job.status}">${job.status}</span></td>
+                                <td>${job.budget}</td>
+                            </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
-        } catch (error) { contentArea.innerHTML = '<div class="error">Failed to load jobs.</div>'; }
+        } catch (error) { contentArea.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`; }
     };
 
     const renderQuotes = async () => {
@@ -413,38 +364,32 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const data = await apiCall('/admin/quotes');
             currentData.quotes = data.data || [];
-            if (currentData.quotes.length === 0) {
-                contentArea.innerHTML = '<div class="no-data"><h3>No quotes found.</h3></div>';
-                return;
-            }
             contentArea.innerHTML = `
                  <div class="table-container">
                     <table class="data-table">
                          <thead><tr><th>Project</th><th>Client</th><th>Amount</th><th>Status</th></tr></thead>
-                         <tbody>
-                            ${currentData.quotes.map(quote => `
-                                <tr>
-                                    <td>${quote.projectTitle}</td>
-                                    <td>${quote.clientName}</td>
-                                    <td>$${quote.amount || 'N/A'}</td>
-                                    <td><span class="status-badge ${quote.status}">${quote.status}</span></td>
-                                </tr>`).join('')}
-                         </tbody>
+                         <tbody>${currentData.quotes.map(quote => `
+                            <tr>
+                                <td>${quote.projectTitle}</td>
+                                <td>${quote.clientName}</td>
+                                <td>$${quote.amount || 'N/A'}</td>
+                                <td><span class="status-badge ${quote.status}">${quote.status}</span></td>
+                            </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
-        } catch (error) { contentArea.innerHTML = '<div class="error">Failed to load quotes.</div>'; }
+        } catch (error) { contentArea.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`; }
     };
 
-    // --- Event Listeners & Global Functions ---
+    // --- Event Handlers & Global Functions ---
     document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const form = e.target, email = form.email.value, password = form.password.value;
+        const form = e.target;
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+        submitButton.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>';
         try {
             const response = await fetch(`${API_BASE_URL}/auth/login/admin`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email.value, password: form.password.value }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Login failed');
@@ -452,7 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('admin-name').textContent = data.user.name || 'Admin';
             showNotification('Login successful!', 'success');
             showAdminView();
-        } catch (error) { showNotification(error.message, 'error');
+        } catch (error) { 
+            showNotification(error.message, 'error');
         } finally {
             submitButton.disabled = false;
             submitButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
@@ -468,17 +414,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.downloadFiles = async (estimationId) => {
         try {
             const data = await apiCall(`/admin/estimations/${estimationId}/files`);
-            if (!data.files || data.files.length === 0) return showNotification('No files to download.', 'info');
+            if (!data.files || data.files.length === 0) return showNotification('No files found.', 'info');
             data.files.forEach(file => {
-                const a = document.createElement('a');
-                a.href = file.url; a.target = '_blank'; a.download = file.name;
+                const a = document.createElement('a'); a.href = file.url; a.target = '_blank'; a.download = file.name;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
             });
-            showNotification('File downloads initiated.', 'success');
-        } catch (error) {}
+        } catch (error) { showNotification(`Download failed: ${error.message}`, 'error'); }
     };
 
     window.openUploadModal = (estimationId) => {
+        document.getElementById('upload-result-form').reset();
         document.getElementById('upload-estimation-id').value = estimationId;
         document.getElementById('upload-result-modal').style.display = 'flex';
     };
@@ -490,7 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = this, estimationId = form['upload-estimation-id'].value;
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
         try {
             const formData = new FormData(form);
             await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
@@ -498,18 +442,18 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal();
             renderEstimations();
         } catch (error) {
+            showNotification(`Upload failed: ${error.message}`, 'error');
         } finally {
             submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="fas fa-upload"></i> Upload Result';
         }
     });
 
     window.toggleUserStatus = async (userId, newStatus) => {
         try {
             await apiCall(`/admin/users/${userId}/status`, 'PATCH', { isActive: newStatus });
-            showNotification(`User status updated to ${newStatus ? 'Active' : 'Inactive'}`, 'success');
+            showNotification('User status updated!', 'success');
             renderUsers();
-        } catch(error) {}
+        } catch(error) { showNotification(`Update failed: ${error.message}`, 'error'); }
     };
 
     // --- Initial Check ---
