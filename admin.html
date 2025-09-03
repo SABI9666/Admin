@@ -5,7 +5,493 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f7fa;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .admin-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .stat-icon.totalUsers { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-icon.contractors { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-icon.totalJobs { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-icon.totalQuotes { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+        .stat-icon.totalEstimations { background: linear-gradient(135deg, #fa709a, #fee140); }
+        .stat-icon.totalMessages { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .section h2 {
+            padding: 25px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 25px;
+            min-height: 400px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e9ecef;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 15px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .user-info strong {
+            color: #2c3e50;
+        }
+        
+        .user-info small {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        
+        .type-badge,
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .type-badge.contractor { background: #e3f2fd; color: #1976d2; }
+        .type-badge.designer { background: #f3e5f5; color: #7b1fa2; }
+        .type-badge.admin { background: #fff3e0; color: #f57c00; }
+        
+        .status-badge.active { background: #e8f5e8; color: #2e7d32; }
+        .status-badge.inactive { background: #ffebee; color: #c62828; }
+        .status-badge.pending { background: #fff8e1; color: #f57f17; }
+        .status-badge.approved { background: #e8f5e8; color: #2e7d32; }
+        .status-badge.rejected { background: #ffebee; color: #c62828; }
+        .status-badge.open { background: #e3f2fd; color: #1976d2; }
+        .status-badge.completed { background: #e8f5e8; color: #2e7d32; }
+        .status-badge.assigned { background: #f3e5f5; color: #7b1fa2; }
+        .status-badge.unread { background: #fff3e0; color: #f57c00; }
+        .status-badge.read { background: #f5f5f5; color: #616161; }
+        
+        .action-group {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .no-data h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #dc3545;
+            background: #f8d7da;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .notification.info { background: #17a2b8; }
+        .notification.warning { background: #ffc107; color: #212529; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+        }
+        
+        .form-actions {
+            padding: 20px 25px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            .action-group {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -23,37 +509,97 @@
         </div>
 
         <div class="stats-grid" id="statsGrid">
-            <div class="loading"><div class="spinner"></div><p>Loading dashboard statistics...</p></div>
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading dashboard statistics...</p>
+            </div>
         </div>
 
         <div class="section">
             <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
             
             <div class="tabs">
-                <button class="tab active" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
-                <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
-                <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
-                <button class="tab" onclick="showTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
-                <button class="tab" onclick="showTab('messages')"><i class="fas fa-comments"></i> Messages</button>
+                <button class="tab active" onclick="showTab('users')">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="tab" onclick="showTab('jobs')">
+                    <i class="fas fa-briefcase"></i> Jobs
+                </button>
+                <button class="tab" onclick="showTab('quotes')">
+                    <i class="fas fa-file-invoice-dollar"></i> Quotes
+                </button>
+                <button class="tab" onclick="showTab('estimations')">
+                    <i class="fas fa-calculator"></i> Estimations
+                </button>
+                <button class="tab" onclick="showTab('messages')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
             </div>
             
-            <div id="users-tab" class="tab-content active"><div class="loading"><div class="spinner"></div><p>Loading users...</p></div></div>
-            <div id="jobs-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading jobs...</p></div></div>
-            <div id="quotes-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading quotes...</p></div></div>
-            <div id="estimations-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading estimations...</p></div></div>
-            <div id="messages-tab" class="tab-content"><div class="loading"><div class="spinner"></div><p>Loading messages...</p></div></div>
+            <div id="users-tab" class="tab-content active">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading users...</p>
+                </div>
+            </div>
+            
+            <div id="jobs-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading jobs...</p>
+                </div>
+            </div>
+            
+            <div id="quotes-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading quotes...</p>
+                </div>
+            </div>
+            
+            <div id="estimations-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading estimations...</p>
+                </div>
+            </div>
+            
+            <div id="messages-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Upload Modal -->
     <div id="pdfUploadModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>Upload Estimation Result</h3><span class="close" onclick="closeModal('pdfUploadModal')">&times;</span></div>
-            <form id="pdfUploadForm" enctype="multipart/form-data">
-                <div class="form-group"><label for="estimationResultFile">Select Result File:</label><input type="file" id="estimationResultFile" name="resultFile" required></div>
-                <div class="form-group"><label for="resultAmount">Estimated Amount ($):</label><input type="number" id="resultAmount" name="amount" min="0" step="0.01" placeholder="0.00"></div>
-                <div class="form-group"><label for="resultNotes">Additional Notes:</label><textarea id="resultNotes" name="notes" placeholder="Add notes about this estimation..."></textarea></div>
-                <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal('pdfUploadModal')">Cancel</button><button type="submit" class="btn btn-success"><i class="fas fa-upload"></i> Upload</button></div>
+            <div class="modal-header">
+                <h3>Upload Estimation Result</h3>
+                <span class="close" onclick="closeModal('pdfUploadModal')">&times;</span>
+            </div>
+            <form id="pdfUploadForm" enctype="multipart/form-data" style="padding: 25px;">
+                <div class="form-group">
+                    <label for="estimationResultFile">Select Result File:</label>
+                    <input type="file" id="estimationResultFile" name="resultFile" required>
+                </div>
+                <div class="form-group">
+                    <label for="resultAmount">Estimated Amount ($):</label>
+                    <input type="number" id="resultAmount" name="amount" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="resultNotes">Additional Notes:</label>
+                    <textarea id="resultNotes" name="notes" rows="3" placeholder="Add notes about this estimation..."></textarea>
+                </div>
             </form>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('pdfUploadModal')">Cancel</button>
+                <button type="submit" form="pdfUploadForm" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
         </div>
     </div>
 
@@ -64,8 +610,7 @@
 
         // --- AUTH & API ---
         function getToken() {
-            // Checks multiple common keys for the token for robustness
-            return localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            return localStorage.getItem('jwtToken') || localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
         }
 
         function logout() {
@@ -79,8 +624,8 @@
         async function apiCall(endpoint, options = {}) {
             const token = getToken();
             if (!token) {
-                alert('Authentication error. Redirecting to login.');
-                logout();
+                showNotification('Authentication error. Redirecting to login.', 'error');
+                setTimeout(logout, 2000);
                 throw new Error('No authentication token found');
             }
             
@@ -89,32 +634,69 @@
                 ...options
             };
             
-            // The browser sets the correct Content-Type for FormData automatically.
             if (options.body && !(options.body instanceof FormData)) {
                 config.headers['Content-Type'] = 'application/json';
             }
 
-            const response = await fetch(`${API_BASE}${endpoint}`, config);
-            
-            if (response.status === 401) {
-                alert('Session expired. Please log in again.');
-                logout();
-                throw new Error('Authentication failed');
+            try {
+                console.log(`API Call: ${endpoint}`, config);
+                const response = await fetch(`${API_BASE}${endpoint}`, config);
+                
+                if (response.status === 401) {
+                    showNotification('Session expired. Please log in again.', 'error');
+                    setTimeout(logout, 2000);
+                    throw new Error('Authentication failed');
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log(`API Response for ${endpoint}:`, data);
+                return data;
+            } catch (error) {
+                console.error('API Call Error:', error);
+                throw error;
             }
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'An unknown server error occurred' }));
-                throw new Error(errorData.error || `HTTP Error: ${response.status}`);
-            }
-            return response.json();
         }
 
-        // --- UI & TABS ---
+        // --- NOTIFICATION SYSTEM ---
+        function showNotification(message, type = 'success') {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.opacity = '0';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // --- TAB MANAGEMENT ---
         function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Update UI
             document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).style.display = 'block';
-            document.querySelector(`.tab[onclick*="'${tabName}'"]`).classList.add('active');
             
+            const selectedTab = document.getElementById(`${tabName}-tab`);
+            const selectedButton = document.querySelector(`.tab[onclick*="'${tabName}'"]`);
+            
+            if (selectedTab) selectedTab.style.display = 'block';
+            if (selectedButton) selectedButton.classList.add('active');
+            
+            // Load data
             const dataLoaders = {
                 users: loadUsersData,
                 jobs: loadJobsData,
@@ -123,26 +705,154 @@
                 messages: loadMessagesData,
             };
             
-            // Only load data if it hasn't been loaded before
-            if (dataLoaders[tabName] && isDataEmpty(tabName)) {
+            if (dataLoaders[tabName]) {
                 dataLoaders[tabName]();
             }
         }
-        
-        function isDataEmpty(dataType) {
-            const dataMap = { users: usersData, jobs: jobsData, quotes: quotesData, estimations: estimationsData, messages: messagesData };
-            return !dataMap[dataType] || dataMap[dataType].length === 0;
+
+        // --- DATA LOADING ---
+        async function loadDashboardStats() {
+            try {
+                console.log('Loading dashboard stats...');
+                const response = await apiCall('/admin/dashboard');
+                
+                if (response.success && response.data) {
+                    const adminUser = response.data.adminUser || 'admin@steelconnect.com';
+                    document.getElementById('adminName').textContent = adminUser.split('@')[0] || 'Admin';
+                    renderStatsGrid(response.data.stats);
+                }
+            } catch (error) {
+                console.error('Dashboard stats error:', error);
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load dashboard statistics</h3>
+                        <p>${error.message}</p>
+                    </div>`;
+            }
         }
 
-        function showNotification(message, type = 'success') {
-            alert(`[${type.toUpperCase()}] ${message}`);
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+        async function loadUsersData() {
+            try {
+                console.log('Loading users data...');
+                document.getElementById('users-tab').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading users...</p></div>';
+                
+                const response = await apiCall('/admin/users');
+                console.log('Users API response:', response);
+                
+                usersData = response.data || [];
+                renderUsersTab();
+            } catch (error) {
+                console.error('Users data error:', error);
+                document.getElementById('users-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load users</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadUsersData()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
         }
 
-        // --- DATA RENDERING ---
+        async function loadJobsData() {
+            try {
+                console.log('Loading jobs data...');
+                document.getElementById('jobs-tab').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading jobs...</p></div>';
+                
+                const response = await apiCall('/admin/jobs');
+                console.log('Jobs API response:', response);
+                
+                jobsData = response.data || [];
+                renderJobsTab();
+            } catch (error) {
+                console.error('Jobs data error:', error);
+                document.getElementById('jobs-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load jobs</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadJobsData()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
+        }
+
+        async function loadQuotesData() {
+            try {
+                console.log('Loading quotes data...');
+                document.getElementById('quotes-tab').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading quotes...</p></div>';
+                
+                const response = await apiCall('/admin/quotes');
+                console.log('Quotes API response:', response);
+                
+                quotesData = response.data || [];
+                renderQuotesTab();
+            } catch (error) {
+                console.error('Quotes data error:', error);
+                document.getElementById('quotes-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load quotes</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadQuotesData()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
+        }
+
+        async function loadMessagesData() {
+            try {
+                console.log('Loading messages data...');
+                document.getElementById('messages-tab').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading messages...</p></div>';
+                
+                const response = await apiCall('/admin/messages');
+                console.log('Messages API response:', response);
+                
+                messagesData = response.data || [];
+                renderMessagesTab();
+            } catch (error) {
+                console.error('Messages data error:', error);
+                document.getElementById('messages-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load messages</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadMessagesData()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
+        }
+
+        async function loadEstimationsData() {
+            try {
+                console.log('Loading estimations data...');
+                document.getElementById('estimations-tab').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading estimations...</p></div>';
+                
+                const response = await apiCall('/estimation');
+                console.log('Estimations API response:', response);
+                
+                estimationsData = response.estimations || [];
+                renderEstimationsTab();
+            } catch (error) {
+                console.error('Estimations data error:', error);
+                document.getElementById('estimations-tab').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Failed to load estimations</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadEstimationsData()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
+        }
+
+        // --- RENDERING FUNCTIONS ---
         function renderStatsGrid(stats) {
             const grid = document.getElementById('statsGrid');
             const statItems = [
@@ -153,107 +863,378 @@
                 { key: 'totalEstimations', icon: 'calculator', label: 'Estimations' },
                 { key: 'totalMessages', icon: 'comments', label: 'Messages' }
             ];
+            
             grid.innerHTML = statItems.map(item => `
                 <div class="stat-card">
-                    <div class="stat-icon ${item.key}"><i class="fas fa-${item.icon}"></i></div>
-                    <div class="stat-number">${stats[item.key] || 0}</div>
-                    <div class="stat-label">${item.label}</div>
+                    <div class="stat-icon ${item.key}">
+                        <i class="fas fa-${item.icon}"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number">${stats[item.key] || 0}</div>
+                        <div class="stat-label">${item.label}</div>
+                    </div>
                 </div>`).join('');
         }
 
         function renderUsersTab() {
             const container = document.getElementById('users-tab');
-            if (isDataEmpty('users')) {
-                container.innerHTML = `<div class="no-data"><h3>No users found</h3></div>`; return;
+            if (!usersData || usersData.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-users" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
+                        <h3>No users found</h3>
+                        <p>Users will appear here once they register on the platform.</p>
+                    </div>`;
+                return;
             }
+            
             container.innerHTML = `
                 <div class="table-container">
                     <table class="data-table">
-                        <thead><tr><th>Name / Company</th><th>Email</th><th>Type</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
-                        <tbody>${usersData.map(user => {
-                            const userType = user.type || user.role || 'user';
-                            const isActive = user.isActive !== false;
-                            const userId = user._id || user.id;
-                            return `<tr>
-                                <td><div class="user-info"><strong>${user.name}</strong><small>${user.company || 'N/A'}</small></div></td>
-                                <td>${user.email}</td>
-                                <td><span class="type-badge ${userType}">${userType}</span></td>
-                                <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
-                                <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-                                <td><div class="action-group">
-                                    <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${userId}', ${!isActive})" title="${isActive ? 'Deactivate' : 'Activate'}">
-                                        <i class="fas fa-${isActive ? 'ban' : 'check'}"></i>
-                                    </button>
-                                </div></td>
-                            </tr>`;
-                        }).join('')}</tbody>
+                        <thead>
+                            <tr>
+                                <th>Name / Company</th>
+                                <th>Email</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${usersData.map(user => {
+                                const userType = user.type || user.role || 'user';
+                                const isActive = user.isActive !== false;
+                                const userId = user._id || user.id;
+                                const joinedDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown';
+                                
+                                return `<tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${user.name || 'Unknown'}</strong>
+                                            <small>${user.company || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${user.email || 'N/A'}</td>
+                                    <td><span class="type-badge ${userType}">${userType}</span></td>
+                                    <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
+                                    <td>${joinedDate}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-warning" onclick="toggleUserStatus('${userId}', ${!isActive})" title="${isActive ? 'Deactivate' : 'Activate'}">
+                                                <i class="fas fa-${isActive ? 'ban' : 'check'}"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteUser('${userId}')" title="Delete User">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderJobsTab() {
+            const container = document.getElementById('jobs-tab');
+            if (!jobsData || jobsData.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-briefcase" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
+                        <h3>No jobs found</h3>
+                        <p>Jobs will appear here when users create project listings.</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Client</th>
+                                <th>Status</th>
+                                <th>Budget</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${jobsData.map(job => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${job.title || job.projectTitle || 'Untitled'}</strong>
+                                            <small>${job.description ? job.description.substring(0, 50) + '...' : 'No description'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${job.clientName || job.posterName || 'Unknown'}</td>
+                                    <td><span class="status-badge ${job.status || 'pending'}">${job.status || 'pending'}</span></td>
+                                    <td>${job.budget || 'Not specified'}</td>
+                                    <td>${job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Unknown'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewJobDetails('${job._id || job.id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderQuotesTab() {
+            const container = document.getElementById('quotes-tab');
+            if (!quotesData || quotesData.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-file-invoice-dollar" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
+                        <h3>No quotes found</h3>
+                        <p>Quotes will appear here when designers submit project proposals.</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Client</th>
+                                <th>Designer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${quotesData.map(quote => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${quote.projectTitle || quote.jobTitle || 'Untitled'}</strong>
+                                            <small>${quote.description ? quote.description.substring(0, 50) + '...' : 'No description'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${quote.clientName || 'Unknown'}</td>
+                                    <td>${quote.designerName || quote.contractorName || 'Unknown'}</td>
+                                    <td>${quote.amount ? ' + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}</td>
+                                    <td><span class="status-badge ${quote.status || 'pending'}">${quote.status || 'pending'}</span></td>
+                                    <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'Unknown'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewQuoteDetails('${quote._id || quote.id}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderMessagesTab() {
+            const container = document.getElementById('messages-tab');
+            if (!messagesData || messagesData.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-comments" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
+                        <h3>No messages found</h3>
+                        <p>Messages will appear here when users send communications through the platform.</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Sender</th>
+                                <th>Subject</th>
+                                <th>Content</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${messagesData.map(message => `
+                                <tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${message.senderName || 'Unknown'}</strong>
+                                            <small>${message.senderEmail || 'N/A'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${message.subject || 'No Subject'}</td>
+                                    <td>${message.content ? message.content.substring(0, 50) + '...' : 'No content'}</td>
+                                    <td><span class="status-badge ${message.status || 'unread'}">${message.status || 'unread'}</span></td>
+                                    <td>${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'Unknown'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id || message.id}')" title="View Message">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     </table>
                 </div>`;
         }
 
         function renderEstimationsTab() {
             const container = document.getElementById('estimations-tab');
-            if (isDataEmpty('estimations')) {
-                container.innerHTML = `<div class="no-data"><h3>No estimations found</h3></div>`; return;
+            if (!estimationsData || estimationsData.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-calculator" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
+                        <h3>No estimations found</h3>
+                        <p>Estimation requests will appear here when contractors submit files for AI analysis.</p>
+                    </div>`;
+                return;
             }
+            
             container.innerHTML = `
                 <div class="table-container">
                     <table class="data-table">
-                        <thead><tr><th>Project</th><th>Contractor</th><th>Status</th><th>Files</th><th>Submitted</th><th>Actions</th></tr></thead>
-                        <tbody>${estimationsData.map(est => {
-                            const estId = est._id || est.id;
-                            return `<tr>
-                                <td>${est.projectTitle || 'Untitled'}</td>
-                                <td>${est.contractorName || 'Unknown'}</td>
-                                <td><span class="status-badge ${est.status}">${est.status}</span></td>
-                                <td>
-                                    ${(est.uploadedFiles?.length || 0)} files
-                                    ${(est.uploadedFiles?.length > 0) ? `<button class="btn btn-sm btn-secondary" onclick="downloadAllEstimationFiles('${estId}')" title="Download Files"><i class="fas fa-download"></i></button>` : ''}
-                                </td>
-                                <td>${new Date(est.createdAt).toLocaleDateString()}</td>
-                                <td><div class="action-group">
-                                    <button class="btn btn-sm btn-success" onclick="openUploadModal('${estId}')" title="Upload Result"><i class="fas fa-upload"></i></button>
-                                    ${est.resultFile ? `<button class="btn btn-sm btn-info" onclick="downloadEstimationResult('${estId}')" title="Download Result"><i class="fas fa-file-download"></i></button>` : ''}
-                                </div></td>
-                            </tr>`;
-                        }).join('')}</tbody>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Contractor</th>
+                                <th>Status</th>
+                                <th>Files</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${estimationsData.map(est => {
+                                const estId = est._id || est.id;
+                                return `<tr>
+                                    <td>
+                                        <div class="user-info">
+                                            <strong>${est.projectTitle || 'Untitled'}</strong>
+                                            <small>${est.description ? est.description.substring(0, 50) + '...' : 'No description'}</small>
+                                        </div>
+                                    </td>
+                                    <td>${est.contractorName || 'Unknown'}</td>
+                                    <td><span class="status-badge ${est.status}">${est.status}</span></td>
+                                    <td>
+                                        ${(est.uploadedFiles?.length || 0)} files
+                                        ${(est.uploadedFiles?.length > 0) ? `<button class="btn btn-sm btn-secondary" onclick="downloadAllEstimationFiles('${estId}')" title="Download Files"><i class="fas fa-download"></i></button>` : ''}
+                                    </td>
+                                    <td>${est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'Unknown'}</td>
+                                    <td>
+                                        <div class="action-group">
+                                            <button class="btn btn-sm btn-success" onclick="openUploadModal('${estId}')" title="Upload Result">
+                                                <i class="fas fa-upload"></i>
+                                            </button>
+                                            ${est.resultFile ? `<button class="btn btn-sm btn-info" onclick="downloadEstimationResult('${estId}')" title="Download Result"><i class="fas fa-file-download"></i></button>` : ''}
+                                        </div>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
                     </table>
                 </div>`;
         }
 
-        // --- DATA LOADING & ACTIONS ---
-        async function loadDashboardStats() {
-            try {
-                const response = await apiCall('/admin/dashboard');
-                document.getElementById('adminName').textContent = response.data.adminUser?.split('@')[0] || 'Admin';
-                renderStatsGrid(response.data.stats);
-            } catch (error) {
-                document.getElementById('statsGrid').innerHTML = `<div class="error">Failed to load stats: ${error.message}</div>`;
-            }
-        }
-        
-        async function loadUsersData() { usersData = (await apiCall('/admin/users')).data; renderUsersTab(); }
-        async function loadJobsData() { document.getElementById('jobs-tab').innerHTML = `<div class="no-data"><h3>Jobs data will be displayed here.</h3></div>`; }
-        async function loadQuotesData() { document.getElementById('quotes-tab').innerHTML = `<div class="no-data"><h3>Quotes data will be displayed here.</h3></div>`; }
-        async function loadMessagesData() { document.getElementById('messages-tab').innerHTML = `<div class="no-data"><h3>Messages data will be displayed here.</h3></div>`; }
-        async function loadEstimationsData() { estimationsData = (await apiCall('/estimation')).estimations; renderEstimationsTab(); }
-
-        /**
-         * CORRECTED: Toggles user active status using the single, correct API endpoint.
-         */
+        // --- USER ACTIONS ---
         async function toggleUserStatus(userId, newStatus) {
             const action = newStatus ? 'activate' : 'deactivate';
             if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+            
             try {
+                console.log(`Toggling user ${userId} status to ${newStatus}`);
                 await apiCall(`/admin/users/${userId}/status`, {
                     method: 'PATCH',
                     body: JSON.stringify({ isActive: newStatus })
                 });
                 showNotification(`User ${action}d successfully`, 'success');
-                // Refresh data to show the change
-                await loadUsersData();
+                await loadUsersData(); // Reload users data
             } catch (error) {
+                console.error('Toggle user status error:', error);
                 showNotification(`Failed to update user status: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+            
+            try {
+                console.log(`Deleting user ${userId}`);
+                await apiCall(`/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                showNotification('User deleted successfully', 'success');
+                await loadUsersData(); // Reload users data
+            } catch (error) {
+                console.error('Delete user error:', error);
+                showNotification(`Failed to delete user: ${error.message}`, 'error');
+            }
+        }
+
+        // --- DETAIL VIEWS ---
+        function viewJobDetails(jobId) {
+            const job = jobsData.find(j => (j._id || j.id) === jobId);
+            if (job) {
+                const details = `
+Job Details:
+Title: ${job.title || job.projectTitle || 'Untitled'}
+Client: ${job.clientName || job.posterName || 'Unknown'}
+Status: ${job.status || 'pending'}
+Budget: ${job.budget || 'Not specified'}
+Description: ${job.description || 'No description'}
+Created: ${job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Unknown'}`;
+                alert(details);
+            } else {
+                showNotification('Job not found', 'error');
+            }
+        }
+
+        function viewQuoteDetails(quoteId) {
+            const quote = quotesData.find(q => (q._id || q.id) === quoteId);
+            if (quote) {
+                const details = `
+Quote Details:
+Project: ${quote.projectTitle || quote.jobTitle || 'Untitled'}
+Client: ${quote.clientName || 'Unknown'}
+Designer: ${quote.designerName || quote.contractorName || 'Unknown'}
+Amount: ${quote.amount ? ' + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}
+Status: ${quote.status || 'pending'}
+Description: ${quote.description || 'No description'}
+Created: ${quote.createdAt ? new Date(quote.createdAt).toLocaleString() : 'Unknown'}`;
+                alert(details);
+            } else {
+                showNotification('Quote not found', 'error');
+            }
+        }
+
+        function viewMessageDetails(messageId) {
+            const message = messagesData.find(m => (m._id || m.id) === messageId);
+            if (message) {
+                const details = `
+Message Details:
+From: ${message.senderName || 'Unknown'} (${message.senderEmail || 'N/A'})
+Subject: ${message.subject || 'No Subject'}
+Status: ${message.status || 'unread'}
+Content: ${message.content || 'No content'}
+Created: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'Unknown'}`;
+                alert(details);
+            } else {
+                showNotification('Message not found', 'error');
             }
         }
 
@@ -264,13 +1245,17 @@
             document.getElementById('pdfUploadModal').style.display = 'block';
         }
 
-        /**
-         * REWRITTEN: Downloads all contractor files for a specific estimation.
-         * Constructs the correct authenticated download URL and opens it.
-         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+        }
+
         function downloadAllEstimationFiles(estimationId) {
             const token = getToken();
-            if (!token) { showNotification('Authentication error.', 'error'); return; }
+            if (!token) { 
+                showNotification('Authentication error.', 'error'); 
+                return; 
+            }
             
             const estimation = estimationsData.find(e => (e._id || e.id) === estimationId);
             if (!estimation || !estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
@@ -281,18 +1266,16 @@
             showNotification(`Preparing to download ${estimation.uploadedFiles.length} file(s)...`, 'info');
             estimation.uploadedFiles.forEach((file, index) => {
                 const url = `${API_BASE}/estimation/${estimationId}/files/${encodeURIComponent(file.name)}/download?token=${token}`;
-                // Stagger downloads slightly to avoid browser popup blockers
                 setTimeout(() => window.open(url, '_blank'), index * 300);
             });
         }
 
-        /**
-         * REWRITTEN: Downloads the admin-uploaded result file for an estimation.
-         * Constructs the correct authenticated download URL and opens it.
-         */
         function downloadEstimationResult(estimationId) {
             const token = getToken();
-            if (!token) { showNotification('Authentication error.', 'error'); return; }
+            if (!token) { 
+                showNotification('Authentication error.', 'error'); 
+                return; 
+            }
             
             const url = `${API_BASE}/estimation/${estimationId}/result/download?token=${token}`;
             window.open(url, '_blank');
@@ -300,35 +1283,60 @@
 
         // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('Admin panel initializing...');
+            
             if (!getToken()) {
-                alert('You are not logged in. Redirecting to login page.');
-                window.location.href = 'index.html';
+                showNotification('You are not logged in. Redirecting to login page.', 'error');
+                setTimeout(() => window.location.href = 'index.html', 2000);
                 return;
             }
+            
+            // Load initial data
             loadDashboardStats();
             showTab('users'); // Load users tab by default
 
             // PDF Upload form handler
             document.getElementById('pdfUploadForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                if (!currentUploadEstimationId) return;
+                if (!currentUploadEstimationId) {
+                    showNotification('No estimation selected', 'error');
+                    return;
+                }
 
                 const formData = new FormData(this);
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+                
                 try {
-                    showNotification('Uploading...', 'info');
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                    
+                    showNotification('Uploading estimation result...', 'info');
                     await apiCall(`/estimation/${currentUploadEstimationId}/result`, {
                         method: 'POST',
                         body: formData
                     });
                     showNotification('Result uploaded successfully!', 'success');
                     closeModal('pdfUploadModal');
-                    // Refresh data to show the new result file button
                     await loadEstimationsData();
                 } catch (error) {
                     showNotification(`Upload failed: ${error.message}`, 'error');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
                 }
             });
+            
+            console.log('Admin panel initialized successfully');
         });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('pdfUploadModal');
+            if (event.target === modal) {
+                closeModal('pdfUploadModal');
+            }
+        }
     </script>
 </body>
 </html>
