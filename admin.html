@@ -605,12 +605,19 @@
 
     <script>
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
-        let usersData = [], jobsData = [], quotesData = [], estimationsData = [], messagesData = [];
+        let usersData = [];
+        let jobsData = [];
+        let quotesData = [];
+        let estimationsData = [];
+        let messagesData = [];
         let currentUploadEstimationId = null;
 
         // --- AUTH & API ---
         function getToken() {
-            return localStorage.getItem('jwtToken') || localStorage.getItem('adminToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            return localStorage.getItem('jwtToken') || 
+                   localStorage.getItem('adminToken') || 
+                   localStorage.getItem('token') || 
+                   sessionStorage.getItem('token');
         }
 
         function logout() {
@@ -665,7 +672,6 @@
 
         // --- NOTIFICATION SYSTEM ---
         function showNotification(message, type = 'success') {
-            // Remove existing notifications
             const existingNotifications = document.querySelectorAll('.notification');
             existingNotifications.forEach(n => n.remove());
             
@@ -686,7 +692,6 @@
         function showTab(tabName) {
             console.log('Switching to tab:', tabName);
             
-            // Update UI
             document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             
@@ -696,7 +701,6 @@
             if (selectedTab) selectedTab.style.display = 'block';
             if (selectedButton) selectedButton.classList.add('active');
             
-            // Load data
             const dataLoaders = {
                 users: loadUsersData,
                 jobs: loadJobsData,
@@ -879,6 +883,9 @@
         function renderUsersTab() {
             const container = document.getElementById('users-tab');
             if (!usersData || usersData.length === 0) {
+        function renderUsersTab() {
+            const container = document.getElementById('users-tab');
+            if (!usersData || usersData.length === 0) {
                 container.innerHTML = `
                     <div class="no-data">
                         <i class="fas fa-users" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
@@ -1025,7 +1032,8 @@
                                     </td>
                                     <td>${quote.clientName || 'Unknown'}</td>
                                     <td>${quote.designerName || quote.contractorName || 'Unknown'}</td>
-                                    <td>${quote.amount ? ' + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}</td>
+                                    <td>${quote.amount ? '
+                 + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}</td>
                                     <td><span class="status-badge ${quote.status || 'pending'}">${quote.status || 'pending'}</span></td>
                                     <td>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'Unknown'}</td>
                                     <td>
@@ -1163,7 +1171,7 @@
                     body: JSON.stringify({ isActive: newStatus })
                 });
                 showNotification(`User ${action}d successfully`, 'success');
-                await loadUsersData(); // Reload users data
+                await loadUsersData();
             } catch (error) {
                 console.error('Toggle user status error:', error);
                 showNotification(`Failed to update user status: ${error.message}`, 'error');
@@ -1179,7 +1187,7 @@
                     method: 'DELETE'
                 });
                 showNotification('User deleted successfully', 'success');
-                await loadUsersData(); // Reload users data
+                await loadUsersData();
             } catch (error) {
                 console.error('Delete user error:', error);
                 showNotification(`Failed to delete user: ${error.message}`, 'error');
@@ -1190,8 +1198,7 @@
         function viewJobDetails(jobId) {
             const job = jobsData.find(j => (j._id || j.id) === jobId);
             if (job) {
-                const details = `
-Job Details:
+                const details = `Job Details:
 Title: ${job.title || job.projectTitle || 'Untitled'}
 Client: ${job.clientName || job.posterName || 'Unknown'}
 Status: ${job.status || 'pending'}
@@ -1207,12 +1214,12 @@ Created: ${job.createdAt ? new Date(job.createdAt).toLocaleString() : 'Unknown'}
         function viewQuoteDetails(quoteId) {
             const quote = quotesData.find(q => (q._id || q.id) === quoteId);
             if (quote) {
-                const details = `
-Quote Details:
+                const details = `Quote Details:
 Project: ${quote.projectTitle || quote.jobTitle || 'Untitled'}
 Client: ${quote.clientName || 'Unknown'}
 Designer: ${quote.designerName || quote.contractorName || 'Unknown'}
-Amount: ${quote.amount ? ' + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}
+Amount: ${quote.amount ? '
+                 + quote.amount.toLocaleString() : quote.quoteAmount || 'Not specified'}
 Status: ${quote.status || 'pending'}
 Description: ${quote.description || 'No description'}
 Created: ${quote.createdAt ? new Date(quote.createdAt).toLocaleString() : 'Unknown'}`;
@@ -1225,8 +1232,7 @@ Created: ${quote.createdAt ? new Date(quote.createdAt).toLocaleString() : 'Unkno
         function viewMessageDetails(messageId) {
             const message = messagesData.find(m => (m._id || m.id) === messageId);
             if (message) {
-                const details = `
-Message Details:
+                const details = `Message Details:
 From: ${message.senderName || 'Unknown'} (${message.senderEmail || 'N/A'})
 Subject: ${message.subject || 'No Subject'}
 Status: ${message.status || 'unread'}
@@ -1291,11 +1297,9 @@ Created: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'U
                 return;
             }
             
-            // Load initial data
             loadDashboardStats();
-            showTab('users'); // Load users tab by default
+            showTab('users');
 
-            // PDF Upload form handler
             document.getElementById('pdfUploadForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (!currentUploadEstimationId) {
@@ -1330,7 +1334,6 @@ Created: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'U
             console.log('Admin panel initialized successfully');
         });
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('pdfUploadModal');
             if (event.target === modal) {
@@ -1340,3 +1343,4 @@ Created: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'U
     </script>
 </body>
 </html>
+                
