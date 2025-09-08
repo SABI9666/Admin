@@ -1997,55 +1997,46 @@ Location: ${user.location || 'N/A'}
             try {
                 showNotification('Preparing file download...', 'info');
                 const data = await apiCall(`/admin/estimations/${estimationId}/files`);
-        
+
                 if (!data.files || data.files.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
-        
-                const files = data.files;
-                console.log(`Found ${files.length} files to download:`, files);
-        
-                let downloadedCount = 0;
-                let failedCount = 0;
-        
-                // Download each file using the corrected API endpoint
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    console.log(`Downloading file ${i + 1}:`, file);
-        
+
+                for (const file of data.files) {
                     try {
                         const token = getToken();
-                        // Use the exact endpoint format from your logs
                         const downloadUrl = `${API_BASE}/admin/estimations/${estimationId}/files/${encodeURIComponent(file.name)}/download`;
-        
-                        // Create a temporary link with authentication
+
+                        const response = await fetch(downloadUrl, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Download failed: ${response.status}`);
+                        }
+
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+
                         const link = document.createElement('a');
-                        link.href = `${downloadUrl}?token=${token}`;
-                        link.download = file.name || 'estimation_file';
-                        link.target = '_blank';
-        
-                        // Add to DOM, click, then remove
+                        link.href = url;
+                        link.download = file.name;
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-        
-                        downloadedCount++;
-        
-                        // Add delay between downloads to prevent browser blocking
-                        if (i < files.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        }
+
+                        window.URL.revokeObjectURL(url);
+
+                        showNotification(`Downloaded ${file.name}`, 'success');
+
                     } catch (fileError) {
-                        console.error(`Failed to download file ${file.name}:`, fileError);
-                        failedCount++;
+                        console.error(`Failed to download ${file.name}:`, fileError);
+                        showNotification(`Failed to download ${file.name}`, 'error');
                     }
-                }
-        
-                if (downloadedCount > 0) {
-                    showNotification(`Downloaded ${downloadedCount} files successfully${failedCount > 0 ? ` (${failedCount} failed)` : ''}`, 'success');
-                } else {
-                    showNotification('No files could be downloaded', 'error');
                 }
             } catch (error) {
                 console.error('Error downloading files:', error);
@@ -2055,26 +2046,37 @@ Location: ${user.location || 'N/A'}
 
         async function downloadEstimationResult(estimationId) {
             try {
-                showNotification('Downloading estimation result...', 'info');
+                showNotification('Preparing result download...', 'info');
                 const token = getToken();
-        
-                // Use the exact endpoint format from your logs
                 const downloadUrl = `${API_BASE}/admin/estimations/${estimationId}/result/download`;
         
-                // Create a temporary link with authentication
-                const link = document.createElement('a');
-                link.href = `${downloadUrl}?token=${token}`;
-                link.download = `estimation_result_${estimationId}.pdf`;
-                link.target = '_blank';
+                const response = await fetch(downloadUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
         
-                // Add to DOM, click, then remove
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                }
+        
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+        
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `estimation_result_${estimationId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
         
-                showNotification('Estimation result download started', 'success');
+                window.URL.revokeObjectURL(url);
+        
+                showNotification('Result download started.', 'success');
+                
             } catch (error) {
-                console.error('Error downloading result:', error);
+                console.error('Error downloading estimation result:', error);
                 showNotification(`Failed to download result: ${error.message}`, 'error');
             }
         }
