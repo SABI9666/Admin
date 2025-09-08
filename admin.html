@@ -707,7 +707,7 @@
     <script>
         console.log('🏗️ SteelConnect Admin Dashboard loaded');
         
-        const API_BASE = 'https://steelconnect-backend.onrender.com/api';
+        const API_BASE = 'https://steelconnect-backend.onrender.com/api';// OR test with just the base without /api:// const API_BASE = 'https://steelconnect-backend.onrender.com';
         let dashboardData = {};
         let usersData = [];
         let jobsData = [];
@@ -718,6 +718,259 @@
         let subscriptionPlans = [];
         let currentEstimationId = null;
         let currentUploadEstimationId = null;
+        
+        // --- CORE AUTH & API FUNCTIONS (UPDATED) ---
+
+        function getToken() {
+            const possibleKeys = [
+                'adminToken',
+                'jwtToken',
+                'token',
+                'authToken'
+            ];
+
+            // Check localStorage first
+            for (const key of possibleKeys) {
+                const token = localStorage.getItem(key);
+                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
+                    console.log(`Found token in localStorage.${key}:`, token.substring(0, 20) + '...');
+                    return token;
+                }
+            }
+
+            // Check sessionStorage
+            for (const key of possibleKeys) {
+                const token = sessionStorage.getItem(key);
+                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
+                    console.log(`Found token in sessionStorage.${key}:`, token.substring(0, 20) + '...');
+                    return token;
+                }
+            }
+
+            console.log('No valid token found');
+            return null;
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            const token = getToken();
+
+            if (!token) {
+                const error = 'No authentication token found';
+                console.error('❌', error);
+                throw new Error(error);
+            }
+
+            const config = {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                ...options
+            };
+
+            const fullUrl = `${API_BASE}${endpoint}`;
+            console.log(`API Call: ${config.method} ${fullUrl}`);
+
+            try {
+                const response = await fetch(fullUrl, config);
+
+                console.log(`Response: ${response.status} ${response.statusText}`);
+
+                if (response.status === 401) {
+                    const error = 'Authentication failed - invalid or expired token';
+                    console.error('🔐', error);
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    showLoginPrompt('Session expired. Please log in again.');
+                    throw new Error(error);
+                }
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch (e) {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
+
+                    console.error('API Error:', errorMessage);
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                console.log('API Success:', data);
+                return data;
+
+            } catch (error) {
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    const networkError = 'Network error: Cannot connect to server';
+                    console.error('🌐', networkError);
+                    throw new Error(networkError);
+                }
+
+                console.error('API Call failed:', error);
+                throw error;
+            }
+        }
+
+        // --- DASHBOARD & UI FUNCTIONS (UPDATED) ---
+        
+        async function loadDashboardStats() {
+            try {
+                console.log('📊 Loading dashboard statistics...');
+
+                const data = await apiCall('/admin/dashboard');
+                dashboardData = data.data || data;
+
+                console.log('✅ Dashboard data loaded:', dashboardData);
+
+                // Update auth status and admin name
+                const adminUser = dashboardData.adminUser || dashboardData.user?.email || 'Admin';
+                const adminName = adminUser.includes('@') ? adminUser.split('@')[0] : adminUser;
+                updateAuthStatus(true, adminName);
+
+                // Render stats cards
+                if (dashboardData.stats) {
+                    renderStatsGrid(dashboardData.stats);
+                } else {
+                    console.warn('No stats data found in dashboard response');
+                    renderStatsGrid({});
+                }
+            } catch (error) {
+                console.error('❌ Error loading dashboard:', error);
+                updateAuthStatus(false);
+
+                if (error.message.includes('Authentication failed') || error.message.includes('invalid or expired token')) {
+                    showLoginPrompt('Your session has expired. Please log in again.');
+                    return;
+                }
+
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Failed to load dashboard</strong><br>
+                        ${error.message}<br><br>
+                        <button class="btn btn-primary" onclick="loadDashboardStats()">
+                            <i class="fas fa-refresh"></i> Retry
+                        </button>
+                        <button class="btn btn-warning" onclick="showLoginPrompt()">
+                            <i class="fas fa-key"></i> Re-authenticate
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function showLoginPrompt(message = 'Authentication required to access admin panel') {
+            console.log('🔐 Showing login prompt:', message);
+
+            const existingOverlay = document.getElementById('loginOverlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            const loginOverlay = document.createElement('div');
+            loginOverlay.id = 'loginOverlay';
+            loginOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.9);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10001;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `;
+
+            loginOverlay.innerHTML = `
+                <div style="background: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                    <h2 style="margin-bottom: 20px; color: #333;">Admin Authentication Required</h2>
+                    <p style="margin-bottom: 30px; color: #666;">${message}</p>
+                    <input type="password" id="manualTokenInput" placeholder="Enter your admin token..."
+                           style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button onclick="setManualToken()" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">
+                            Login
+                        </button>
+                        <button onclick="redirectToLogin()" style="background: #6c757d; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer;">
+                            Go to Login Page
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(loginOverlay);
+            
+            setTimeout(() => {
+                const input = document.getElementById('manualTokenInput');
+                if (input) {
+                    input.focus();
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            setManualToken();
+                        }
+                    });
+                }
+            }, 200);
+        }
+
+        async function setManualToken() {
+            const tokenInput = document.getElementById('manualTokenInput');
+            const token = tokenInput.value.trim();
+
+            if (!token) {
+                alert('Please enter a token');
+                return;
+            }
+
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('jwtToken', token);
+            localStorage.setItem('token', token);
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const overlay = document.getElementById('loginOverlay');
+                    if (overlay) {
+                        overlay.remove();
+                    }
+                    loadDashboardStats();
+                } else {
+                    localStorage.removeItem('adminToken');
+                    localStorage.removeItem('jwtToken');
+                    localStorage.removeItem('token');
+                    alert('Invalid token. Please check and try again.');
+                    tokenInput.value = '';
+                }
+
+            } catch (error) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('jwtToken');
+                localStorage.removeItem('token');
+                alert('Authentication test failed: ' + error.message);
+                tokenInput.value = '';
+            }
+        }
+        
+        function redirectToLogin() {
+            window.location.href = 'index.html';
+        }
+        
+        // --- UNCHANGED FUNCTIONS ---
         
         // Upload estimation result function
         function uploadEstimationResult(estimationId) {
@@ -833,100 +1086,6 @@
                 }, 300);
             }, 4000);
         }
-
-        // Get authentication token
-        function getToken() {
-            // Check all possible token storage locations
-            const tokens = [
-                localStorage.getItem('adminToken'),
-                localStorage.getItem('token'),
-                localStorage.getItem('authToken'),
-                sessionStorage.getItem('adminToken'),
-                sessionStorage.getItem('token'),
-                sessionStorage.getItem('authToken')
-            ];
-            
-            // Return the first non-null token
-            for (const token of tokens) {
-                if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
-                    console.log('Found token:', token.substring(0, 20) + '...');
-                    return token;
-                }
-            }
-            
-            console.log('No valid token found in storage');
-            return null;
-        }
-        
-        // Redirect to login page
-        function redirectToLogin() {
-            showNotification('Please log in to access the admin panel', 'error');
-            
-            // Try different possible login pages
-            const possibleLoginPages = [
-                'index.html',
-                'login.html',
-                'admin-login.html',
-                '/',
-                '../index.html'
-            ];
-            
-            // Use the first one that exists or default to index.html
-            window.location.href = possibleLoginPages[0];
-        }
-        
-        // Make authenticated API call
-        async function apiCall(endpoint, options = {}) {
-            const token = getToken();
-            
-            if (!token) {
-                console.error('No authentication token available');
-                redirectToLogin();
-                throw new Error('No authentication token found');
-            }
-            
-            const config = {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                ...options
-            };
-            
-            console.log(`Making API call to: ${API_BASE}${endpoint}`);
-            
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, config);
-                
-                console.log(`API Response Status: ${response.status}`);
-                
-                if (response.status === 401) {
-                    console.error('Authentication failed - token may be expired or invalid');
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    redirectToLogin();
-                    throw new Error('Authentication failed');
-                }
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`API Error: ${response.status} - ${errorText}`);
-                    throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log(`API Response:`, data);
-                return data;
-                
-            } catch (error) {
-                if (error.message === 'Authentication failed') {
-                    // Don't log this as it's handled above
-                    throw error;
-                }
-                console.error('API Call failed:', error);
-                throw error;
-            }
-        }
         
         // Update authentication status indicator
         function updateAuthStatus(isAuthenticated, userName = null) {
@@ -947,47 +1106,6 @@
                 if (adminName) {
                     adminName.textContent = 'Not Logged In';
                 }
-            }
-        }
-        
-        // Load dashboard stats
-        async function loadDashboardStats() {
-            try {
-                console.log('📊 Loading dashboard statistics...');
-                
-                const data = await apiCall('/admin/dashboard');
-                dashboardData = data.data;
-                
-                console.log('✅ Dashboard data loaded:', dashboardData);
-                
-                // Update auth status and admin name
-                updateAuthStatus(true, dashboardData.adminUser?.split('@')[0] || 'Admin');
-                
-                // Render stats cards
-                renderStatsGrid(dashboardData.stats);
-                
-            } catch (error) {
-                console.error('❌ Error loading dashboard:', error);
-                updateAuthStatus(false);
-                
-                if (error.message === 'Authentication failed') {
-                    showLoginPrompt();
-                    return;
-                }
-                
-                document.getElementById('statsGrid').innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Failed to load dashboard: ${error.message}
-                        <br><br>
-                        <button class="btn btn-primary" onclick="loadDashboardStats()">
-                            <i class="fas fa-refresh"></i> Retry
-                        </button>
-                        <button class="btn btn-secondary" onclick="showLoginPrompt()">
-                            <i class="fas fa-key"></i> Re-authenticate
-                        </button>
-                    </div>
-                `;
             }
         }
         
@@ -2478,113 +2596,6 @@ Notes: ${estimation.notes || 'No notes provided'}
             }, 5 * 60 * 1000);
         });
 
-        // Show login prompt overlay
-        function showLoginPrompt() {
-            const loginOverlay = document.createElement('div');
-            loginOverlay.id = 'loginOverlay';
-            loginOverlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.8);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-            `;
-            
-            loginOverlay.innerHTML = `
-                <div style="background: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 400px; margin: 20px;">
-                    <h2 style="margin-bottom: 20px; color: #333;">
-                        <i class="fas fa-lock"></i> Authentication Required
-                    </h2>
-                    <p style="margin-bottom: 20px; color: #666;">
-                        Please enter your admin authentication token:
-                    </p>
-                    <input type="password" id="manualTokenInput" placeholder="Paste your token here..." 
-                           style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px;">
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button onclick="setManualToken()" class="btn btn-success">
-                            <i class="fas fa-sign-in-alt"></i> Login
-                        </button>
-                        <button onclick="redirectToLogin()" class="btn btn-secondary">
-                            <i class="fas fa-external-link-alt"></i> Go to Login Page
-                        </button>
-                    </div>
-                    <p style="margin-top: 20px; font-size: 12px; color: #888;">
-                        Token will be stored securely in your browser
-                    </p>
-                </div>
-            `;
-            
-            document.body.appendChild(loginOverlay);
-            
-            // Focus on input
-            setTimeout(() => {
-                document.getElementById('manualTokenInput').focus();
-            }, 100);
-            
-            // Allow Enter key to submit
-            document.getElementById('manualTokenInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    setManualToken();
-                }
-            });
-        }
-
-        // Set manual token and try to authenticate
-        async function setManualToken() {
-            const tokenInput = document.getElementById('manualTokenInput');
-            const token = tokenInput.value.trim();
-            
-            if (!token) {
-                showNotification('Please enter a token', 'warning');
-                return;
-            }
-            
-            // Store token
-            localStorage.setItem('adminToken', token);
-            
-            try {
-                showNotification('Testing authentication...', 'info');
-                
-                // Test the token
-                const response = await fetch(`${API_BASE}/admin/dashboard`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    showNotification('Authentication successful!', 'success');
-                    
-                    // Remove login overlay
-                    const overlay = document.getElementById('loginOverlay');
-                    if (overlay) {
-                        overlay.remove();
-                    }
-                    
-                    // Start loading dashboard
-                    loadDashboardStats();
-                    
-                } else {
-                    localStorage.removeItem('adminToken');
-                    showNotification('Invalid token. Please check and try again.', 'error');
-                    tokenInput.value = '';
-                    tokenInput.focus();
-                }
-                
-            } catch (error) {
-                localStorage.removeItem('adminToken');
-                showNotification('Authentication test failed: ' + error.message, 'error');
-                tokenInput.value = '';
-                tokenInput.focus();
-            }
-        }
-
         // Modal event handlers
         window.onclick = function(event) {
             const modals = ['statusModal', 'pdfUploadModal'];
@@ -2671,11 +2682,3 @@ Notes: ${estimation.notes || 'No notes provided'}
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
