@@ -862,7 +862,7 @@
             try {
                 console.log('📊 Loading dashboard statistics...');
 
-                const data = await apiCall('/admin/dashboard');
+                const data = await apiCall('/dashboard');
                 // If apiCall returns without data due to no token, exit early.
                 if (!data) return;
 
@@ -984,7 +984,7 @@
                 messageEl.textContent = 'Logging in...';
                 messageEl.style.color = '#666';
 
-                const response = await fetch(`${API_BASE}/auth/login`, {
+                const response = await fetch(`${API_BASE}/auth/login/admin`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1046,7 +1046,7 @@
                     throw new Error('No authentication token found');
                 }
                 
-                const response = await fetch(`${API_BASE}/estimation/${estimationId}/result`, {
+                const response = await fetch(`${API_BASE}/estimations/${estimationId}/result`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -1280,7 +1280,7 @@
         async function loadUsersData() {
             try {
                 console.log('👥 Loading users data...');
-                const data = await apiCall('/admin/users');
+                const data = await apiCall('/users');
                 usersData = data.data;
                 console.log('✅ Users data loaded:', usersData.length, 'users');
                 renderUsersTab();
@@ -1377,7 +1377,7 @@
         async function loadJobsData() {
             try {
                 console.log('💼 Loading jobs data...');
-                const data = await apiCall('/admin/jobs');
+                const data = await apiCall('/jobs');
                 jobsData = data.data;
                 console.log('✅ Jobs data loaded:', jobsData.length, 'jobs');
                 renderJobsTab();
@@ -1490,7 +1490,7 @@
         async function loadQuotesData() {
             try {
                 console.log('💰 Loading quotes data...');
-                const data = await apiCall('/admin/quotes');
+                const data = await apiCall('/quotes');
                 quotesData = data.data;
                 console.log('✅ Quotes data loaded:', quotesData.length, 'quotes');
                 renderQuotesTab();
@@ -1639,7 +1639,7 @@
                                         <div style="display: flex; align-items: center; gap: 10px;">
                                             <span>${estimation.uploadedFiles?.length || estimation.files?.length || 0} files</span>
                                             ${estimation.uploadedFiles?.length > 0 || estimation.files?.length > 0 ? `
-                                                <button class="btn btn-sm btn-secondary" onclick="downloadEstimationFiles('${estimation._id || estimation.id}')" title="Download Files">
+                                                <button class="btn btn-sm btn-secondary" onclick="downloadAllEstimationFiles('${estimation._id || estimation.id}')" title="Download Files">
                                                     <i class="fas fa-download"></i>
                                                 </button>
                                             ` : ''}
@@ -1677,7 +1677,7 @@
         async function loadMessagesData() {
             try {
                 console.log('💬 Loading messages data...');
-                const data = await apiCall('/admin/messages');
+                const data = await apiCall('/messages');
                 messagesData = data.data?.messages || [];
                 console.log('✅ Messages data loaded:', messagesData.length, 'messages');
                 renderMessagesTab();
@@ -1702,7 +1702,7 @@
         async function loadEstimationsData() {
             try {
                 console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/admin/estimations');
+                const data = await apiCall('/estimations');
                 estimationsData = data.data?.estimations || [];
                 console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
                 renderEstimationsTab();
@@ -1737,7 +1737,7 @@
 
             try {
                 showNotification('Checking authentication...', 'info');
-                const response = await fetch(`${API_BASE}/admin/dashboard`, {
+                const response = await fetch(`${API_BASE}/dashboard`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -1782,16 +1782,10 @@
         async function loadSubscriptionsData() {
             try {
                 console.log('💳 Loading subscriptions data...');
-                const [subscriptionsResponse, plansResponse] = await Promise.all([
-                    apiCall('/admin/subscriptions'),
-                    apiCall('/admin/subscription-plans')
-                ]);
-                
-                subscriptionsData = subscriptionsResponse.subscriptions || [];
-                subscriptionPlans = plansResponse.plans || [];
+                const data = await apiCall('/subscriptions');
+                subscriptionsData = data.subscriptions || [];
                 
                 console.log('✅ Subscriptions data loaded:', subscriptionsData.length, 'subscriptions');
-                console.log('✅ Plans data loaded:', subscriptionPlans.length, 'plans');
                 
                 renderSubscriptionsTab();
             } catch (error) {
@@ -1944,7 +1938,7 @@
         async function viewUserDetails(userId) {
             try {
                 showNotification('Loading user details...', 'info');
-                const data = await apiCall(`/admin/users/${userId}`);
+                const data = await apiCall(`/users/${userId}`);
                 
                 const user = data.user;
                 const userDetails = `
@@ -1973,38 +1967,13 @@ Location: ${user.location || 'N/A'}
                 const action = newStatus ? 'Activating' : 'Deactivating';
                 showNotification(`${action} user...`, 'info');
                 
-                // Try different possible endpoints for user status update
-                const possibleEndpoints = [
-                    `/admin/users/${userId}/status`,
-                    `/admin/users/${userId}`,
-                    `/users/${userId}/status`,
-                    `/users/${userId}`
-                ];
-                
-                let success = false;
-                let lastError = null;
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        await apiCall(endpoint, {
-                            method: 'PATCH',
-                            body: JSON.stringify({ 
-                                isActive: newStatus,
-                                status: newStatus ? 'active' : 'inactive'
-                            })
-                        });
-                        success = true;
-                        break;
-                    } catch (error) {
-                        lastError = error;
-                        console.log(`Endpoint ${endpoint} failed, trying next...`);
-                        continue;
-                    }
-                }
-                
-                if (!success) {
-                    throw lastError;
-                }
+                await apiCall(`/users/${userId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ 
+                        isActive: newStatus,
+                        status: newStatus ? 'active' : 'inactive'
+                    })
+                });
                 
                 const user = usersData.find(u => (u._id || u.id) === userId);
                 if (user) {
@@ -2021,13 +1990,13 @@ Location: ${user.location || 'N/A'}
         }
 
         // --- FIXED DOWNLOAD FUNCTIONS ---
-
         async function downloadEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing file download...', 'info');
-                const data = await apiCall(`/admin/estimations/${estimationId}`);
-                if (!data) return; 
-
+                const data = await apiCall(`/estimations/${estimationId}`);
+                if (!data || !data.data || !data.data.estimation) {
+                    throw new Error("Estimation data not found");
+                }
                 const estimation = data.data.estimation;
                 if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
@@ -2042,13 +2011,10 @@ Location: ${user.location || 'N/A'}
                         link.href = file.url;
                         link.download = file.name;
                         link.target = '_blank';
-                        
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
                         downloadedCount++;
-                        
                         await new Promise(resolve => setTimeout(resolve, 500));
                     } catch (fileError) {
                         failedCount++;
@@ -2073,8 +2039,10 @@ Location: ${user.location || 'N/A'}
         async function downloadEstimationResult(estimationId) {
             try {
                 showNotification('Preparing result download...', 'info');
-                const data = await apiCall(`/admin/estimations/${estimationId}`);
-                if(!data) return;
+                const data = await apiCall(`/estimations/${estimationId}`);
+                if(!data || !data.data || !data.data.estimation) {
+                    throw new Error("Estimation data not found");
+                };
 
                 const estimation = data.data.estimation;
                 if (!estimation.resultFile) {
@@ -2107,7 +2075,7 @@ Location: ${user.location || 'N/A'}
         async function downloadAllEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing bulk download...', 'info');
-                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                const data = await apiCall(`/estimations/${estimationId}`);
                 const estimation = data.data.estimation;
                 if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
@@ -2144,7 +2112,7 @@ Location: ${user.location || 'N/A'}
         // FIXED: File viewing with proper data access
         async function viewEstimationFiles(estimationId) {
             try {
-                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                const data = await apiCall(`/estimations/${estimationId}`);
                 const estimation = data.data.estimation;
                 const files = estimation.uploadedFiles || [];
                 if (files.length === 0) {
@@ -2219,7 +2187,7 @@ Location: ${user.location || 'N/A'}
         async function viewEstimationDetails(estimationId) {
             try {
                 showNotification('Loading estimation details...', 'info');
-                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                const data = await apiCall(`/estimations/${estimationId}`);
                 if (!data) return;
                 
                 const estimation = data.data.estimation;
@@ -2358,7 +2326,7 @@ Location: ${user.location || 'N/A'}
             try {
                 showNotification(`${block ? 'Blocking' : 'Unblocking'} message...`, 'info');
 
-                await apiCall(`/admin/messages/${messageId}/block`, {
+                await apiCall(`/messages/${messageId}/block`, {
                     method: 'PATCH',
                     body: JSON.stringify({
                         block: block,
@@ -2410,7 +2378,7 @@ Location: ${user.location || 'N/A'}
             try {
                 showNotification(`${block ? 'Blocking' : 'Unblocking'} user messages...`, 'info');
 
-                await apiCall(`/admin/messages/user/${encodeURIComponent(userEmail)}/block`, {
+                await apiCall(`/messages/user/${encodeURIComponent(userEmail)}/block`, {
                     method: 'PATCH',
                     body: JSON.stringify({
                         block: block,
@@ -2460,7 +2428,7 @@ Location: ${user.location || 'N/A'}
 
                 // Mark all unread messages as read
                 const promises = unreadMessages.map(message =>
-                    apiCall(`/admin/messages/${message._id || message.id}/status`, {
+                    apiCall(`/messages/${message._id || message.id}/status`, {
                         method: 'PATCH',
                         body: JSON.stringify({
                             status: 'read',
@@ -2490,7 +2458,7 @@ Location: ${user.location || 'N/A'}
         async function markAsRead(messageId) {
             try {
                 showNotification('Marking message as read...', 'info');
-                await apiCall(`/admin/messages/${messageId}/status`, {
+                await apiCall(`/messages/${messageId}/status`, {
                     method: 'PATCH',
                     body: JSON.stringify({
                         status: 'read',
@@ -2518,7 +2486,7 @@ Location: ${user.location || 'N/A'}
         async function viewMessageDetails(messageId) {
             try {
                 showNotification('Loading message details...', 'info');
-                const data = await apiCall(`/admin/messages/${messageId}`);
+                const data = await apiCall(`/messages/${messageId}`);
 
                 const message = data.data?.message;
                 if (!message) {
@@ -2563,7 +2531,7 @@ Location: ${user.location || 'N/A'}
                 }
 
                 showNotification('Sending reply...', 'info');
-                await apiCall(`/admin/messages/${messageId}/reply`, {
+                await apiCall(`/messages/${messageId}/reply`, {
                     method: 'POST',
                     body: JSON.stringify({
                         content: replyContent.trim()
@@ -2593,7 +2561,7 @@ Location: ${user.location || 'N/A'}
     
             try {
                 showNotification('Deleting message...', 'info');
-                await apiCall(`/admin/messages/${messageId}`, {
+                await apiCall(`/messages/${messageId}`, {
                     method: 'DELETE'
                 });
     
@@ -2894,7 +2862,7 @@ Location: ${user.location || 'N/A'}
                     
                     try {
                         showNotification('Updating status...', 'info');
-                        await apiCall(`/estimation/${currentEstimationId}/status`, {
+                        await apiCall(`/estimations/${currentEstimationId}/status`, {
                             method: 'PATCH',
                             body: JSON.stringify({ status, notes })
                         });
@@ -2957,4 +2925,3 @@ Location: ${user.location || 'N/A'}
     </script>
 </body>
 </html>
-
