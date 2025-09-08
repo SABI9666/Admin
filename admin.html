@@ -124,6 +124,14 @@
             padding: 5px 10px;
             font-size: 12px;
         }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            padding: 0;
+        }
         
         .stats-grid {
             display: grid;
@@ -499,6 +507,20 @@
             resize: vertical;
             min-height: 100px;
         }
+
+        /* Styles for new modals */
+        .files-modal, .estimation-details-modal { padding: 1rem; }
+        .files-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .file-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .file-icon { font-size: 2.5rem; color: #007bff; margin-bottom: 1rem; }
+        .file-info h4 { margin: 0; font-size: 1rem; }
+        .file-info p { margin: 0.25rem 0; color: #6c757d; }
+        .file-actions { margin-top: 1rem; display: flex; gap: 0.5rem; }
+        .modal-actions { margin-top: 2rem; text-align: right; }
+        .estimation-header { display: flex; gap: 2rem; margin-bottom: 1.5rem; }
+        .estimation-description, .estimation-files, .estimation-result, .estimation-metadata { margin-bottom: 1.5rem; }
+        .files-list .file-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f1f3f5; border-radius: 4px; margin-bottom: 0.5rem; }
+        .file-size { color: #6c757d; margin-left: auto; }
         
         @media (max-width: 768px) {
             .header {
@@ -674,7 +696,7 @@
                     <textarea id="statusNotes" placeholder="Add any notes about this status change..."></textarea>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="closeModal('statusModal')">Cancel</button>
+                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-success">Update Status</button>
                 </div>
             </form>
@@ -686,7 +708,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Upload Estimation Result</h3>
-                <span class="close" onclick="closeModal('pdfUploadModal')">&times;</span>
+                <span class="close" onclick="closeModal()">&times;</span>
             </div>
             <form id="pdfUploadForm" enctype="multipart/form-data">
                 <div class="form-group">
@@ -703,12 +725,19 @@
                     <textarea id="resultNotes" name="notes" placeholder="Add any additional notes about this estimation..."></textarea>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="closeModal('pdfUploadModal')">Cancel</button>
+                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-upload"></i> Upload Result
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Generic Modal for details and file viewing -->
+    <div id="genericModal" class="modal">
+        <div class="modal-content" id="genericModalContent">
+            <!-- Content will be injected here by JavaScript -->
         </div>
     </div>
 
@@ -1044,7 +1073,7 @@
                 
                 // Refresh the estimations tab
                 renderEstimationsTab();
-                closeModal('pdfUploadModal');
+                closeModal();
                 
                 return data;
                 
@@ -1993,88 +2022,102 @@ Location: ${user.location || 'N/A'}
 
         // --- FIXED DOWNLOAD FUNCTIONS ---
 
+        // FIXED: Admin panel download functions
+        // Replace the existing download functions in your admin panel script
+        // --- FIXED DOWNLOAD FUNCTIONS ---
         async function downloadEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing file download...', 'info');
-                const data = await apiCall(`/admin/estimations/${estimationId}/files`);
-
-                if (!data.files || data.files.length === 0) {
+                // Get estimation details to access files
+                const data = await apiCall(`/estimation/${estimationId}`);
+                const estimation = data.estimation;
+                if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
-
-                for (const file of data.files) {
+                let downloadedCount = 0;
+                const token = getToken();
+                // Download each file individually
+                for (const file of estimation.uploadedFiles) {
                     try {
-                        const token = getToken();
-                        const downloadUrl = `${API_BASE}/admin/estimations/${estimationId}/files/${encodeURIComponent(file.name)}/download`;
-
-                        const response = await fetch(downloadUrl, {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`Download failed: ${response.status}`);
-                        }
-
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-
+                        // Create temporary link for download
                         const link = document.createElement('a');
-                        link.href = url;
+                        link.href = file.url;
                         link.download = file.name;
+                        link.target = '_blank';
+                        // Add auth header if needed (for protected files)
+                        if (token && !file.url.includes('storage.googleapis.com')) {
+                            // For files that require authentication
+                            const response = await fetch(file.url, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                const objectUrl = URL.createObjectURL(blob);
+                                link.href = objectUrl;
+                            }
+                        }
+                        // Trigger download
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-
-                        window.URL.revokeObjectURL(url);
-
-                        showNotification(`Downloaded ${file.name}`, 'success');
-
+                        downloadedCount++;
+                        // Small delay to prevent browser blocking multiple downloads
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     } catch (fileError) {
-                        console.error(`Failed to download ${file.name}:`, fileError);
+                        console.error(`Failed to download file ${file.name}:`, fileError);
                         showNotification(`Failed to download ${file.name}`, 'error');
                     }
+                }
+                if (downloadedCount > 0) {
+                    showNotification(`Downloaded ${downloadedCount} files successfully`, 'success');
                 }
             } catch (error) {
                 console.error('Error downloading files:', error);
                 showNotification(`Failed to download files: ${error.message}`, 'error');
             }
         }
-
         async function downloadEstimationResult(estimationId) {
             try {
                 showNotification('Preparing result download...', 'info');
-                const token = getToken();
-                const downloadUrl = `${API_BASE}/admin/estimations/${estimationId}/result/download`;
-        
-                const response = await fetch(downloadUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-        
-                if (!response.ok) {
-                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                // Get estimation details to access result file
+                const data = await apiCall(`/estimation/${estimationId}`);
+                const estimation = data.estimation;
+                if (!estimation.resultFile) {
+                    showNotification('No result file available for this estimation', 'warning');
+                    return;
                 }
-        
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-        
+                const resultFile = estimation.resultFile;
+                const token = getToken();
+                // Create download link
                 const link = document.createElement('a');
-                link.href = url;
-                link.download = `estimation_result_${estimationId}.pdf`;
+                link.href = resultFile.url;
+                link.download = resultFile.name || `estimation_result_${estimationId}.pdf`;
+                link.target = '_blank';
+                // Handle authenticated downloads if needed
+                if (token && !resultFile.url.includes('storage.googleapis.com')) {
+                    try {
+                        const response = await fetch(resultFile.url, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const objectUrl = URL.createObjectURL(blob);
+                            link.href = objectUrl;
+                        }
+                    } catch (authError) {
+                        console.warn('Auth download failed, trying direct:', authError);
+                    }
+                }
+                // Trigger download
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-        
-                window.URL.revokeObjectURL(url);
-        
-                showNotification('Result download started.', 'success');
-                
+                showNotification('Result download started', 'success');
             } catch (error) {
                 console.error('Error downloading estimation result:', error);
                 showNotification(`Failed to download result: ${error.message}`, 'error');
@@ -2083,32 +2126,197 @@ Location: ${user.location || 'N/A'}
 
         // --- END FIXED DOWNLOAD FUNCTIONS ---
         
-        // View estimation details with enhanced file information
+        // --- NEW HELPER & VIEW FUNCTIONS ---
+
+        // ENHANCED: Download all files with better error handling
+        async function downloadAllEstimationFiles(estimationId) {
+            try {
+                showNotification('Preparing bulk download...', 'info');
+                const data = await apiCall(`/estimation/${estimationId}`);
+                const estimation = data.estimation;
+                if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
+                    showNotification('No files found for this estimation', 'warning');
+                    return;
+                }
+                let downloadedCount = 0;
+                let failedCount = 0;
+                const token = getToken();
+                for (const file of estimation.uploadedFiles) {
+                    try {
+                        const link = document.createElement('a');
+                        link.href = file.url;
+                        link.download = file.name;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        downloadedCount++;
+                        // Delay to prevent pop-up blockers
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                    } catch (fileError) {
+                        console.error(`Failed to download file ${file.name}:`, fileError);
+                        failedCount++;
+                    }
+                }
+                const message = `Downloaded ${downloadedCount} files successfully${failedCount > 0 ? ` (${failedCount} failed)` : ''}`;
+                showNotification(message, downloadedCount > 0 ? 'success' : 'error');
+            } catch (error) {
+                console.error('Error downloading files:', error);
+                showNotification(`Failed to download files: ${error.message}`, 'error');
+            }
+        }
+
+        // FIXED: File viewing with proper data access
+        async function viewEstimationFiles(estimationId) {
+            try {
+                const data = await apiCall(`/estimation/${estimationId}`);
+                const estimation = data.estimation;
+                const files = estimation.uploadedFiles || [];
+                if (files.length === 0) {
+                    showNotification('No files found for this estimation', 'info');
+                    return;
+                }
+                showModal('files-modal', `
+                    <div class="files-modal">
+                        <h3>Uploaded Files</h3>
+                        <div class="files-grid">
+                            ${files.map(file => `
+                                <div class="file-card">
+                                    <div class="file-icon"><i class="fas fa-${getFileIcon(file.type)}"></i></div>
+                                    <div class="file-info">
+                                        <h4>${file.name}</h4>
+                                        <p>${formatFileSize(file.size)}</p>
+                                        <small>Uploaded: ${formatDate(file.uploadedAt)}</small>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button class="btn btn-sm btn-primary" onclick="downloadSingleFile('${file.url}', '${file.name}')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="viewFileInNewTab('${file.url}')">
+                                            <i class="fas fa-external-link-alt"></i> View
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-primary" onclick="downloadAllEstimationFiles('${estimationId}')">
+                                <i class="fas fa-download"></i> Download All
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                        </div>
+                    </div>
+                `);
+            } catch (error) {
+                console.error('Error viewing files:', error);
+                showNotification('Failed to load files', 'error');
+            }
+        }
+
+        // HELPER: Download individual file
+        function downloadSingleFile(fileUrl, fileName) {
+            try {
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.download = fileName;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showNotification(`Downloading ${fileName}...`, 'info');
+            } catch (error) {
+                console.error('Error downloading file:', error);
+                showNotification('Failed to download file', 'error');
+            }
+        }
+
+        // HELPER: View file in new tab
+        function viewFileInNewTab(fileUrl) {
+            try {
+                window.open(fileUrl, '_blank');
+            } catch (error) {
+                console.error('Error opening file:', error);
+                showNotification('Failed to open file', 'error');
+            }
+        }
+
+        // FIXED: Enhanced estimation details view with proper file access
         async function viewEstimationDetails(estimationId) {
             try {
                 showNotification('Loading estimation details...', 'info');
                 const data = await apiCall(`/estimation/${estimationId}`);
-                
                 const estimation = data.estimation;
-                const filesList = estimation.uploadedFiles?.map(file => file.name).join(', ') || 'No files';
-                
-                const estimationDetails = `
-Estimation Details:
-Project: ${estimation.projectTitle || 'Untitled'}
-Contractor: ${estimation.contractorName || 'Unknown'}
-Status: ${estimation.status || 'pending'}
-Amount: ${estimation.estimatedAmount ? `${estimation.estimatedAmount.toLocaleString()}` : 'Pending'}
-Files: ${filesList}
-Submitted: ${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}
-Notes: ${estimation.notes || 'No notes provided'}
-                `;
-                
-                alert(estimationDetails);
+                showModal('estimation-details-modal', `
+                    <div class="estimation-details-modal">
+                        <h3>Estimation Details</h3>
+                        <div class="estimation-content">
+                            <div class="estimation-header">
+                                <div class="contractor-section">
+                                    <h4>Contractor Information</h4>
+                                    <p><strong>Name:</strong> ${estimation.contractorName}</p>
+                                    <p><strong>Email:</strong> ${estimation.contractorEmail}</p>
+                                    <p><strong>Company:</strong> ${estimation.contractorCompany || 'Not specified'}</p>
+                                </div>
+                                <div class="project-section">
+                                    <h4>Project Information</h4>
+                                    <p><strong>Title:</strong> ${estimation.projectTitle}</p>
+                                    <p><strong>Type:</strong> ${estimation.projectType || 'General'}</p>
+                                    <p><strong>Status:</strong> <span class="status-badge ${estimation.status}">${estimation.status}</span></p>
+                                </div>
+                            </div>
+                            <div class="estimation-description">
+                                <h4>Project Description</h4>
+                                <p>${estimation.description || 'No description provided'}</p>
+                            </div>
+                            ${estimation.uploadedFiles?.length ? `
+                                <div class="estimation-files">
+                                    <h4>Uploaded Files (${estimation.uploadedFiles.length})</h4>
+                                    <div class="files-list">
+                                        ${estimation.uploadedFiles.map(file => `
+                                            <div class="file-item">
+                                                <i class="fas fa-${getFileIcon(file.type)}"></i>
+                                                <span>${file.name}</span>
+                                                <span class="file-size">(${formatFileSize(file.size)})</span>
+                                                <button class="btn btn-sm btn-link" onclick="downloadSingleFile('${file.url}', '${file.name}')" title="Download">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : '<p><em>No files uploaded</em></p>'}
+                            ${estimation.resultFile ? `
+                                <div class="estimation-result">
+                                    <h4>Result File</h4>
+                                    <div class="result-file-info">
+                                        <i class="fas fa-${getFileIcon(estimation.resultFile.type)}"></i>
+                                        <span>${estimation.resultFile.name}</span>
+                                        <button class="btn btn-sm btn-success" onclick="downloadSingleFile('${estimation.resultFile.url}', '${estimation.resultFile.name}')">
+                                            <i class="fas fa-download"></i> Download Result
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <div class="estimation-metadata">
+                                <p><strong>Created:</strong> ${formatDate(estimation.createdAt)}</p>
+                                <p><strong>Due Date:</strong> ${estimation.dueDate ? formatDate(estimation.dueDate) : 'Not set'}</p>
+                                <p><strong>Last Updated:</strong> ${formatDate(estimation.updatedAt)}</p>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            ${estimation.uploadedFiles?.length ? `
+                                <button class="btn btn-primary" onclick="downloadAllEstimationFiles('${estimationId}')">
+                                    <i class="fas fa-download"></i> Download All Files
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                        </div>
+                    </div>
+                `);
                 showNotification('Estimation details loaded successfully', 'success');
-                
             } catch (error) {
                 console.error('Error loading estimation details:', error);
-                showNotification(`Failed to load estimation details: ${error.message}`, 'error');
+                showNotification('Failed to load estimation details', 'error');
             }
         }
 
@@ -2567,9 +2775,28 @@ Notes: ${estimation.notes || 'No notes provided'}
         }
 
         // Modal functions
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) modal.style.display = 'none';
+        function closeModal() {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.style.display = 'none';
+            });
+            // Clear content of generic modal
+            const genericContent = document.getElementById('genericModalContent');
+            if (genericContent) {
+                genericContent.innerHTML = '';
+            }
+        }
+
+        function showModal(id, content) {
+            const modalContent = document.getElementById('genericModalContent');
+            const modal = document.getElementById('genericModal');
+            
+            if(modal && modalContent){
+                modalContent.innerHTML = content;
+                modal.style.display = 'block';
+            } else {
+                console.error("Modal container not found!");
+            }
         }
 
         // Refresh functions
@@ -2645,14 +2872,38 @@ Notes: ${estimation.notes || 'No notes provided'}
 
         // Modal event handlers
         window.onclick = function(event) {
-            const modals = ['statusModal', 'pdfUploadModal'];
-            modals.forEach(modalId => {
-                const modal = document.getElementById(modalId);
-                if (event.target === modal) {
-                    modal.style.display = 'none';
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target == modal) {
+                    closeModal();
                 }
             });
         }
+        
+        // Helper functions for new modals
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        }
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        function getFileIcon(fileType) {
+            if (!fileType) return 'file';
+            if (fileType.includes('pdf')) return 'file-pdf';
+            if (fileType.includes('image')) return 'file-image';
+            if (fileType.includes('zip') || fileType.includes('archive')) return 'file-archive';
+            if (fileType.includes('word')) return 'file-word';
+            if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'file-excel';
+            return 'file-alt';
+        }
+
 
         // Status form handler - Initialize after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
@@ -2677,7 +2928,7 @@ Notes: ${estimation.notes || 'No notes provided'}
                         }
                         
                         renderEstimationsTab();
-                        closeModal('statusModal');
+                        closeModal();
                         showNotification('Status updated successfully!', 'success');
                         
                     } catch (error) {
