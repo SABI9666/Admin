@@ -2022,108 +2022,83 @@ Location: ${user.location || 'N/A'}
 
         // --- FIXED DOWNLOAD FUNCTIONS ---
 
-        // FIXED: Admin panel download functions
-        // Replace the existing download functions in your admin panel script
-        // --- FIXED DOWNLOAD FUNCTIONS ---
         async function downloadEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing file download...', 'info');
-                // Get estimation details to access files
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                if (!data) return; 
+
+                const estimation = data.data.estimation;
                 if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
                 let downloadedCount = 0;
-                const token = getToken();
-                // Download each file individually
+                let failedCount = 0;
+                
                 for (const file of estimation.uploadedFiles) {
                     try {
-                        // Create temporary link for download
                         const link = document.createElement('a');
                         link.href = file.url;
                         link.download = file.name;
                         link.target = '_blank';
-                        // Add auth header if needed (for protected files)
-                        if (token && !file.url.includes('storage.googleapis.com')) {
-                            // For files that require authentication
-                            const response = await fetch(file.url, {
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
-                            });
-                            if (response.ok) {
-                                const blob = await response.blob();
-                                const objectUrl = URL.createObjectURL(blob);
-                                link.href = objectUrl;
-                            }
-                        }
-                        // Trigger download
+                        
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
+                        
                         downloadedCount++;
-                        // Small delay to prevent browser blocking multiple downloads
+                        
                         await new Promise(resolve => setTimeout(resolve, 500));
                     } catch (fileError) {
+                        failedCount++;
                         console.error(`Failed to download file ${file.name}:`, fileError);
                         showNotification(`Failed to download ${file.name}`, 'error');
                     }
                 }
+
                 if (downloadedCount > 0) {
-                    showNotification(`Downloaded ${downloadedCount} files successfully`, 'success');
+                     const message = `Downloaded ${downloadedCount} files successfully${failedCount > 0 ? ` (${failedCount} failed)` : ''}`;
+                     showNotification(message, failedCount > 0 ? 'warning' : 'success');
+                } else {
+                    showNotification('Could not download any files.', 'error');
                 }
+
             } catch (error) {
-                console.error('Error downloading files:', error);
-                showNotification(`Failed to download files: ${error.message}`, 'error');
+                console.error('Error preparing to download files:', error);
+                showNotification(`Failed to get file list: ${error.message}`, 'error');
             }
         }
+        
         async function downloadEstimationResult(estimationId) {
             try {
                 showNotification('Preparing result download...', 'info');
-                // Get estimation details to access result file
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                if(!data) return;
+
+                const estimation = data.data.estimation;
                 if (!estimation.resultFile) {
                     showNotification('No result file available for this estimation', 'warning');
                     return;
                 }
                 const resultFile = estimation.resultFile;
-                const token = getToken();
-                // Create download link
+                
                 const link = document.createElement('a');
                 link.href = resultFile.url;
                 link.download = resultFile.name || `estimation_result_${estimationId}.pdf`;
                 link.target = '_blank';
-                // Handle authenticated downloads if needed
-                if (token && !resultFile.url.includes('storage.googleapis.com')) {
-                    try {
-                        const response = await fetch(resultFile.url, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            const objectUrl = URL.createObjectURL(blob);
-                            link.href = objectUrl;
-                        }
-                    } catch (authError) {
-                        console.warn('Auth download failed, trying direct:', authError);
-                    }
-                }
-                // Trigger download
+                
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                
                 showNotification('Result download started', 'success');
             } catch (error) {
                 console.error('Error downloading estimation result:', error);
                 showNotification(`Failed to download result: ${error.message}`, 'error');
             }
         }
-
+        
         // --- END FIXED DOWNLOAD FUNCTIONS ---
         
         // --- NEW HELPER & VIEW FUNCTIONS ---
@@ -2132,15 +2107,15 @@ Location: ${user.location || 'N/A'}
         async function downloadAllEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing bulk download...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                const estimation = data.data.estimation;
                 if (!estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
                 let downloadedCount = 0;
                 let failedCount = 0;
-                const token = getToken();
+
                 for (const file of estimation.uploadedFiles) {
                     try {
                         const link = document.createElement('a');
@@ -2169,8 +2144,8 @@ Location: ${user.location || 'N/A'}
         // FIXED: File viewing with proper data access
         async function viewEstimationFiles(estimationId) {
             try {
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                const estimation = data.data.estimation;
                 const files = estimation.uploadedFiles || [];
                 if (files.length === 0) {
                     showNotification('No files found for this estimation', 'info');
@@ -2244,8 +2219,10 @@ Location: ${user.location || 'N/A'}
         async function viewEstimationDetails(estimationId) {
             try {
                 showNotification('Loading estimation details...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}`);
-                const estimation = data.estimation;
+                const data = await apiCall(`/admin/estimations/${estimationId}`);
+                if (!data) return;
+                
+                const estimation = data.data.estimation;
                 showModal('estimation-details-modal', `
                     <div class="estimation-details-modal">
                         <h3>Estimation Details</h3>
@@ -2787,7 +2764,7 @@ Location: ${user.location || 'N/A'}
             }
         }
 
-        function showModal(id, content) {
+        function showModal(id, content) { // id is not used, but let's keep it for compatibility with old code.
             const modalContent = document.getElementById('genericModalContent');
             const modal = document.getElementById('genericModal');
             
@@ -2980,3 +2957,4 @@ Location: ${user.location || 'N/A'}
     </script>
 </body>
 </html>
+
