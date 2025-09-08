@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Admin Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -323,6 +324,7 @@
             font-size: 12px;
             font-weight: 500;
             color: white;
+            text-transform: capitalize;
         }
         
         .status-badge.pending { background: #ffc107; color: #333; }
@@ -337,6 +339,8 @@
         .status-badge.expired { background: #dc3545; }
         .status-badge.read { background: #28a745; }
         .status-badge.unread { background: #ffc107; color: #333; }
+        .status-badge.blocked { background: #343a40; }
+        .status-badge.replied { background: #667eea; }
         
         .type-badge {
             padding: 4px 8px;
@@ -535,7 +539,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <h1>
                 <i class="fas fa-tachometer-alt"></i>
@@ -557,7 +560,6 @@
             </div>
         </div>
 
-        <!-- Stats Grid -->
         <div class="stats-grid" id="statsGrid">
             <div class="loading">
                 <div class="spinner"></div>
@@ -565,11 +567,9 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="section">
             <h2><i class="fas fa-chart-bar"></i> Management Portal</h2>
             
-            <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" onclick="showTab('overview')">
                     <i class="fas fa-home"></i> Overview
@@ -594,7 +594,6 @@
                 </button>
             </div>
             
-            <!-- Tab Contents -->
             <div id="overview-tab" class="tab-content active">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -646,7 +645,6 @@
         </div>
     </div>
 
-    <!-- Status Modal -->
     <div id="statusModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -676,7 +674,6 @@
         </div>
     </div>
 
-    <!-- PDF Upload Modal -->
     <div id="pdfUploadModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1406,22 +1403,6 @@
             `;
         }
         
-        // Load estimations data
-        async function loadEstimationsData() {
-            try {
-                console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/estimation');
-                estimationsData = data.estimations || [];
-                console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
-                renderEstimationsTab();
-            } catch (error) {
-                console.error('❌ Error loading estimations:', error);
-                document.getElementById('estimations-tab').innerHTML = `
-                    <div class="error">Failed to load estimations: ${error.message}</div>
-                `;
-            }
-        }
-        
         // Render estimations tab with download functionality
         function renderEstimationsTab() {
             const estimationsTab = document.getElementById('estimations-tab');
@@ -1515,14 +1496,14 @@
                 </div>
             `;
         }
-        
-        // Load messages data
+
+        // Load messages data - UPDATED to use correct endpoint
         async function loadMessagesData() {
             try {
                 console.log('💬 Loading messages data...');
-                const data = await apiCall('/messages');
-                messagesData = data.data || data.messages || [];
-                console.log('✅ Messages data loaded:', messagesData.length, 'conversations');
+                const data = await apiCall('/admin/messages');
+                messagesData = data.data?.messages || [];
+                console.log('✅ Messages data loaded:', messagesData.length, 'messages');
                 renderMessagesTab();
             } catch (error) {
                 console.error('❌ Error loading messages:', error);
@@ -1541,12 +1522,12 @@
             }
         }
         
-        // Load estimations data with better error handling
+        // Load estimations data - UPDATED to use correct endpoint
         async function loadEstimationsData() {
             try {
                 console.log('🧮 Loading estimations data...');
-                const data = await apiCall('/estimation');
-                estimationsData = data.estimations || data.data || [];
+                const data = await apiCall('/admin/estimations');
+                estimationsData = data.data?.estimations || [];
                 console.log('✅ Estimations data loaded:', estimationsData.length, 'estimations');
                 renderEstimationsTab();
             } catch (error) {
@@ -1565,7 +1546,7 @@
                 `;
             }
         }
-
+        
         // Add authentication status checker
         async function checkAuthStatus() {
             const token = getToken();
@@ -1620,82 +1601,7 @@
             console.log('Current token being used:', getToken());
             console.log('=== End Debug ===');
         }
-        
-        // Render messages tab
-        function renderMessagesTab() {
-            const messagesTab = document.getElementById('messages-tab');
-            
-            if (!messagesData || messagesData.length === 0) {
-                messagesTab.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-comments"></i>
-                        <h3>No messages found</h3>
-                        <p>User messages will appear here.</p>
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            messagesTab.innerHTML = `
-                <div class="section-header">
-                    <h3><i class="fas fa-comments"></i> Messages (${messagesData.length})</h3>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadMessagesData()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>From</th>
-                                <th>Subject</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${messagesData.map(message => `
-                                <tr>
-                                    <td>
-                                        <div class="user-info">
-                                            <strong>${message.senderName || message.from || 'Anonymous'}</strong>
-                                            <small>${message.senderEmail || message.email || 'No email'}</small>
-                                        </div>
-                                    </td>
-                                    <td>${message.subject || message.title || 'No subject'}</td>
-                                    <td><span class="type-badge ${message.type || 'general'}">${(message.type || 'general').toUpperCase()}</span></td>
-                                    <td><span class="status-badge ${message.isRead ? 'read' : 'unread'}">${message.isRead ? 'Read' : 'Unread'}</span></td>
-                                    <td>${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-group">
-                                            <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${message._id || message.id}')" title="View Message">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-success" onclick="replyToMessage('${message._id || message.id}')" title="Reply">
-                                                <i class="fas fa-reply"></i>
-                                            </button>
-                                            ${!message.isRead ? `
-                                                <button class="btn btn-sm btn-warning" onclick="markAsRead('${message._id || message.id}')" title="Mark as Read">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            ` : ''}
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
+
         // Load subscriptions data
         async function loadSubscriptionsData() {
             try {
@@ -1938,72 +1844,79 @@ Location: ${user.location || 'N/A'}
             }
         }
 
-        // Enhanced estimation file download functionality
+        // UPDATED: Enhanced estimation file download functionality
         async function downloadEstimationFiles(estimationId) {
             try {
                 showNotification('Preparing file download...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}/files`);
-                
-                if (!data.files || data.files.length === 0) {
+                const data = await apiCall(`/admin/estimations/${estimationId}/files`);
+                            
+                if (!data.data?.files || data.data.files.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
-                
-                // Download each file
-                for (let i = 0; i < data.files.length; i++) {
-                    const file = data.files[i];
-                    if (file.url) {
-                        const link = document.createElement('a');
-                        link.href = file.url;
-                        link.download = file.name || `estimation_file_${i + 1}`;
-                        link.target = '_blank';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        // Add small delay between downloads
-                        if (i < data.files.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
+                            
+                const files = data.data.files;
+                console.log(`Found ${files.length} files to download:`, files);
+                            
+                let downloadedCount = 0;
+                let failedCount = 0;
+                            
+                // Download each file using the API endpoint
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    console.log(`Downloading file ${i + 1}:`, file);
+                                    
+                    try {
+                        // Use the API download endpoint for secure downloads
+                        const downloadUrl = `/admin/estimations/${estimationId}/files/${encodeURIComponent(file.name)}/download`;
+                                            
+                        // We will try to open the download link in a new tab.
+                        // For this to work with authentication, the server must handle session/token auth via cookies or a short-lived token in the URL.
+                        // A direct fetch() with an Authorization header cannot trigger a file download dialog directly.
+                        // Opening a new window is a common workaround.
+                        window.open(`${API_BASE}${downloadUrl}`, '_blank');
+                                            
+                        downloadedCount++;
+                                            
+                        // Add small delay between downloads to prevent browser blocking
+                        if (i < files.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 800));
                         }
+                    } catch (fileError) {
+                        console.error(`Failed to download file ${file.name}:`, fileError);
+                        failedCount++;
                     }
                 }
-                
-                showNotification(`Downloaded ${data.files.length} files successfully`, 'success');
-                
+                            
+                if (downloadedCount > 0) {
+                    showNotification(`Downloaded ${downloadedCount} files successfully${failedCount > 0 ? ` (${failedCount} failed)` : ''}`, 'success');
+                } else {
+                    showNotification('No files could be downloaded', 'error');
+                }
+                        
             } catch (error) {
                 console.error('Error downloading files:', error);
                 showNotification(`Failed to download files: ${error.message}`, 'error');
             }
         }
-
-        // Enhanced estimation result download
+        
+        // UPDATED: Enhanced estimation result download
         async function downloadEstimationResult(estimationId) {
             try {
                 showNotification('Downloading estimation result...', 'info');
-                const data = await apiCall(`/estimation/${estimationId}/result`);
-                
-                if (!data.resultFile || !data.resultFile.url) {
-                    showNotification('No result file available for download', 'warning');
-                    return;
-                }
-                
-                // Create download link
-                const link = document.createElement('a');
-                link.href = data.resultFile.url;
-                link.download = data.resultFile.name || 'estimation_result.pdf';
-                link.target = '_blank';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                showNotification('Estimation result downloaded successfully', 'success');
-                
+                const downloadUrl = `/admin/estimations/${estimationId}/result/download`;
+        
+                // Similar to file download, open the authenticated URL in a new tab.
+                window.open(`${API_BASE}${downloadUrl}`, '_blank');
+        
+                showNotification('Estimation result download started', 'success');
+        
             } catch (error) {
                 console.error('Error downloading result:', error);
                 showNotification(`Failed to download result: ${error.message}`, 'error');
             }
         }
-
+        
         // View estimation details with enhanced file information
         async function viewEstimationDetails(estimationId) {
             try {
@@ -2035,11 +1948,11 @@ Notes: ${estimation.notes || 'No notes provided'}
 
         // Generic action functions
         function viewDetails(id, type) {
-            showNotification(`Loading ${type} details...`, 'info');
+            alert(`Viewing details for ${type} ID: ${id}. Full view not yet implemented.`);
         }
 
         function updateStatus(id, type) {
-            currentEstimationId = id;
+            currentEstimationId = id; // Assuming we reuse this for other types for now
             document.getElementById('statusModal').style.display = 'block';
         }
 
@@ -2048,40 +1961,437 @@ Notes: ${estimation.notes || 'No notes provided'}
             document.getElementById('statusModal').style.display = 'block';
         }
 
-        function replyToMessage(id) {
-            showNotification('Reply functionality coming soon...', 'info');
+        // --- NEW AND UPDATED MESSAGE FUNCTIONS ---
+
+        // Filter messages by status
+        function filterMessages(filterValue) {
+            const rows = document.querySelectorAll('#messages-tab tbody tr');
+            rows.forEach(row => {
+                const messageId = row.dataset.messageId;
+                const messageData = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!messageData) return;
+
+                let shouldShow = true;
+
+                if (filterValue) {
+                    switch (filterValue) {
+                        case 'unread':
+                            shouldShow = (!messageData.isRead || messageData.status === 'unread') && !messageData.isBlocked;
+                            break;
+                        case 'read':
+                            shouldShow = messageData.isRead && messageData.status !== 'unread' && !messageData.isBlocked;
+                            break;
+                        case 'blocked':
+                            shouldShow = messageData.isBlocked;
+                            break;
+                        case 'replied':
+                            shouldShow = messageData.status === 'replied';
+                            break;
+                    }
+                }
+
+                row.style.display = shouldShow ? '' : 'none';
+            });
         }
 
-        function markAsRead(id) {
-            showNotification('Message marked as read', 'success');
+        // Block/Unblock individual message
+        async function blockMessage(messageId, block = true) {
+            const action = block ? 'block' : 'unblock';
+            const reason = block ? prompt(`Enter reason for blocking this message:`) : '';
+
+            if (block && (reason === null || reason.trim() === '')) {
+                showNotification('Blocking cancelled. Reason is required.', 'warning');
+                return; // User cancelled or provided no reason
+            }
+
+            try {
+                showNotification(`${block ? 'Blocking' : 'Unblocking'} message...`, 'info');
+
+                await apiCall(`/admin/messages/${messageId}/block`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        block: block,
+                        reason: reason
+                    })
+                });
+
+                // Update local message data
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.isBlocked = block;
+                    message.status = block ? 'blocked' : (message.isRead ? 'read' : 'unread');
+                    if (block) {
+                        message.blockedAt = new Date().toISOString();
+                        message.blockReason = reason;
+                    } else {
+                        message.blockedAt = null;
+                        message.blockReason = null;
+                    }
+                }
+
+                renderMessagesTab();
+                showNotification(`Message ${action}ed successfully`, 'success');
+
+            } catch (error) {
+                console.error(`Error ${action}ing message:`, error);
+                showNotification(`Failed to ${action} message: ${error.message}`, 'error');
+            }
         }
 
+        // Block/Unblock user from sending messages
+        async function blockUserMessages(userEmail, block = true) {
+            const action = block ? 'block' : 'unblock';
+            const confirmMessage = block ?
+                `Block user "${userEmail}" from sending messages? This will also block all their existing messages.` :
+                `Unblock user "${userEmail}"? This will restore their ability to send messages.`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const reason = block ? prompt(`Enter reason for blocking this user:`) : '';
+
+            if (block && (reason === null || reason.trim() === '')) {
+                showNotification('Blocking cancelled. Reason is required.', 'warning');
+                return; // User cancelled or provided no reason
+            }
+
+            try {
+                showNotification(`${block ? 'Blocking' : 'Unblocking'} user messages...`, 'info');
+
+                await apiCall(`/admin/messages/user/${encodeURIComponent(userEmail)}/block`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        block: block,
+                        reason: reason
+                    })
+                });
+
+                // Update local messages data for this user
+                messagesData.forEach(message => {
+                    if (message.senderEmail === userEmail || message.email === userEmail) {
+                        message.isBlocked = block;
+                        message.status = block ? 'blocked' : (message.isRead ? 'read' : 'unread');
+                        if (block) {
+                            message.blockedAt = new Date().toISOString();
+                            message.blockReason = reason;
+                        } else {
+                            message.blockedAt = null;
+                            message.blockReason = null;
+                        }
+                    }
+                });
+
+                renderMessagesTab();
+                showNotification(`User ${action}ed successfully`, 'success');
+
+            } catch (error) {
+                console.error(`Error ${action}ing user:`, error);
+                showNotification(`Failed to ${action} user: ${error.message}`, 'error');
+            }
+        }
+
+        // Mark all messages as read
+        async function markAllAsRead() {
+            if (!confirm('Mark all unread messages as read?')) {
+                return;
+            }
+
+            const unreadMessages = messagesData.filter(m => (!m.isRead || m.status === 'unread') && !m.isBlocked);
+
+            if (unreadMessages.length === 0) {
+                showNotification('No unread messages to mark', 'info');
+                return;
+            }
+
+            try {
+                showNotification(`Marking ${unreadMessages.length} messages as read...`, 'info');
+
+                // Mark all unread messages as read
+                const promises = unreadMessages.map(message =>
+                    apiCall(`/admin/messages/${message._id || message.id}/status`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            status: 'read',
+                            isRead: true
+                        })
+                    })
+                );
+
+                await Promise.all(promises);
+
+                // Update local data
+                unreadMessages.forEach(message => {
+                    message.isRead = true;
+                    message.status = 'read';
+                });
+
+                renderMessagesTab();
+                showNotification(`${unreadMessages.length} messages marked as read`, 'success');
+
+            } catch (error) {
+                console.error('Error marking all messages as read:', error);
+                showNotification(`Failed to mark all messages as read: ${error.message}`, 'error');
+            }
+        }
+        
+        // UPDATED: Mark message as read functionality
+        async function markAsRead(messageId) {
+            try {
+                showNotification('Marking message as read...', 'info');
+                await apiCall(`/admin/messages/${messageId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        status: 'read',
+                        isRead: true
+                    })
+                });
+
+                // Update local message data
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (message) {
+                    message.isRead = true;
+                    message.status = 'read';
+                }
+
+                renderMessagesTab();
+                showNotification('Message marked as read', 'success');
+
+            } catch (error) {
+                console.error('Error marking message as read:', error);
+                showNotification(`Failed to mark message as read: ${error.message}`, 'error');
+            }
+        }
+
+        // UPDATED: Enhanced message viewing with proper message structure
         async function viewMessageDetails(messageId) {
             try {
                 showNotification('Loading message details...', 'info');
                 const data = await apiCall(`/admin/messages/${messageId}`);
-                
-                const message = data.message;
-                const messageDetails = `
-Message Details:
-From: ${message.senderName || message.from || 'Anonymous'}
-Email: ${message.senderEmail || message.email || 'N/A'}
-Subject: ${message.subject || message.title || 'No subject'}
-Type: ${message.type || 'general'}
-Date: ${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}
-Status: ${message.isRead ? 'Read' : 'Unread'}
 
-Message:
-${message.content || message.text || 'No content available'}
+                const message = data.data?.message;
+                if (!message) {
+                    throw new Error('Message data not found');
+                }
+
+                let blockingInfo = '';
+                if (message.isBlocked) {
+                    blockingInfo = `\n\n--- BLOCKING INFO ---\nBlocked: Yes\nBlocked At: ${message.blockedAt ? new Date(message.blockedAt).toLocaleString() : 'N/A'}\nBlocked By: ${message.blockedBy || 'Unknown'}\nReason: ${message.blockReason || 'No reason provided'}`;
+                }
+
+                const messageDetails = `Message Details:\nFrom: ${message.senderName || message.from || 'Anonymous'}\nEmail: ${message.senderEmail || message.email || 'N/A'}\nSubject: ${message.subject || message.title || 'No subject'}\nType: ${message.type || 'general'}\nDate: ${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}\nStatus: ${message.isBlocked ? 'BLOCKED' : (message.isRead ? 'Read' : 'Unread')}${blockingInfo}\n\nMessage:\n${message.content || message.text || 'No content available'}${message.thread && message.thread.length > 0 ? `\n\n--- REPLIES (${message.thread.length}) ---\n${message.thread.map(reply => `${reply.senderName}: ${reply.content} (${new Date(reply.sentAt).toLocaleString()})`).join('\n')}` : ''}
                 `;
-                
+
                 alert(messageDetails);
                 showNotification('Message details loaded successfully', 'success');
-                
+
             } catch (error) {
                 console.error('Error loading message details:', error);
                 showNotification(`Failed to load message details: ${error.message}`, 'error');
             }
+        }
+
+        // UPDATED: Reply to message functionality with blocking check
+        async function replyToMessage(messageId) {
+            try {
+                const message = messagesData.find(m => (m._id || m.id) === messageId);
+                if (!message) {
+                    showNotification('Message not found', 'error');
+                    return;
+                }
+
+                if (message.isBlocked) {
+                    showNotification('Cannot reply to a blocked message.', 'error');
+                    return;
+                }
+
+                const replyContent = prompt(`Reply to: ${message.subject || 'No Subject'}\nFrom: ${message.senderName || 'Anonymous'}\n\nEnter your reply:`);
+
+                if (!replyContent || replyContent.trim() === '') {
+                    return; // User cancelled or entered empty reply
+                }
+
+                showNotification('Sending reply...', 'info');
+                await apiCall(`/admin/messages/${messageId}/reply`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        content: replyContent.trim()
+                    })
+                });
+
+                // Update local message data
+                if (message) {
+                    message.status = 'replied';
+                    message.isRead = true;
+                }
+
+                renderMessagesTab();
+                showNotification('Reply sent successfully', 'success');
+
+            } catch (error) {
+                console.error('Error sending reply:', error);
+                showNotification(`Failed to send reply: ${error.message}`, 'error');
+            }
+        }
+
+        // UPDATED: Delete message functionality
+        async function deleteMessage(messageId) {
+            if (!confirm('Are you sure you want to permanently delete this message? This action cannot be undone.')) {
+                return;
+            }
+    
+            try {
+                showNotification('Deleting message...', 'info');
+                await apiCall(`/admin/messages/${messageId}`, {
+                    method: 'DELETE'
+                });
+    
+                // Remove from local data
+                const messageIndex = messagesData.findIndex(m => (m._id || m.id) === messageId);
+                if (messageIndex > -1) {
+                    messagesData.splice(messageIndex, 1);
+                }
+    
+                renderMessagesTab();
+                showNotification('Message deleted successfully', 'success');
+    
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                showNotification(`Failed to delete message: ${error.message}`, 'error');
+            }
+        }
+        
+        // UPDATED: Render messages tab with blocking controls
+        function renderMessagesTab() {
+            const messagesTab = document.getElementById('messages-tab');
+
+            if (!messagesData || messagesData.length === 0) {
+                messagesTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-comments"></i>
+                        <h3>No messages found</h3>
+                        <p>User messages will appear here.</p>
+                        <button class="btn btn-primary" onclick="loadMessagesData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Count message types
+            const unreadCount = messagesData.filter(m => (!m.isRead || m.status === 'unread') && !m.isBlocked).length;
+            const blockedCount = messagesData.filter(m => m.isBlocked).length;
+
+            messagesTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-comments"></i> Messages (${messagesData.length})
+                        ${unreadCount > 0 ? `<span style="color: #dc3545; font-size: 14px; margin-left: 10px;">• ${unreadCount} unread</span>` : ''}
+                        ${blockedCount > 0 ? `<span style="color: #6c757d; font-size: 14px; margin-left: 10px;">• ${blockedCount} blocked</span>` : ''}
+                    </h3>
+                    <div class="header-actions" style="flex-wrap: wrap; gap: 10px;">
+                        <button class="btn btn-primary" onclick="loadMessagesData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                        ${unreadCount > 0 ? `
+                            <button class="btn btn-success" onclick="markAllAsRead()">
+                                <i class="fas fa-check-double"></i> Mark All Read
+                            </button>
+                        ` : ''}
+                        <div class="filter-controls">
+                            <select id="message-filter" onchange="filterMessages(this.value)" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                                <option value="">All Messages</option>
+                                <option value="unread">Unread Only</option>
+                                <option value="read">Read Only</option>
+                                <option value="blocked">Blocked Only</option>
+                                <option value="replied">Replied</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>Subject</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${messagesData.map(message => {
+                                const messageId = message._id || message.id;
+                                const isUnread = (!message.isRead || message.status === 'unread') && !message.isBlocked;
+                                const isBlocked = message.isBlocked;
+                                let rowClass = '';
+
+                                if (isBlocked) {
+                                    rowClass = 'style="background-color: #f8d7da; opacity: 0.7;"';
+                                } else if (isUnread) {
+                                    rowClass = 'style="background-color: #fff3cd;"';
+                                }
+
+                                return `
+                                    <tr ${rowClass} data-message-id="${messageId}">
+                                        <td>
+                                            <div class="user-info">
+                                                <strong>${message.senderName || message.from || 'Anonymous'}</strong>
+                                                <small>${message.senderEmail || message.email || 'No email'}</small>
+                                                ${isBlocked ? `<br><small style="color: #dc3545; font-weight: bold;">BLOCKED</small>` : ''}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span ${isUnread ? 'style="font-weight: bold;"' : ''}>
+                                                ${message.subject || message.title || 'No subject'}
+                                            </span>
+                                        </td>
+                                        <td><span class="type-badge ${message.type || 'general'}">${(message.type || 'general').toUpperCase()}</span></td>
+                                        <td>
+                                            <span class="status-badge ${isBlocked ? 'blocked' : (message.status || (message.isRead ? 'read' : 'unread'))}">
+                                                ${isBlocked ? 'Blocked' : (message.status || (message.isRead ? 'Read' : 'Unread'))}
+                                            </span>
+                                        </td>
+                                        <td>${message.createdAt ? new Date(message.createdAt).toLocaleDateString() : 'N/A'}</td>
+                                        <td>
+                                            <div class="action-group">
+                                                <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${messageId}')" title="View Message">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                ${!isBlocked ? `
+                                                    <button class="btn btn-sm btn-primary" onclick="replyToMessage('${messageId}')" title="Reply">
+                                                        <i class="fas fa-reply"></i>
+                                                    </button>
+                                                    ${isUnread ? `
+                                                        <button class="btn btn-sm btn-success" onclick="markAsRead('${messageId}')" title="Mark as Read">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                    <button class="btn btn-sm btn-warning" onclick="blockMessage('${messageId}', true)" title="Block Message">
+                                                        <i class="fas fa-ban"></i>
+                                                    </button>
+                                                ` : `
+                                                    <button class="btn btn-sm btn-success" onclick="blockMessage('${messageId}', false)" title="Unblock Message">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </button>
+                                                `}
+                                                <button class="btn btn-sm btn-secondary" onclick="blockUserMessages('${message.senderEmail || message.email}', ${!isBlocked})" title="${isBlocked ? 'Unblock User' : 'Block User from Messaging'}">
+                                                    <i class="fas fa-user-${isBlocked ? 'check' : 'ban'}"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteMessage('${messageId}')" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
         function cancelSubscription(id) {
