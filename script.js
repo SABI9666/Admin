@@ -550,7 +550,6 @@ async function renderAdminSubscriptions() {
                     </button>
                 </div>
                 
-                <!-- Subscription Plans Tab -->
                 <div id="plans-tab" class="tab-content active">
                     <div class="admin-section-header">
                         <div class="section-title">
@@ -604,7 +603,6 @@ async function renderAdminSubscriptions() {
                     </div>
                 </div>
                 
-                <!-- User Subscriptions Tab -->
                 <div id="users-tab" class="tab-content">
                     <div class="admin-section-header">
                         <div class="section-title">
@@ -677,7 +675,6 @@ async function renderAdminSubscriptions() {
                     ` : '<div class="empty-state"><i class="fas fa-users"></i><h3>No subscriptions found</h3><p>User subscriptions will appear here when they subscribe to plans.</p></div>'}
                 </div>
                 
-                <!-- Analytics Tab -->
                 <div id="analytics-tab" class="tab-content">
                     <div class="subscription-analytics">
                         <h3>Subscription Analytics</h3>
@@ -950,11 +947,14 @@ async function renderAdminMessages() {
             return;
         }
         
+        const unreadCount = messages.filter(m => m.status === 'unread').length;
+
         contentArea.innerHTML = `
             <div class="admin-section-header">
                 <div class="section-title">
                     <h2>Messages Management</h2>
-                    <span class="count-badge">${messages.length} messages</span>
+                    <span class="count-badge">${messages.length} total</span>
+                    ${unreadCount > 0 ? `<span class="count-badge unread">${unreadCount} unread</span>` : ''}
                 </div>
                 <div class="section-actions">
                     <div class="search-box">
@@ -968,6 +968,11 @@ async function renderAdminMessages() {
                         <option value="replied">Replied</option>
                         <option value="archived">Archived</option>
                     </select>
+                    ${unreadCount > 0 ? `
+                        <button class="btn btn-success" onclick="markAllAsRead()">
+                            <i class="fas fa-check-double"></i> Mark All Read
+                        </button>
+                    ` : ''}
                     <button class="btn btn-primary" onclick="exportMessages()">
                         <i class="fas fa-download"></i> Export CSV
                     </button>
@@ -1213,6 +1218,38 @@ async function deleteMessage(messageId) {
         }
     }
 }
+
+async function markAllAsRead() {
+    if (!confirm('Are you sure you want to mark all unread messages as read?')) {
+        return;
+    }
+
+    try {
+        showNotification('Marking all messages as read...', 'info');
+        const { messages } = await apiCall('/admin/messages');
+        const unreadMessageIds = messages
+            .filter(m => m.status === 'unread')
+            .map(m => m._id);
+
+        if (unreadMessageIds.length === 0) {
+            showNotification('No unread messages found.', 'info');
+            return;
+        }
+
+        const updatePromises = unreadMessageIds.map(id =>
+            apiCall(`/admin/messages/${id}/status`, 'PATCH', { status: 'read' })
+        );
+
+        await Promise.all(updatePromises);
+        
+        showNotification(`${unreadMessageIds.length} messages marked as read.`, 'success');
+        renderAdminMessages();
+
+    } catch (error) {
+        console.error('Failed to mark all messages as read:', error);
+    }
+}
+
 
 // --- QUOTES MANAGEMENT ---
 async function renderAdminQuotes() {
