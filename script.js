@@ -4,9 +4,11 @@ const appState = {
     currentFilter: '',
     currentSection: 'dashboard',
     uploadProgress: 0,
-    currentProfileReview: null // <-- ADDED for profile reviews
+    currentProfileReview: null
 };
-const API_BASE_URL = 'https://steelconnect-backend.onrender.com'; // NOTE: Base URL for API calls
+// Updated API base URL configuration
+const API_BASE = 'https://steelconnect-backend.onrender.com/api';
+const API_BASE_URL = 'https://steelconnect-backend.onrender.com'; // Kept for functions using the full URL
 
 // --- CORE UTILITY FUNCTIONS ---
 function showNotification(message, type = 'info', duration = 5000) {
@@ -24,7 +26,6 @@ function showNotification(message, type = 'info', duration = 5000) {
     container.appendChild(notification);
     setTimeout(() => { notification.remove(); }, duration);
 }
-
 
 function getNotificationIcon(type) {
     const icons = {
@@ -54,38 +55,69 @@ function getToken() {
     return localStorage.getItem('jwtToken');
 }
 
+// Enhanced API call with better error handling (replaces original apiCall)
 async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
     const token = getToken();
+    if (!token) {
+        showNotification('No authentication token found. Please log in again.', 'error');
+        throw new Error('No authentication token found');
+    }
+
     const options = {
         method,
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
     };
 
-    if (body && !isFileUpload) {
-        options.headers['Content-Type'] = 'application/json';
-        options.body = JSON.stringify(body);
-    } else if (body && isFileUpload) {
-        options.body = body;
+    // Adjust for file uploads vs. JSON
+    if (body) {
+        if (isFileUpload) {
+            options.body = body; // FormData handles its own content type
+        } else {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(body);
+        }
     }
+
+    console.log(`📡 API Call: ${method} ${API_BASE_URL}/api${endpoint}`);
 
     try {
         const response = await fetch(`${API_BASE_URL}/api${endpoint}`, options);
-        // Handle cases where the response might not be JSON
-        if (response.headers.get('Content-Type')?.includes('json')) {
-            const responseData = await response.json();
-            if (!response.ok) {
-                 // Use a more specific message if available from the backend
-                 const errorMessage = responseData.message || responseData.error || `HTTP error! Status: ${response.status}`;
-                 throw new Error(errorMessage);
+
+        let responseData;
+        const contentType = response.headers.get('content-type');
+
+        if (!response.ok) {
+            // Try to parse error message from JSON response
+            if (contentType && contentType.includes('application/json')) {
+                responseData = await response.json();
+                console.error('API Error:', response.status, responseData);
+                throw new Error(responseData.message || responseData.error || `HTTP error! Status: ${response.status}`);
+            } else {
+                 // Handle non-JSON errors (e.g., plain text, HTML)
+                 const text = await response.text();
+                 console.error('Non-JSON API Error:', response.status, text);
+                 throw new Error(text || `HTTP error! Status: ${response.status}`);
             }
-            return responseData;
         }
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        return response; // Return raw response for file streams, etc.
+
+        // Handle successful but potentially non-JSON responses (like file downloads)
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+            console.log(`✅ API Success:`, responseData);
+            return responseData;
+        } else {
+             // For file blobs or other non-JSON success responses
+             console.log(`✅ API Success (Non-JSON response)`);
+             return response;
+        }
+
     } catch (error) {
-        const errorMessage = error.name === 'TypeError' ? 'Network error: Could not connect to server.' : error.message;
-        showNotification(errorMessage, 'error');
-        throw new Error(errorMessage);
+        console.error(`❌ API Call Failed (${endpoint}):`, error);
+        // Show notification for the final error message
+        showNotification(error.message, 'error');
+        throw error;
     }
 }
 
@@ -121,7 +153,7 @@ function showModal(modalId, content) {
     modal.id = 'dynamic-modal';
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content">
+        <div class="modal-content" id="${modalId}-content">
             <button class="modal-close" onclick="closeModal()">&times;</button>
             ${content}
         </div>
@@ -130,6 +162,25 @@ function showModal(modalId, content) {
     document.body.appendChild(modal);
     modal.style.display = 'flex';
 }
+
+// Generic modal for new features, allows style overrides
+function showGenericModal(content, style = '') {
+     const existingModal = document.getElementById('dynamic-modal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'dynamic-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="${style}">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            ${content}
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
 
 function closeModal() {
     const modal = document.getElementById('dynamic-modal');
@@ -159,68 +210,19 @@ async function handleAdminLogin(event) {
         showNotification('Login successful! Redirecting...', 'success');
         setTimeout(() => { window.location.href = 'admin.html'; }, 1000);
     } catch (error) {
+        // Error notification is handled by apiCall
         loginButton.disabled = false;
         loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
     }
 }
 
 // --- ADMIN PANEL LOGIC ---
-
-// Helper to inject custom styles needed for new features
-function injectAdminStyles() {
-    const css = `
-        .stat-card-alert {
-            border: 2px solid #f59e0b;
-            background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
-            animation: pulse 2s infinite;
-        }
-        .stat-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #f59e0b;
-            color: white;
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 10px;
-            font-weight: 600;
-        }
-        .admin-stat-card {
-            position: relative;
-        }
-        .dashboard-alert {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        }
-        .dashboard-alert h3 {
-            margin-top: 0;
-            color: #92400e;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-            50% { transform: scale(1.03); box-shadow: 0 0 10px 10px rgba(245, 158, 11, 0); }
-        }
-    `;
-    const style = document.createElement('style');
-    style.id = 'dynamic-admin-styles';
-    style.textContent = css;
-    if (!document.getElementById('dynamic-admin-styles')) {
-        document.head.appendChild(style);
-    }
-}
-
-
 function initializeAdminPage() {
     try {
         const user = JSON.parse(localStorage.getItem('currentUser'));
         const token = getToken();
         if (token && user && (user.role?.toLowerCase() === 'admin' || user.type?.toLowerCase() === 'admin')) {
             appState.currentUser = user;
-            injectAdminStyles(); // <-- Inject custom styles
             setupAdminPanel();
         } else {
             showAdminLoginPrompt("Access Denied: Admin privileges required.");
@@ -269,22 +271,45 @@ function setupAdminPanel() {
 
 function renderAdminSection(section) {
     const contentArea = document.getElementById('admin-content-area');
-    showLoader(contentArea);
+    // Ensure the content area has an ID for the profile reviews tab to find it
+    contentArea.id = 'admin-content-area';
 
     const renderMap = {
         dashboard: renderAdminDashboard,
         users: renderAdminUsers,
+        'profile-reviews': renderProfileReviewsTab, // Added profile reviews
         quotes: renderAdminQuotes,
         estimations: renderAdminEstimations,
         jobs: renderAdminJobs,
         messages: renderAdminMessages,
         subscriptions: renderAdminSubscriptions,
         analytics: renderAdminAnalytics,
-        'system-stats': renderSystemStats,
-        'profile-reviews': renderProfileReviewsTab // <-- ADDED profile reviews route
+        'system-stats': renderSystemStats
     };
+     // Add a container for the profile reviews tab if it doesn't exist
+    if (!document.getElementById('profile-reviews-tab')) {
+        const tabContainer = document.createElement('div');
+        tabContainer.id = 'profile-reviews-tab';
+        // Hide it by default
+        tabContainer.style.display = 'none';
+        contentArea.parentNode.appendChild(tabContainer);
+    }
+     // Hide all main content sections before showing the new one
+    document.querySelectorAll('.admin-content-section').forEach(sec => sec.style.display = 'none');
 
-    setTimeout(() => renderMap[section] ? renderMap[section]() : renderComingSoon(section), 100);
+    // Logic to switch between main content area and dedicated tab containers
+    if (section === 'profile-reviews') {
+        contentArea.style.display = 'none'; // Hide main content area
+        const profileTab = document.getElementById('profile-reviews-tab');
+        profileTab.style.display = 'block'; // Show profile tab container
+        renderProfileReviewsTab(); // Render into its own container
+    } else {
+        const profileTab = document.getElementById('profile-reviews-tab');
+        if(profileTab) profileTab.style.display = 'none'; // Hide profile tab
+        contentArea.style.display = 'block'; // Show main content area
+        showLoader(contentArea);
+        setTimeout(() => renderMap[section] ? renderMap[section]() : renderComingSoon(section), 100);
+    }
 }
 
 function renderComingSoon(section) {
@@ -297,53 +322,15 @@ function renderComingSoon(section) {
         </div>
     `;
 }
-// --- DASHBOARD (UPDATED) ---
+// --- DASHBOARD ---
 async function renderAdminDashboard() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        // Fetch both dashboard stats and profile stats in parallel
-        const [dashboardData, profileStatsData] = await Promise.all([
-            apiCall('/admin/dashboard'),
-            // Add error handling in case the profile-stats endpoint fails
-            apiCall('/admin/profile-stats').catch(err => {
-                console.warn("Could not load profile stats. Defaulting to 0.", err);
-                return { data: { pending: 0 } }; // Return default structure
-            })
-        ]);
-
-        const stats = dashboardData.stats;
-        const recentActivity = dashboardData.recentActivity;
-        const profileStats = profileStatsData.data || { pending: 0 }; // Use .data from the response
-        const pendingReviews = profileStats.pending || 0;
-
-        let pendingReviewBanner = '';
-        if (pendingReviews > 0) {
-            pendingReviewBanner = `
-                <div class="dashboard-alert">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Profile Reviews Pending</h3>
-                    <p>You have <strong>${pendingReviews} profile reviews</strong> waiting for your attention. These users are waiting for approval to access all platform features.</p>
-                    <button class="btn btn-primary" onclick="document.querySelector('.admin-nav-link[data-section=\\'profile-reviews\\']').click()">
-                        <i class="fas fa-user-check"></i> Review Profiles Now
-                    </button>
-                </div>
-            `;
-        }
-
+        const data = await apiCall('/admin/dashboard');
         contentArea.innerHTML = `
             <div class="dashboard-overview">
-                ${pendingReviewBanner}
                 <div class="admin-stats-grid">
-                     <div class="admin-stat-card ${pendingReviews > 0 ? 'stat-card-alert' : ''}">
-                        <div class="stat-icon" style="background: ${pendingReviews > 0 ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span class="stat-value">${pendingReviews}</span>
-                            <span class="stat-label">Pending Reviews</span>
-                            ${pendingReviews > 0 ? '<div class="stat-indicator">Action Required</div>' : ''}
-                        </div>
-                    </div>
-                    ${Object.entries(stats).map(([key, value]) => `
+                    ${Object.entries(data.stats).map(([key, value]) => `
                         <div class="admin-stat-card">
                             <div class="stat-icon">
                                 <i class="fas fa-${getStatIcon(key)}"></i>
@@ -359,7 +346,7 @@ async function renderAdminDashboard() {
                 <div class="recent-activity">
                     <h3>Recent Activity</h3>
                     <div class="activity-list">
-                        ${recentActivity?.map(activity => `
+                        ${data.recentActivity?.map(activity => `
                             <div class="activity-item">
                                 <div class="activity-icon">
                                     <i class="fas fa-${getActivityIcon(activity.type)}"></i>
@@ -605,7 +592,7 @@ async function viewUserDetails(userId) {
             </div>
         `);
     } catch (error) {
-        showNotification('Failed to load user details', 'error');
+        // Error already handled by apiCall
     }
 }
 
@@ -630,6 +617,409 @@ async function deleteUser(userId) {
         }
     }
 }
+
+// --- PROFILE REVIEW MANAGEMENT (NEW & REPLACES OLD) ---
+
+// Load profile reviews with comprehensive error handling
+async function loadProfileReviews() {
+    try {
+        console.log('🔍 Loading profile reviews...');
+        // Use endpoint without /api prefix as apiCall adds it
+        let data = await apiCall('/admin/profile-reviews', 'GET');
+        const allReviews = data.data || [];
+
+        if (allReviews.length === 0) {
+            console.warn('No profile reviews found, checking user count...');
+            try {
+                const usersData = await apiCall('/admin/users', 'GET');
+                const users = usersData.users || []; // Adjusted to match user endpoint structure
+                console.log(`Found ${users.length} total users`);
+                if (users.length === 0) {
+                    console.log('No users in system, suggesting test data creation');
+                }
+            } catch (usersError) {
+                console.warn('Could not fetch users for comparison:', usersError.message);
+            }
+        }
+        console.log(`✅ Loaded ${allReviews.length} profile reviews`);
+        return allReviews;
+    } catch (error) {
+        console.error('❌ Error loading profile reviews:', error);
+        throw error;
+    }
+}
+
+// Enhanced profile reviews tab renderer
+async function renderProfileReviewsTab() {
+    const profileReviewsTab = document.getElementById('profile-reviews-tab');
+    if (!profileReviewsTab) {
+        console.error('Profile reviews tab container not found');
+        // Fallback to main content area if needed
+        profileReviewsTab = document.getElementById('admin-content-area');
+    }
+
+    profileReviewsTab.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading profile reviews...</p></div>`;
+
+    try {
+        const reviews = await loadProfileReviews();
+
+        if (reviews.length === 0) {
+            profileReviewsTab.innerHTML = `
+                <div class="empty-state premium-empty">
+                    <div class="empty-icon"><i class="fas fa-user-check"></i></div>
+                    <h3>No Profile Reviews Found</h3>
+                    <p>There are no profile reviews in the system yet. Users need to complete their profiles to appear here.</p>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="renderProfileReviewsTab()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <button class="btn btn-secondary" onclick="debugProfileSystem()"><i class="fas fa-bug"></i> Debug System</button>
+                        <button class="btn btn-success" onclick="createTestUsers()"><i class="fas fa-plus"></i> Create Test Users</button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const pendingReviews = reviews.filter(r => r.status === 'pending');
+        const completedReviews = reviews.filter(r => r.status !== 'pending');
+
+        profileReviewsTab.innerHTML = `
+            <div class="admin-section-header">
+                <div class="section-title">
+                     <h2><i class="fas fa-user-check"></i> Profile Reviews</h2>
+                     <span class="count-badge"> ${reviews.length} total</span>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-primary" onclick="renderProfileReviewsTab()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <button class="btn btn-secondary" onclick="debugProfileSystem()"><i class="fas fa-bug"></i> Debug</button>
+                </div>
+            </div>
+            ${pendingReviews.length > 0 ? `
+                <div class="review-section">
+                    <h4 style="color: #f59e0b; margin-bottom: 1rem;"><i class="fas fa-clock"></i> Pending Reviews (${pendingReviews.length})</h4>
+                    <div class="profile-reviews-grid">${pendingReviews.map(renderProfileReviewCard).join('')}</div>
+                </div>
+            ` : `
+                <div class="review-section">
+                    <div class="empty-state" style="margin-bottom: 2rem;">
+                         <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                        <h4>All Reviews Complete!</h4>
+                        <p>There are no pending profile reviews at this time.</p>
+                    </div>
+                </div>
+            `}
+            ${completedReviews.length > 0 ? `
+                <div class="review-section">
+                    <h4 style="color: #6b7280; margin-bottom: 1rem;"><i class="fas fa-history"></i> Recently Reviewed (${completedReviews.length})</h4>
+                    <div class="profile-reviews-grid">${completedReviews.slice(0, 6).map(renderProfileReviewCard).join('')}</div>
+                </div>
+            ` : ''}
+        `;
+    } catch (error) {
+        console.error('❌ Error rendering profile reviews:', error);
+        profileReviewsTab.innerHTML = `
+            <div class="error-state premium-error">
+                <div class="error-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Error Loading Profile Reviews</h3>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-primary" onclick="renderProfileReviewsTab()"><i class="fas fa-redo"></i> Try Again</button>
+                    <button class="btn btn-secondary" onclick="debugProfileSystem()"><i class="fas fa-bug"></i> Debug Issue</button>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: #f3f4f6; border-radius: 8px; text-align: left;">
+                    <details>
+                        <summary style="cursor: pointer; font-weight: bold;">Technical Details</summary>
+                        <pre style="margin-top: 0.5rem; font-size: 0.8rem; overflow-x: auto;">${error.stack || error.message}</pre>
+                    </details>
+                </div>
+            </div>
+        `;
+    }
+}
+
+
+// Render individual profile review card
+function renderProfileReviewCard(review) {
+    const user = review.user || {};
+    const statusClass = review.status || 'pending';
+    const statusIcon = {
+        'pending': 'fa-clock',
+        'approved': 'fa-check-circle',
+        'rejected': 'fa-times-circle'
+    }[review.status] || 'fa-question-circle';
+    const userType = user.type || review.userType || 'user';
+    const submittedDate = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'N/A';
+    const reviewedDate = review.reviewedAt ? new Date(review.reviewedAt).toLocaleDateString() : null;
+    const isPending = review.status === 'pending';
+    return `
+        <div class="profile-review-card premium-card review-status-${statusClass}">
+            <div class="review-header">
+                <div class="user-info">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                        ${(user.name || review.userName || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div class="user-details">
+                        <h4>${user.name || review.userName || 'Unknown User'}</h4>
+                        <p>${user.email || review.userEmail || 'No email'}</p>
+                        <span class="role-badge ${userType}">
+                            <i class="fas ${userType === 'designer' ? 'fa-drafting-compass' : 'fa-building'}"></i>
+                            ${userType.charAt(0).toUpperCase() + userType.slice(1)}
+                        </span>
+                    </div>
+                </div>
+                <div class="review-status">
+                    <span class="status-badge ${statusClass}">
+                        <i class="fas ${statusIcon}"></i>
+                        ${review.status?.charAt(0).toUpperCase() + review.status?.slice(1) || 'Pending'}
+                    </span>
+                </div>
+            </div>
+            <div class="review-meta">
+                 <span>Submitted: ${submittedDate}</span>
+                 ${reviewedDate ? `<span>Reviewed: ${reviewedDate}</span>` : ''}
+            </div>
+            ${review.reviewNotes ? `
+                <div class="review-notes">
+                    <strong>${review.status === 'rejected' ? 'Rejection Reason:' : 'Admin Notes:'}</strong>
+                    <p>${review.reviewNotes}</p>
+                </div>
+            ` : ''}
+            <div class="review-actions">
+                <button class="btn btn-sm btn-info" onclick="viewProfileDetails('${review._id || review.userId}')"><i class="fas fa-eye"></i> View Details</button>
+                ${isPending ? `
+                    <button class="btn btn-sm btn-success" onclick="showApproveModal('${review._id || review.userId}')"><i class="fas fa-check"></i> Approve</button>
+                    <button class="btn btn-sm btn-danger" onclick="showRejectModal('${review._id || review.userId}')"><i class="fas fa-times"></i> Reject</button>
+                ` : review.status === 'rejected' ? `
+                    <button class="btn btn-sm btn-success" onclick="showApproveModal('${review._id || review.userId}')"><i class="fas fa-check"></i> Re-Approve</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// View profile details with enhanced error handling
+async function viewProfileDetails(reviewId) {
+    try {
+        showNotification('Loading profile details...', 'info');
+        console.log('Loading profile details for:', reviewId);
+
+        const data = await apiCall(`/admin/profile-reviews/${reviewId}`, 'GET');
+        const review = data.data.review;
+        const user = review.user || {};
+        const profile = review.profileData || {};
+
+        const modalContent = `
+            <div class="modal-header premium-modal-header">
+                <h3><i class="fas fa-user-circle"></i> Profile Review Details</h3>
+                <p class="modal-subtitle">${user.name} - ${user.type?.charAt(0).toUpperCase() + user.type?.slice(1) || 'User'}</p>
+            </div>
+            <div class="profile-details-content">
+                 <div class="profile-section">
+                    <h4><i class="fas fa-user"></i> Basic Information</h4>
+                    <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                    <p><strong>Account Type:</strong> ${user.type || 'N/A'}</p>
+                    <p><strong>Status:</strong> <span class="status-badge ${review.status}">${review.status}</span></p>
+                </div>
+
+                ${user.type === 'contractor' ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-building"></i> Contractor Information</h4>
+                        <p><strong>Company:</strong> ${profile.companyName || 'N/A'}</p>
+                        <p><strong>Website:</strong> ${profile.companyWebsite ? `<a href="${profile.companyWebsite}" target="_blank">${profile.companyWebsite}</a>` : 'N/A'}</p>
+                        <p><strong>Description:</strong> ${profile.description || 'N/A'}</p>
+                    </div>
+                ` : ''}
+
+                ${user.type === 'designer' ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-drafting-compass"></i> Designer Information</h4>
+                        <p><strong>Skills:</strong> ${(Array.isArray(profile.skills) ? profile.skills : (profile.skills || '').split(',')).map(skill => `<span class="skill-tag">${skill.trim()}</span>`).join(' ')}</p>
+                        <p><strong>LinkedIn:</strong> ${profile.linkedinProfile ? `<a href="${profile.linkedinProfile}" target="_blank">${profile.linkedinProfile}</a>` : 'N/A'}</p>
+                        <p><strong>Bio:</strong> ${profile.bio || 'N/A'}</p>
+                    </div>
+                ` : ''}
+
+                ${review.status !== 'pending' && review.reviewNotes ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-comment-alt"></i> Review Notes</h4>
+                        <div class="review-notes-display">
+                            <p>${review.reviewNotes}</p>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="modal-actions">
+                ${review.status === 'pending' ? `
+                    <button class="btn btn-success" onclick="closeModal(); showApproveModal('${reviewId}')"><i class="fas fa-check"></i> Approve Profile</button>
+                    <button class="btn btn-danger" onclick="closeModal(); showRejectModal('${reviewId}')"><i class="fas fa-times"></i> Reject Profile</button>
+                ` : ''}
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        `;
+        showGenericModal(modalContent, 'max-width: 800px; max-height: 90vh; overflow-y: auto;');
+    } catch (error) {
+        console.error('Error loading profile details:', error);
+    }
+}
+
+// Show approval modal
+function showApproveModal(reviewId) {
+    const modalContent = `
+        <div class="modal-header premium-modal-header">
+            <h3 style="color: #10b981;"><i class="fas fa-check-circle"></i> Approve Profile</h3>
+            <p class="modal-subtitle">Approve this user's profile and grant full platform access</p>
+        </div>
+        <form id="approve-profile-form" class="premium-form">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-comment"></i> Approval Notes (Optional)</label>
+                <textarea id="approval-notes" class="form-textarea" rows="3" placeholder="Add any notes..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Approve Profile</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    showGenericModal(modalContent, 'max-width: 500px;');
+    document.getElementById('approve-profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleProfileApproval(reviewId);
+    });
+}
+
+// Show rejection modal
+function showRejectModal(reviewId) {
+    const modalContent = `
+        <div class="modal-header premium-modal-header">
+            <h3 style="color: #ef4444;"><i class="fas fa-times-circle"></i> Reject Profile</h3>
+            <p class="modal-subtitle">Reject this profile and provide feedback for improvement</p>
+        </div>
+        <form id="reject-profile-form" class="premium-form">
+            <div class="form-group">
+                <label class="form-label" style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> Rejection Reason (Required)</label>
+                <textarea id="rejection-reason" class="form-textarea" rows="4" required placeholder="Explain what needs to be updated..."></textarea>
+            </div>
+             <div class="common-reasons" style="margin: 1rem 0;">
+                <label class="form-label">Quick reasons (click to add):</label>
+                <div class="reason-buttons">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="addReason('Missing or insufficient professional experience details')">Missing Experience</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="addReason('Resume/portfolio files are missing or unclear')">Missing Files</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="addReason('Contact information is incomplete')">Incomplete Contact</button>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger"><i class="fas fa-times"></i> Reject Profile</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    `;
+    showGenericModal(modalContent, 'max-width: 600px;');
+    document.getElementById('reject-profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleProfileRejection(reviewId);
+    });
+}
+
+// Add reason to rejection textarea
+function addReason(reason) {
+    const textarea = document.getElementById('rejection-reason');
+    const currentValue = textarea.value.trim();
+    textarea.value = currentValue ? currentValue + '\n\n• ' + reason : '• ' + reason;
+    textarea.focus();
+}
+
+// Handle profile approval
+async function handleProfileApproval(reviewId) {
+    const submitBtn = document.querySelector('#approve-profile-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Approving...';
+    try {
+        const notes = document.getElementById('approval-notes').value.trim();
+        await apiCall(`/admin/profile-reviews/${reviewId}/approve`, 'POST', {
+            notes: notes || 'Profile approved by admin'
+        });
+        showNotification('Profile approved successfully!', 'success');
+        closeModal();
+        setTimeout(renderProfileReviewsTab, 1000);
+    } catch (error) {
+        // Error notification handled in apiCall
+    } finally {
+        if(submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    }
+}
+
+// Handle profile rejection
+async function handleProfileRejection(reviewId) {
+    const reason = document.getElementById('rejection-reason').value.trim();
+    if (!reason) {
+        showNotification('Please provide a reason for rejection', 'warning');
+        return;
+    }
+    const submitBtn = document.querySelector('#reject-profile-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Rejecting...';
+    try {
+        await apiCall(`/admin/profile-reviews/${reviewId}/reject`, 'POST', { reason });
+        showNotification('Profile rejected and user notified.', 'success');
+        closeModal();
+        setTimeout(renderProfileReviewsTab, 1000);
+    } catch (error) {
+        // Error notification handled in apiCall
+    } finally {
+        if(submitBtn){
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    }
+}
+
+// Debug profile system
+async function debugProfileSystem() {
+    try {
+        showNotification('Running profile system debug...', 'info');
+        const data = await apiCall('/admin/debug/profiles', 'GET');
+        console.log('=== PROFILE SYSTEM DEBUG ===', data.data, '=== END DEBUG ===');
+        showNotification('Debug complete - check console for details', 'success');
+
+        const { breakdown, recommendations } = data.data;
+        const debugModal = `
+            <div class="modal-header premium-modal-header"><h3><i class="fas fa-bug"></i> Profile System Debug Results</h3></div>
+            <div class="debug-results">
+                <h4>System Status</h4>
+                <ul>
+                    <li>Total Users: ${breakdown.total}</li>
+                    <li>Profile Completed: ${breakdown.profileCompleted}</li>
+                    <li>Profile Not Completed: ${breakdown.profileNotCompleted}</li>
+                </ul>
+                <h4>Profile Status</h4>
+                <ul>${Object.entries(breakdown.byProfileStatus).map(([status, count]) => `<li>${status}: ${count}</li>`).join('')}</ul>
+            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+        `;
+        showGenericModal(debugModal, 'max-width: 600px;');
+    } catch (error) {
+       // Error already handled
+    }
+}
+
+// Create test users for testing
+async function createTestUsers() {
+    if(!confirm("Are you sure you want to create new test users? This is for development purposes.")) return;
+    try {
+        showNotification('Creating test users...', 'info');
+        const data = await apiCall('/admin/debug/create-test-users', 'POST');
+        showNotification(`Created ${data.data.length} test users successfully!`, 'success');
+        setTimeout(renderProfileReviewsTab, 1000);
+    } catch (error) {
+        // Error already handled
+    }
+}
+
 // --- SUBSCRIPTION MANAGEMENT ---
 async function renderAdminSubscriptions() {
     const contentArea = document.getElementById('admin-content-area');
@@ -2235,321 +2625,6 @@ async function deleteJob(jobId) {
         }
     }
 }
-
-// --- PROFILE REVIEW MANAGEMENT (NEW SECTION) ---
-
-async function loadProfileReviews() {
-    try {
-        console.log('🔍 Loading profile reviews...');
-        const data = await apiCall('/admin/profile-reviews', 'GET');
-        const reviews = data.data || [];
-        console.log(`✅ Loaded ${reviews.length} profile reviews`);
-        return reviews;
-    } catch (error) {
-        console.error('❌ Error loading profile reviews:', error);
-        throw error;
-    }
-}
-
-async function renderProfileReviewsTab() {
-    const contentArea = document.getElementById('admin-content-area');
-    showLoader(contentArea);
-
-    try {
-        const reviews = await loadProfileReviews();
-        if (reviews.length === 0) {
-            contentArea.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-check"></i>
-                    <h3>No Pending Reviews</h3>
-                    <p>All user profiles have been reviewed.</p>
-                    <button class="btn btn-primary" onclick="renderProfileReviewsTab()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            `;
-            return;
-        }
-
-        const pendingReviews = reviews.filter(r => r.status === 'pending');
-        const completedReviews = reviews.filter(r => r.status !== 'pending');
-
-        contentArea.innerHTML = `
-            <div class="admin-section-header">
-                <div class="section-title">
-                    <h2>Profile Reviews</h2>
-                    <span class="count-badge">${reviews.length} total</span>
-                    ${pendingReviews.length > 0 ? `<span class="count-badge unread">${pendingReviews.length} pending</span>` : ''}
-                </div>
-                 <div class="section-actions">
-                    <button class="btn btn-primary" onclick="renderProfileReviewsTab()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            
-            ${pendingReviews.length > 0 ? `
-                <div class="review-section">
-                    <h4><i class="fas fa-clock"></i> Pending Reviews (${pendingReviews.length})</h4>
-                    <div class="profile-reviews-grid">
-                        ${pendingReviews.map(review => renderProfileReviewCard(review, true)).join('')}
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${completedReviews.length > 0 ? `
-                <div class="review-section" style="margin-top: 2rem;">
-                    <h4><i class="fas fa-history"></i> Recently Reviewed (${completedReviews.length})</h4>
-                    <div class="profile-reviews-grid">
-                        ${completedReviews.slice(0, 10).map(review => renderProfileReviewCard(review, false)).join('')}
-                    </div>
-                </div>
-            ` : ''}
-        `;
-    } catch (error) {
-        contentArea.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Error Loading Profile Reviews</h3>
-                <p>Failed to load profile reviews: ${error.message}</p>
-                <button class="btn btn-primary" onclick="renderProfileReviewsTab()">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-function renderProfileReviewCard(review, isPending) {
-    const user = review.user || {};
-    const statusClass = review.status || 'pending';
-    const statusIcon = {
-        'pending': 'fa-clock',
-        'approved': 'fa-check-circle',
-        'rejected': 'fa-times-circle'
-    }[review.status] || 'fa-question-circle';
-    const userType = user.type || review.userType || 'user';
-    const submittedDate = review.createdAt ? formatDate(review.createdAt) : 'N/A';
-    const reviewedDate = review.reviewedAt ? formatDate(review.reviewedAt) : null;
-    
-    return `
-        <div class="profile-review-card review-status-${statusClass}">
-            <div class="review-header">
-                <div class="user-info">
-                    <div class="user-avatar" style="background-color: #667eea">
-                        ${(user.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div class="user-details">
-                        <h4>${user.name || 'Unknown User'}</h4>
-                        <p>${user.email || 'No email'}</p>
-                        <span class="role-badge ${userType}">${userType}</span>
-                    </div>
-                </div>
-                <div class="review-status">
-                    <span class="status-badge ${statusClass}">
-                        <i class="fas ${statusIcon}"></i>
-                        ${review.status?.charAt(0).toUpperCase() + review.status?.slice(1) || 'Pending'}
-                    </span>
-                </div>
-            </div>
-            <div class="review-meta">
-                <span>Submitted: ${submittedDate}</span>
-                ${reviewedDate ? `<span>Reviewed: ${reviewedDate}</span>` : ''}
-                ${review.reviewedBy ? `<span>By: ${review.reviewedBy}</span>` : ''}
-            </div>
-            ${review.reviewNotes ? `
-                <div class="review-notes">
-                    <strong>Admin Notes:</strong>
-                    <p>${review.reviewNotes}</p>
-                </div>
-            ` : ''}
-            <div class="review-actions">
-                <button class="btn btn-sm btn-info" onclick="viewProfileDetails('${review._id}')">
-                    <i class="fas fa-eye"></i> View Details
-                </button>
-                ${isPending ? `
-                    <button class="btn btn-sm btn-success" onclick="showApproveModal('${review._id}')">
-                        <i class="fas fa-check"></i> Approve
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="showRejectModal('${review._id}')">
-                        <i class="fas fa-times"></i> Reject
-                    </button>
-                ` : review.status === 'rejected' ? `
-                    <button class="btn btn-sm btn-success" onclick="showApproveModal('${review._id}')">
-                        <i class="fas fa-check"></i> Approve Now
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-    `;
-}
-
-async function viewProfileDetails(reviewId) {
-    try {
-        showNotification('Loading profile details...', 'info');
-        const data = await apiCall(`/admin/profile-reviews/${reviewId}`, 'GET');
-        const review = data.data.review;
-        const user = review.user || {};
-        const profileData = review.profileData || {};
-
-        const modalContent = `
-            <div class="profile-details-modal">
-                <div class="modal-header">
-                    <h3>Profile Review Details</h3>
-                    <p>${user.name} - ${user.type?.charAt(0).toUpperCase() + user.type?.slice(1) || 'User'}</p>
-                </div>
-                <div class="profile-details-content">
-                    <div class="profile-section">
-                        <h4>Basic Information</h4>
-                        <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
-                        <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
-                        <p><strong>Account Type:</strong> ${user.type || 'N/A'}</p>
-                        <p><strong>Submitted:</strong> ${formatDate(review.createdAt)}</p>
-                    </div>
-
-                    ${user.type === 'contractor' ? `
-                        <div class="profile-section">
-                            <h4>Contractor Information</h4>
-                            <p><strong>Company:</strong> ${profileData.companyName || 'N/A'}</p>
-                            <p><strong>Business Type:</strong> ${profileData.businessType || 'N/A'}</p>
-                            <p><strong>Website:</strong> ${profileData.companyWebsite ? `<a href="${profileData.companyWebsite}" target="_blank">${profileData.companyWebsite}</a>` : 'N/A'}</p>
-                            <p><strong>Description:</strong> ${profileData.description || 'N/A'}</p>
-                        </div>
-                    ` : ''}
-                     ${user.type === 'designer' ? `
-                         <div class="profile-section">
-                            <h4>Designer Information</h4>
-                            <p><strong>Skills:</strong> ${profileData.skills?.join(', ') || 'N/A'}</p>
-                            <p><strong>Experience:</strong> ${profileData.experience || 'N/A'}</p>
-                            <p><strong>LinkedIn:</strong> ${profileData.linkedinProfile ? `<a href="${profileData.linkedinProfile}" target="_blank">${profileData.linkedinProfile}</a>` : 'N/A'}</p>
-                            <p><strong>Bio:</strong> ${profileData.bio || 'N/A'}</p>
-                        </div>
-                    ` : ''}
-
-                    ${profileData.resume || profileData.certificates?.length > 0 ? `
-                        <div class="profile-section">
-                            <h4>Uploaded Files</h4>
-                             ${profileData.resume ? `<p><strong>Resume:</strong> <a href="${profileData.resume.url}" target="_blank">View File</a></p>` : ''}
-                             ${profileData.certificates?.map(cert => `<p><strong>Certificate:</strong> <a href="${cert.url}" target="_blank">${cert.filename}</a></p>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-                <div class="modal-actions">
-                    ${review.status === 'pending' ? `
-                        <button class="btn btn-success" onclick="closeModal(); showApproveModal('${review._id}')">
-                            <i class="fas fa-check"></i> Approve
-                        </button>
-                        <button class="btn btn-danger" onclick="closeModal(); showRejectModal('${review._id}')">
-                            <i class="fas fa-times"></i> Reject
-                        </button>
-                    ` : ''}
-                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                </div>
-            </div>
-        `;
-        showModal('profile-details', modalContent);
-    } catch (error) {
-        showNotification('Failed to load profile details', 'error');
-    }
-}
-
-function showApproveModal(reviewId) {
-    appState.currentProfileReview = reviewId;
-    const modalContent = `
-        <div class="modal-header">
-            <h3>Approve Profile</h3>
-            <p>Approve this user's profile and grant full platform access.</p>
-        </div>
-        <form id="approve-profile-form">
-            <div class="form-group">
-                <label for="approval-notes">Approval Notes (Optional)</label>
-                <textarea id="approval-notes" class="form-control" rows="3" placeholder="Add any notes about the approval..."></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-success">
-                    <i class="fas fa-check"></i> Approve Profile
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            </div>
-        </form>
-    `;
-    showModal('approve-profile', modalContent);
-    document.getElementById('approve-profile-form').addEventListener('submit', handleProfileApproval);
-}
-
-function showRejectModal(reviewId) {
-    appState.currentProfileReview = reviewId;
-    const modalContent = `
-        <div class="modal-header">
-            <h3>Reject Profile</h3>
-            <p>Reject this profile and provide feedback for improvement.</p>
-        </div>
-        <form id="reject-profile-form">
-            <div class="form-group">
-                <label for="rejection-reason">Rejection Reason (Required)</label>
-                <textarea id="rejection-reason" class="form-control" rows="4" required placeholder="Explain what needs to be updated..."></textarea>
-                <small>This will be sent to the user via email.</small>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-times"></i> Reject Profile
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            </div>
-        </form>
-    `;
-    showModal('reject-profile', modalContent);
-    document.getElementById('reject-profile-form').addEventListener('submit', handleProfileRejection);
-}
-
-async function handleProfileApproval(event) {
-    event.preventDefault();
-    if (!appState.currentProfileReview) return showNotification('No profile selected', 'error');
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
-
-    try {
-        const notes = document.getElementById('approval-notes').value.trim();
-        await apiCall(`/admin/profile-reviews/${appState.currentProfileReview}/approve`, 'POST', {
-            notes: notes || 'Profile approved by admin'
-        });
-        showNotification('Profile approved successfully!', 'success');
-        closeModal();
-        appState.currentProfileReview = null;
-        renderProfileReviewsTab();
-    } catch (error) {
-        showNotification(`Failed to approve profile: ${error.message}`, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-check"></i> Approve Profile';
-    }
-}
-
-async function handleProfileRejection(event) {
-    event.preventDefault();
-    if (!appState.currentProfileReview) return showNotification('No profile selected', 'error');
-
-    const reason = document.getElementById('rejection-reason').value.trim();
-    if (!reason) return showNotification('Please provide a reason for rejection', 'warning');
-
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rejecting...';
-
-    try {
-        await apiCall(`/admin/profile-reviews/${appState.currentProfileReview}/reject`, 'POST', { reason });
-        showNotification('Profile rejected and user notified.', 'success');
-        closeModal();
-        appState.currentProfileReview = null;
-        renderProfileReviewsTab();
-    } catch (error) {
-        showNotification(`Failed to reject profile: ${error.message}`, 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-times"></i> Reject Profile';
-    }
-}
-
 // --- ANALYTICS ---
 async function renderAdminAnalytics() {
     const contentArea = document.getElementById('admin-content-area');
