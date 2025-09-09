@@ -574,6 +574,9 @@
                 <button class="tab active" onclick="showTab('overview')">
                     <i class="fas fa-home"></i> Overview
                 </button>
+                <button class="tab" onclick="showTab('profile-reviews')">
+                    <i class="fas fa-user-check"></i> Profile Reviews
+                </button>
                 <button class="tab" onclick="showTab('users')">
                     <i class="fas fa-users"></i> Users
                 </button>
@@ -598,6 +601,13 @@
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Loading overview data...</p>
+                </div>
+            </div>
+
+            <div id="profile-reviews-tab" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading profile reviews...</p>
                 </div>
             </div>
             
@@ -1097,6 +1107,11 @@
                 loadSubscriptionsData();
             } else if (tabName === 'overview') {
                 renderOverviewTab();
+            }
+            // Add a condition for the new tab, though its function is not yet defined
+            else if (tabName === 'profile-reviews') {
+                // Example: loadProfileReviewsData();
+                console.log("Profile Reviews tab clicked. Implement data loading here.");
             }
         }
         
@@ -2671,3 +2686,13 @@ Notes: ${estimation.notes || 'No notes provided'}
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
