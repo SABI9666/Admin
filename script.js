@@ -2405,3 +2405,462 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') closeModal();
     });
 });
+
+// --- NEW/UPDATED USER PORTAL FUNCTIONS ---
+
+async function checkProfileAndRoute() {
+    const container = document.getElementById('app-container');
+    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading your dashboard...</p></div>`;
+    try {
+        const response = await apiCall('/profile/status', 'GET');
+        const { profileStatus, canAccess, rejectionReason } = response.data;
+        // Update global state
+        appState.currentUser.profileStatus = profileStatus;
+        appState.currentUser.canAccess = canAccess;
+        // Always show the full app interface
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.style.display = 'flex';
+        // Set up sidebar user info
+        document.getElementById('sidebarUserName').textContent = appState.currentUser.name;
+        document.getElementById('sidebarUserType').textContent = appState.currentUser.type;
+        document.getElementById('sidebarUserAvatar').textContent = (appState.currentUser.name || "A").charAt(0).toUpperCase();
+        buildSidebarNav();
+        // Show dashboard regardless of profile status
+        renderAppSection('dashboard');
+        // Load user data based on type
+        if (appState.currentUser.type === 'designer') loadUserQuotes();
+        if (appState.currentUser.type === 'contractor') loadUserEstimations();
+        // Initialize notifications and activity timer
+        initializeEnhancedNotifications();
+        resetInactivityTimer();
+        // Show profile status notification if needed
+        if (profileStatus === 'incomplete') {
+            showNotification('Complete your profile in Settings to unlock all features.', 'info', 8000);
+        } else if (profileStatus === 'pending') {
+            showNotification('Your profile is under review. You\'ll get full access once approved.', 'info', 8000);
+        } else if (profileStatus === 'rejected') {
+            showNotification('Please update your profile in Settings - some changes are needed.', 'warning', 10000);
+        }
+        console.log('User portal loaded successfully');
+    } catch (error) {
+        showNotification('Could not verify your profile status. Please try again.', 'error');
+        container.innerHTML = `<div class="error-state"><h2>Error</h2><p>Could not load your dashboard. Please try logging in again.</p><button class="btn btn-primary" onclick="logout()">Logout</button></div>`;
+    }
+}
+
+function renderAppSection(sectionId) {
+    const container = document.getElementById('app-container');
+    document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionId);
+    });
+    const userRole = appState.currentUser.type;
+    const profileStatus = appState.currentUser.profileStatus;
+    const isApproved = profileStatus === 'approved';
+    // Check if feature requires approval
+    const restrictedSections = ['post-job', 'jobs', 'my-quotes', 'approved-jobs', 'estimation-tool', 'my-estimations', 'messages'];
+    const isRestricted = restrictedSections.includes(sectionId);
+    if (isRestricted && !isApproved) {
+        container.innerHTML = getRestrictedAccessTemplate(sectionId, profileStatus);
+        return;
+    }
+    // Handle settings section (always accessible)
+    if (sectionId === 'settings') {
+        container.innerHTML = getSettingsTemplate(appState.currentUser);
+        return;
+    }
+    // Regular section rendering for approved users or dashboard
+    if (sectionId === 'dashboard') {
+        container.innerHTML = getDashboardTemplate(appState.currentUser);
+        renderRecentActivityWidgets();
+    } else if (sectionId === 'jobs') {
+        const title = userRole === 'designer' ? 'Available Projects' : 'My Posted Projects';
+        const subtitle = userRole === 'designer' ? 'Browse and submit quotes for engineering projects' : 'Manage your project listings and review quotes';
+        container.innerHTML = `
+            ${userRole === 'contractor' ? '<div id="dynamic-feature-header" class="dynamic-feature-header"></div>' : ''}
+            <div class="section-header modern-header">
+                <div class="header-content"><h2><i class="fas ${userRole === 'designer' ? 'fa-search' : 'fa-tasks'}"></i> ${title}</h2><p class="header-subtitle">${subtitle}</p></div>
+            </div>
+            <div id="jobs-list" class="jobs-grid"></div>
+            <div id="load-more-container" class="load-more-section"></div>`;
+        if (userRole === 'contractor') updateDynamicHeader();
+        fetchAndRenderJobs();
+    } else if (sectionId === 'post-job') {
+        container.innerHTML = getPostJobTemplate();
+        document.getElementById('post-job-form').addEventListener('submit', handlePostJob);
+    } else if (sectionId === 'my-quotes') {
+        fetchAndRenderMyQuotes();
+    } else if (sectionId === 'approved-jobs') {
+        fetchAndRenderApprovedJobs();
+    } else if (sectionId === 'messages') {
+        fetchAndRenderConversations();
+    } else if (sectionId === 'estimation-tool') {
+        container.innerHTML = getEstimationToolTemplate();
+        setupEstimationToolEventListeners();
+    } else if (sectionId === 'my-estimations') {
+        fetchAndRenderMyEstimations();
+    }
+}
+
+function getRestrictedAccessTemplate(sectionId, profileStatus) {
+    const sectionNames = {
+        'post-job': 'Post Projects',
+        'jobs': 'Browse Projects',
+        'my-quotes': 'My Quotes',
+        'approved-jobs': 'Approved Projects',
+        'estimation-tool': 'AI Estimation',
+        'my-estimations': 'My Estimations',
+        'messages': 'Messages'
+    };
+    const sectionName = sectionNames[sectionId] || 'This Feature';
+    let statusMessage = '';
+    let actionButton = '';
+    let statusIcon = 'fa-lock';
+    let statusColor = '#f59e0b';
+    if (profileStatus === 'incomplete') {
+        statusMessage = 'Complete your profile to unlock this feature.';
+        actionButton = `<button class="btn btn-primary" onclick="renderProfileCompletionView()">Complete Profile</button>`;
+        statusIcon = 'fa-user-edit';
+    } else if (profileStatus === 'pending') {
+        statusMessage = 'Your profile is under review. This feature will be available once approved.';
+        statusIcon = 'fa-clock';
+        statusColor = '#0ea5e9';
+    } else if (profileStatus === 'rejected') {
+        statusMessage = 'Please update your profile to access this feature.';
+        actionButton = `<button class="btn btn-primary" onclick="renderProfileCompletionView()">Update Profile</button>`;
+        statusIcon = 'fa-exclamation-triangle';
+        statusColor = '#ef4444';
+    }
+    return `
+        <div class="restricted-access-container" style="max-width: 600px; margin: 4rem auto; text-align: center; background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+            <div class="restricted-icon" style="font-size: 4rem; margin-bottom: 1.5rem; color: ${statusColor};">
+                <i class="fas ${statusIcon}"></i>
+            </div>
+            <h2 style="font-size: 2rem; margin-bottom: 1rem;">${sectionName} - Access Restricted</h2>
+            <p style="color: var(--text-gray); margin-bottom: 2rem; font-size: 1.1rem;">${statusMessage}</p>
+            ${actionButton}
+            <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+                <p style="font-size: 0.9rem; color: var(--text-gray); margin: 0;">
+                    <i class="fas fa-info-circle"></i> All features will be unlocked once your profile is approved by our admin team.
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+function getSettingsTemplate(user) {
+    const profileStatus = user.profileStatus || 'incomplete';
+    const canAccess = user.canAccess !== false;
+    let profileSection = '';
+    if (profileStatus === 'incomplete') {
+        profileSection = `
+            <div class="settings-card" style="border-left: 4px solid #f59e0b;">
+                <h3><i class="fas fa-user-edit"></i> Complete Your Profile</h3>
+                <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="margin: 0; color: #92400e;"><strong>Action Required:</strong> Your profile is incomplete. Complete it to unlock all platform features.</p>
+                </div>
+                <button class="btn btn-primary" onclick="renderProfileCompletionView()">
+                    <i class="fas fa-edit"></i> Complete Profile Now
+                </button>
+            </div>`;
+    } else if (profileStatus === 'pending') {
+        profileSection = `
+            <div class="settings-card" style="border-left: 4px solid #0ea5e9;">
+                <h3><i class="fas fa-clock"></i> Profile Under Review</h3>
+                <div style="background: #e0f2fe; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="margin: 0; color: #075985;"><strong>Status:</strong> Your profile has been submitted and is currently under review by our admin team.</p>
+                </div>
+                <p>Review typically takes 24-48 hours. You'll receive an email once approved.</p>
+            </div>`;
+    } else if (profileStatus === 'rejected') {
+        profileSection = `
+            <div class="settings-card" style="border-left: 4px solid #ef4444;">
+                <h3><i class="fas fa-exclamation-triangle"></i> Profile Needs Update</h3>
+                <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="margin: 0; color: #991b1b;"><strong>Action Required:</strong> Your profile needs some updates before it can be approved.</p>
+                    ${user.rejectionReason ? `<p style="margin: 0.5rem 0 0 0; color: #991b1b;"><strong>Reason:</strong> ${user.rejectionReason}</p>` : ''}
+                </div>
+                <button class="btn btn-primary" onclick="renderProfileCompletionView()">
+                    <i class="fas fa-edit"></i> Update Profile
+                </button>
+            </div>`;
+    } else if (profileStatus === 'approved') {
+        profileSection = `
+            <div class="settings-card" style="border-left: 4px solid #10b981;">
+                <h3><i class="fas fa-check-circle"></i> Profile Approved</h3>
+                <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="margin: 0; color: #065f46;"><strong>Status:</strong> Your profile is approved and you have full access to all platform features.</p>
+                </div>
+                <button class="btn btn-outline" onclick="renderProfileCompletionView()">
+                    <i class="fas fa-edit"></i> Update Profile Information
+                </button>
+            </div>`;
+    }
+    return `
+        <div class="section-header modern-header">
+            <div class="header-content">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <p class="header-subtitle">Manage your account, profile, and subscription details</p>
+            </div>
+        </div>
+        <div class="settings-container">
+            ${profileSection}
+            <div class="settings-card">
+                <h3><i class="fas fa-user-edit"></i> Personal Information</h3>
+                <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Profile updated successfully!', 'success');">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" value="${user.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" value="${user.email}" disabled>
+                        <small class="form-help">Email cannot be changed.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Account Type</label>
+                        <input type="text" class="form-input" value="${user.type.charAt(0).toUpperCase() + user.type.slice(1)}" disabled>
+                        <small class="form-help">Account type cannot be changed.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+            <div class="settings-card">
+                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                <form class="premium-form" onsubmit="event.preventDefault(); showNotification('Password functionality not implemented.', 'info');">
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-input">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+            <div class="settings-card subscription-card">
+                <h3><i class="fas fa-gem"></i> Subscription & Billing</h3>
+                <p>You are currently on the <strong>Pro Plan</strong>. This gives you access to unlimited projects and AI estimations.</p>
+                <div class="subscription-plans">
+                    <div class="plan-card">
+                        <h4>Basic</h4>
+                        <p class="price">Free</p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> 3 Projects / month</li>
+                            <li><i class="fas fa-times"></i> AI Estimations</li>
+                            <li><i class="fas fa-check"></i> Standard Support</li>
+                        </ul>
+                        <button class="btn btn-outline" disabled>Current Plan</button>
+                    </div>
+                    <div class="plan-card active">
+                        <h4>Pro</h4>
+                        <p class="price">$49<span>/mo</span></p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Unlimited Projects</li>
+                            <li><i class="fas fa-check"></i> AI Estimations</li>
+                            <li><i class="fas fa-check"></i> Priority Support</li>
+                        </ul>
+                        <button class="btn btn-success" onclick="showNotification('You are on the best plan!', 'info')">Your Plan</button>
+                    </div>
+                    <div class="plan-card">
+                        <h4>Enterprise</h4>
+                        <p class="price">Contact Us</p>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Team Accounts</li>
+                            <li><i class="fas fa-check"></i> Advanced Analytics</li>
+                            <li><i class="fas fa-check"></i> Dedicated Support</li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="showNotification('Contacting sales...', 'info')">Get a Quote</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getDashboardTemplate(user) {
+    const isContractor = user.type === 'contractor';
+    const name = user.name.split(' ')[0];
+    const profileStatus = user.profileStatus || 'incomplete';
+    const isApproved = profileStatus === 'approved';
+    // Profile status card based on current status
+    let profileStatusCard = '';
+    if (profileStatus === 'incomplete') {
+        profileStatusCard = `
+            <div class="dashboard-profile-status-card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Complete Your Profile</h3>
+                <p>Your profile is incomplete. Complete it now to unlock all platform features and get access to ${isContractor ? 'posting projects and AI estimation tools' : 'browsing projects and submitting quotes'}.</p>
+                <button class="btn btn-primary" onclick="renderProfileCompletionView()">
+                    <i class="fas fa-user-edit"></i> Complete Profile Now
+                </button>
+            </div>`;
+    } else if (profileStatus === 'pending') {
+        profileStatusCard = `
+            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%); border-color: #3b82f6;">
+                <h3 style="color: #1e40af;"><i class="fas fa-clock"></i> Profile Under Review</h3>
+                <p style="color: #1e40af;">Your profile has been submitted and is currently under review by our admin team. You'll receive an email notification once approved. Review typically takes 24-48 hours.</p>
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                    <p style="margin: 0; color: #1e40af; font-size: 0.9rem;"><i class="fas fa-info-circle"></i> You have limited access until approval. All features will be unlocked once approved.</p>
+                </div>
+            </div>`;
+    } else if (profileStatus === 'rejected') {
+        profileStatusCard = `
+            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: #ef4444;">
+                <h3 style="color: #dc2626;"><i class="fas fa-times-circle"></i> Profile Needs Update</h3>
+                <p style="color: #dc2626;">Your profile needs some updates before it can be approved. Please review the feedback and update your profile.</p>
+                ${user.rejectionReason ? `<div style="background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;"><p style="margin: 0; color: #dc2626; font-size: 0.9rem;"><strong>Reason:</strong> ${user.rejectionReason}</p></div>` : ''}
+                <button class="btn btn-primary" onclick="renderProfileCompletionView()">
+                    <i class="fas fa-edit"></i> Update Profile Now
+                </button>
+            </div>`;
+    } else if (profileStatus === 'approved') {
+        profileStatusCard = `
+            <div class="dashboard-profile-status-card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #10b981;">
+                <h3 style="color: #059669;"><i class="fas fa-check-circle"></i> Profile Approved</h3>
+                <p style="color: #059669;">Your profile is approved and you have full access to all platform features. Start exploring and connecting with professionals!</p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    ${isContractor ? `
+                        <button class="btn btn-outline" onclick="renderAppSection('post-job')" style="border-color: #059669; color: #059669;">
+                            <i class="fas fa-plus"></i> Post First Project
+                        </button>
+                        <button class="btn btn-outline" onclick="renderAppSection('estimation-tool')" style="border-color: #059669; color: #059669;">
+                            <i class="fas fa-calculator"></i> Try AI Estimation
+                        </button>
+                    ` : `
+                        <button class="btn btn-outline" onclick="renderAppSection('jobs')" style="border-color: #059669; color: #059669;">
+                            <i class="fas fa-search"></i> Browse Projects
+                        </button>
+                        <button class="btn btn-outline" onclick="renderAppSection('my-quotes')" style="border-color: #059669; color: #059669;">
+                            <i class="fas fa-file-invoice-dollar"></i> View My Quotes
+                        </button>
+                    `}
+                </div>
+            </div>`;
+    }
+    const contractorQuickActions = `
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'post-job\')' : 'showRestrictedFeature(\'post-job\')'}">
+            <i class="fas fa-plus-circle card-icon"></i>
+            <h3>Create New Project</h3>
+            <p>Post a new listing for designers to quote on.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
+            <i class="fas fa-tasks card-icon"></i>
+            <h3>My Projects</h3>
+            <p>View and manage all your active projects.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'estimation-tool\')' : 'showRestrictedFeature(\'estimation-tool\')'}">
+            <i class="fas fa-calculator card-icon"></i>
+            <h3>AI Estimation</h3>
+            <p>Get instant cost estimates for your drawings.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'approved-jobs\')' : 'showRestrictedFeature(\'approved-jobs\')'}">
+            <i class="fas fa-check-circle card-icon"></i>
+            <h3>Approved Projects</h3>
+            <p>Track progress and communicate on assigned work.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>`;
+    const contractorWidgets = `
+        <div class="widget-card">
+            <h3><i class="fas fa-history"></i> Recent Projects</h3>
+            <div id="recent-projects-widget" class="widget-content">
+                ${!isApproved ? '<p class="widget-empty-text">Complete your profile to start posting projects.</p>' : ''}
+            </div>
+        </div>`;
+    const designerQuickActions = `
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'jobs\')' : 'showRestrictedFeature(\'jobs\')'}">
+            <i class="fas fa-search card-icon"></i>
+            <h3>Browse Projects</h3>
+            <p>Find new opportunities and submit quotes.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'my-quotes\')' : 'showRestrictedFeature(\'my-quotes\')'}">
+            <i class="fas fa-file-invoice-dollar card-icon"></i>
+            <h3>My Quotes</h3>
+            <p>Track the status of your submitted quotes.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>
+        <div class="quick-action-card" onclick="showNotification('Feature coming soon!', 'info')">
+            <i class="fas fa-upload card-icon"></i>
+            <h3>Submit Work</h3>
+            <p>Upload deliverables for your assigned projects.</p>
+        </div>
+        <div class="quick-action-card ${!isApproved ? 'restricted-card' : ''}" onclick="${isApproved ? 'renderAppSection(\'messages\')' : 'showRestrictedFeature(\'messages\')'}">
+            <i class="fas fa-comments card-icon"></i>
+            <h3>Messages</h3>
+            <p>Communicate with clients about projects.</p>
+            ${!isApproved ? '<div class="restriction-overlay"><i class="fas fa-lock"></i></div>' : ''}
+        </div>`;
+    const designerWidgets = `
+        <div class="widget-card">
+            <h3><i class="fas fa-history"></i> Recent Quotes</h3>
+            <div id="recent-quotes-widget" class="widget-content">
+                ${!isApproved ? '<p class="widget-empty-text">Complete your profile to start submitting quotes.</p>' : ''}
+            </div>
+        </div>`;
+    // Calculate profile completion percentage
+    let completionPercentage = 0;
+    if (profileStatus === 'incomplete') completionPercentage = 25;
+    else if (profileStatus === 'pending') completionPercentage = 75;
+    else if (profileStatus === 'rejected') completionPercentage = 50;
+    else if (profileStatus === 'approved') completionPercentage = 100;
+    return `
+        <div class="dashboard-container">
+            <div class="dashboard-hero">
+                <div>
+                    <h2>Welcome back, ${name} 👋</h2>
+                    <p>You are logged in to your <strong>${isContractor ? 'Contractor' : 'Designer'} Portal</strong>. ${isApproved ? 'All features are available.' : 'Complete your profile to unlock all features.'}</p>
+                </div>
+                <div class="subscription-badge">
+                    <i class="fas fa-star"></i> Pro Plan
+                </div>
+            </div>
+            ${profileStatusCard}
+            <h3 class="dashboard-section-title">Quick Actions</h3>
+            <div class="dashboard-grid">
+                ${isContractor ? contractorQuickActions : designerQuickActions}
+            </div>
+            <div class="dashboard-columns">
+                ${isContractor ? contractorWidgets : designerWidgets}
+                <div class="widget-card">
+                    <h3><i class="fas fa-user-circle"></i> Your Profile</h3>
+                    <div class="widget-content">
+                        <p>Profile Status: <strong style="color: ${profileStatus === 'approved' ? '#10b981' : profileStatus === 'pending' ? '#3b82f6' : '#f59e0b'}">${profileStatus.charAt(0).toUpperCase() + profileStatus.slice(1)}</strong></p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${completionPercentage}%;"></div>
+                        </div>
+                        <p class="progress-label">${completionPercentage}% Complete</p>
+                        ${profileStatus !== 'approved' ? `
+                            <button class="btn btn-primary" onclick="${profileStatus === 'incomplete' || profileStatus === 'rejected' ? 'renderProfileCompletionView()' : 'renderAppSection(\'settings\')'}">
+                                <i class="fas fa-edit"></i> ${profileStatus === 'incomplete' || profileStatus === 'rejected' ? 'Complete Profile' : 'View Profile Status'}
+                            </button>
+                        ` : `
+                            <button class="btn btn-outline" onclick="renderAppSection('settings')">
+                                <i class="fas fa-edit"></i> Update Profile
+                            </button>
+                        `}
+                        <hr class="widget-divider">
+                        <p>Upgrade your plan for advanced features.</p>
+                        <button class="btn btn-primary" onclick="renderAppSection('settings')">
+                           <i class="fas fa-arrow-up"></i> Upgrade Subscription
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function showRestrictedFeature(featureName) {
+    const profileStatus = appState.currentUser.profileStatus;
+    let message = '';
+    if (profileStatus === 'incomplete') {
+        message = 'Complete your profile to access this feature.';
+    } else if (profileStatus === 'pending') {
+        message = 'This feature will be available once your profile is approved.';
+    } else if (profileStatus === 'rejected') {
+        message = 'Please update your profile to access this feature.';
+    }
+    showNotification(message, 'warning', 6000);
+}
