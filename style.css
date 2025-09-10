@@ -601,6 +601,12 @@ body {
     box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
 }
 
+.status-badge.approved {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: white;
+    box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+}
+
 .type-badge {
     padding: 4px 12px;
     border-radius: 15px;
@@ -901,7 +907,7 @@ body {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* === NEWLY ADDED STYLES === */
+/* === PROFILE REVIEWS STYLES === */
 
 /* Admin Profile Management Styles */
 .profile-reviews-grid {    
@@ -1011,21 +1017,6 @@ body {
     display: flex;    
     align-items: center;    
     gap: 0.5rem;
-}
-
-.status-badge.pending {    
-    background: #fef3c7;    
-    color: #92400e;
-}
-
-.status-badge.approved {    
-    background: #d1fae5;    
-    color: #065f46;
-}
-
-.status-badge.rejected {    
-    background: #fee2e2;    
-    color: #991b1b;
 }
 
 /* Review Meta Information */
@@ -1421,5 +1412,77 @@ body {
     .reason-buttons .btn {        
         width: 100%;        
         text-align: left;    
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    .header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+
+    .header h1 {
+        font-size: 24px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .section {
+        padding: 20px;
+    }
+
+    .tabs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tab {
+        justify-content: center;
+        padding: 12px 20px;
+    }
+
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        min-width: 600px;
+    }
+
+    .message-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .message-actions {
+        flex-direction: column;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        max-height: 95vh;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
     }
 }
