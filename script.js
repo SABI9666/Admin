@@ -121,7 +121,6 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
     }
 }
 
-
 function logout() {
     localStorage.clear();
     showNotification('You have been logged out.', 'success');
@@ -143,7 +142,6 @@ function formatCurrency(amount) {
         currency: 'USD'
     }).format(amount || 0);
 }
-
 // --- MODAL UTILITIES ---
 function showModal(modalId, content) {
     const existingModal = document.getElementById('dynamic-modal');
@@ -180,7 +178,6 @@ function showGenericModal(content, style = '') {
     document.body.appendChild(modal);
     modal.style.display = 'flex';
 }
-
 
 function closeModal() {
     const modal = document.getElementById('dynamic-modal');
@@ -617,8 +614,7 @@ async function deleteUser(userId) {
         }
     }
 }
-
-// --- PROFILE REVIEW MANAGEMENT (NEW & REPLACES OLD) ---
+// --- PROFILE REVIEW MANAGEMENT ---
 
 // Load profile reviews with comprehensive error handling
 async function loadProfileReviews() {
@@ -735,7 +731,6 @@ async function renderProfileReviewsTab() {
         `;
     }
 }
-
 
 // Render individual profile review card
 function renderProfileReviewCard(review) {
@@ -861,7 +856,6 @@ async function viewProfileDetails(reviewId) {
         console.error('Error loading profile details:', error);
     }
 }
-
 // Show approval modal
 function showApproveModal(reviewId) {
     const modalContent = `
@@ -1019,762 +1013,6 @@ async function createTestUsers() {
         // Error already handled
     }
 }
-
-// --- SUBSCRIPTION MANAGEMENT ---
-async function renderAdminSubscriptions() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const [subscriptionsData, plansData] = await Promise.all([
-            apiCall('/admin/subscriptions'),
-            apiCall('/admin/subscription-plans')
-        ]);
-
-        contentArea.innerHTML = `
-            <div class="subscriptions-management">
-                <div class="subscription-tabs">
-                    <button class="tab-button active" onclick="switchSubscriptionTab('plans')">
-                        <i class="fas fa-layer-group"></i> Subscription Plans
-                    </button>
-                    <button class="tab-button" onclick="switchSubscriptionTab('users')">
-                        <i class="fas fa-users"></i> User Subscriptions
-                    </button>
-                    <button class="tab-button" onclick="switchSubscriptionTab('analytics')">
-                        <i class="fas fa-chart-bar"></i> Analytics
-                    </button>
-                </div>
-
-                <div id="plans-tab" class="tab-content active">
-                    <div class="admin-section-header">
-                        <div class="section-title">
-                            <h2>Subscription Plans</h2>
-                            <span class="count-badge">${plansData.plans?.length || 0} plans</span>
-                        </div>
-                        <div class="section-actions">
-                            <button class="btn btn-primary" onclick="createSubscriptionPlan()">
-                                <i class="fas fa-plus"></i> Create New Plan
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="plans-grid">
-                        ${plansData.plans?.length ? plansData.plans.map(plan => `
-                            <div class="plan-card">
-                                <div class="plan-header">
-                                    <h4>${plan.name}</h4>
-                                    <div class="plan-price">
-                                        ${formatCurrency(plan.price)}
-                                        <small>/${plan.interval}</small>
-                                    </div>
-                                </div>
-                                <div class="plan-body">
-                                    <div class="plan-description">
-                                        ${plan.description || 'No description available'}
-                                    </div>
-                                    <div class="plan-features">
-                                        <h5>Features:</h5>
-                                        <ul>
-                                            ${plan.features?.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('') || '<li>No features listed</li>'}
-                                        </ul>
-                                    </div>
-                                    <div class="plan-stats">
-                                        <div class="stat-item">
-                                            <i class="fas fa-users"></i>
-                                            <span>${plan.subscriberCount || 0} subscribers</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="plan-actions">
-                                    <button class="btn btn-sm btn-info" onclick="editSubscriptionPlan('${plan._id}')">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriptionPlan('${plan._id}')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('') : '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No subscription plans</h3><p>Create your first subscription plan to get started.</p></div>'}
-                    </div>
-                </div>
-
-                <div id="users-tab" class="tab-content">
-                    <div class="admin-section-header">
-                        <div class="section-title">
-                            <h2>User Subscriptions</h2>
-                            <span class="count-badge">${subscriptionsData.subscriptions?.length || 0} subscriptions</span>
-                        </div>
-                        <div class="section-actions">
-                            <select id="subscription-status-filter" onchange="filterSubscriptionsByStatus(this.value)">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="expired">Expired</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    ${subscriptionsData.subscriptions?.length ? `
-                        <div class="admin-table-container">
-                            <table class="admin-table" id="subscriptions-table">
-                                <thead>
-                                    <tr>
-                                        <th>User</th>
-                                        <th>Plan</th>
-                                        <th>Status</th>
-                                        <th>Started</th>
-                                        <th>Next Billing</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${subscriptionsData.subscriptions.map(sub => `
-                                        <tr data-subscription-id="${sub._id}" data-status="${sub.status}">
-                                            <td>
-                                                <div class="user-info">
-                                                    <div class="user-avatar">
-                                                        <i class="fas fa-user"></i>
-                                                    </div>
-                                                    <div class="user-details">
-                                                        <strong>${sub.userName}</strong>
-                                                        <small>${sub.userEmail}</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="plan-info">
-                                                    <strong>${sub.planName}</strong>
-                                                    <small>${formatCurrency(sub.planPrice)}/${sub.planInterval}</small>
-                                                </div>
-                                            </td>
-                                            <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
-                                            <td>${formatDate(sub.startDate)}</td>
-                                            <td>${sub.nextBillingDate ? formatDate(sub.nextBillingDate) : 'N/A'}</td>
-                                            <td>
-                                                <div class="action-buttons">
-                                                    <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id}')" title="View Details">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    ${sub.status === 'active' ? `
-                                                        <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id}')" title="Cancel">
-                                                            <i class="fas fa-ban"></i>
-                                                        </button>
-                                                    ` : ''}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : '<div class="empty-state"><i class="fas fa-users"></i><h3>No subscriptions found</h3><p>User subscriptions will appear here when they subscribe to plans.</p></div>'}
-                </div>
-
-                <div id="analytics-tab" class="tab-content">
-                    <div class="subscription-analytics">
-                        <h3>Subscription Analytics</h3>
-                        <div class="analytics-grid">
-                            <div class="analytics-card">
-                                <h4>Revenue Overview</h4>
-                                <div class="metrics-grid">
-                                    <div class="metric">
-                                        <span class="metric-value">${formatCurrency(calculateTotalRevenue(subscriptionsData.subscriptions))}</span>
-                                        <span class="metric-label">Total Revenue</span>
-                                    </div>
-                                    <div class="metric">
-                                        <span class="metric-value">${formatCurrency(calculateMonthlyRevenue(subscriptionsData.subscriptions))}</span>
-                                        <span class="metric-label">Monthly Revenue</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="analytics-card">
-                                <h4>Plan Performance</h4>
-                                <div class="plan-performance">
-                                    ${generatePlanPerformanceChart(plansData.plans)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to load subscriptions</h3>
-                <button class="btn btn-primary" onclick="renderAdminSubscriptions()">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-function switchSubscriptionTab(tabName) {
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-    document.querySelector(`[onclick="switchSubscriptionTab('${tabName}')"]`).classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-}
-
-function createSubscriptionPlan() {
-    showModal('create-plan-modal', `
-        <div class="create-plan-modal">
-            <h3>Create Subscription Plan</h3>
-            <form id="create-plan-form">
-                <div class="form-group">
-                    <label for="plan-name">Plan Name:</label>
-                    <input type="text" id="plan-name" required placeholder="e.g., Premium Plan">
-                </div>
-                <div class="form-group">
-                    <label for="plan-price">Price:</label>
-                    <input type="number" id="plan-price" step="0.01" required placeholder="29.99">
-                </div>
-                <div class="form-group">
-                    <label for="plan-interval">Billing Interval:</label>
-                    <select id="plan-interval" required>
-                        <option value="month">Monthly</option>
-                        <option value="year">Yearly</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="plan-description">Description:</label>
-                    <textarea id="plan-description" placeholder="Plan description..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Features:</label>
-                    <div id="features-container">
-                        <div class="feature-input">
-                            <input type="text" placeholder="Feature 1">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
-                        <i class="fas fa-plus"></i> Add Feature
-                    </button>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Create Plan
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    `);
-
-    document.getElementById('create-plan-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const features = Array.from(document.querySelectorAll('#features-container input'))
-            .map(input => input.value.trim())
-            .filter(value => value);
-
-        const planData = {
-            name: document.getElementById('plan-name').value,
-            price: parseFloat(document.getElementById('plan-price').value),
-            interval: document.getElementById('plan-interval').value,
-            description: document.getElementById('plan-description').value,
-            features
-        };
-
-        try {
-            await apiCall('/admin/subscription-plans', 'POST', planData);
-            showNotification('Subscription plan created successfully', 'success');
-            closeModal();
-            renderAdminSubscriptions();
-        } catch (error) {
-            // Error already handled by apiCall
-        }
-    });
-}
-
-function addFeature() {
-    const container = document.getElementById('features-container');
-    const featureDiv = document.createElement('div');
-    featureDiv.className = 'feature-input';
-    featureDiv.innerHTML = `
-        <input type="text" placeholder="New feature">
-        <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
-            <i class="fas fa-minus"></i>
-        </button>
-    `;
-    container.appendChild(featureDiv);
-}
-
-function removeFeature(button) {
-    button.parentElement.remove();
-}
-
-async function editSubscriptionPlan(planId) {
-    try {
-        const plan = await apiCall(`/admin/subscription-plans/${planId}`);
-        showNotification('Edit plan functionality to be implemented', 'info');
-    } catch (error) {
-        showNotification('Failed to load plan details', 'error');
-    }
-}
-
-async function deleteSubscriptionPlan(planId) {
-    if (confirm('Are you sure you want to delete this subscription plan? This action cannot be undone.')) {
-        try {
-            await apiCall(`/admin/subscription-plans/${planId}`, 'DELETE');
-            showNotification('Subscription plan deleted successfully', 'success');
-            renderAdminSubscriptions();
-        } catch (error) {
-            // Error already handled by apiCall
-        }
-    }
-}
-
-async function cancelSubscription(subscriptionId) {
-    if (confirm('Are you sure you want to cancel this subscription?')) {
-        try {
-            await apiCall(`/admin/subscriptions/${subscriptionId}/cancel`, 'PATCH');
-            showNotification('Subscription cancelled successfully', 'success');
-            renderAdminSubscriptions();
-        } catch (error) {
-            // Error already handled by apiCall
-        }
-    }
-}
-
-async function viewSubscriptionDetails(subscriptionId) {
-    try {
-        const data = await apiCall(`/admin/subscriptions/${subscriptionId}`);
-        const subscription = data.subscription;
-
-        showModal('subscription-details-modal', `
-            <div class="subscription-details-modal">
-                <h3>Subscription Details</h3>
-                <div class="subscription-info">
-                    <div class="info-section">
-                        <h4>User Information</h4>
-                        <p><strong>Name:</strong> ${subscription.userName}</p>
-                        <p><strong>Email:</strong> ${subscription.userEmail}</p>
-                    </div>
-                    <div class="info-section">
-                        <h4>Plan Information</h4>
-                        <p><strong>Plan:</strong> ${subscription.planName}</p>
-                        <p><strong>Price:</strong> ${formatCurrency(subscription.planPrice)}/${subscription.planInterval}</p>
-                        <p><strong>Status:</strong> <span class="status-badge ${subscription.status}">${subscription.status}</span></p>
-                    </div>
-                    <div class="info-section">
-                        <h4>Billing Information</h4>
-                        <p><strong>Start Date:</strong> ${formatDate(subscription.startDate)}</p>
-                        <p><strong>Next Billing:</strong> ${subscription.nextBillingDate ? formatDate(subscription.nextBillingDate) : 'N/A'}</p>
-                        <p><strong>Total Paid:</strong> ${formatCurrency(subscription.totalPaid || 0)}</p>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                </div>
-            </div>
-        `);
-    } catch (error) {
-        showNotification('Failed to load subscription details', 'error');
-    }
-}
-
-function filterSubscriptionsByStatus(status) {
-    const table = document.getElementById('subscriptions-table');
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        const subscriptionStatus = row.dataset.status;
-        const shouldShow = !status || subscriptionStatus === status;
-        row.style.display = shouldShow ? '' : 'none';
-    });
-}
-
-function calculateTotalRevenue(subscriptions) {
-    if (!subscriptions) return 0;
-    return subscriptions
-        .filter(sub => sub.status === 'active')
-        .reduce((total, sub) => total + (sub.planPrice || 0), 0);
-}
-
-function calculateMonthlyRevenue(subscriptions) {
-    if (!subscriptions) return 0;
-    return subscriptions
-        .filter(sub => sub.status === 'active' && sub.planInterval === 'month')
-        .reduce((total, sub) => total + (sub.planPrice || 0), 0);
-}
-
-function generatePlanPerformanceChart(plans) {
-    if (!plans || plans.length === 0) {
-        return '<p>No plan data available</p>';
-    }
-
-    return plans.map(plan => `
-        <div class="plan-performance-item">
-            <div class="plan-name">${plan.name}</div>
-            <div class="plan-subscribers">
-                <div class="subscriber-bar">
-                    <div class="subscriber-fill" style="width: ${(plan.subscriberCount / Math.max(...plans.map(p => p.subscriberCount))) * 100}%"></div>
-                </div>
-                <span class="subscriber-count">${plan.subscriberCount || 0}</span>
-            </div>
-        </div>
-    `).join('');
-}
-// --- MESSAGES MANAGEMENT ---
-async function renderAdminMessages() {
-    const contentArea = document.getElementById('admin-content-area');
-    try {
-        const { messages } = await apiCall('/admin/messages');
-        // Make messages data globally available for this section for simplicity of filtering
-        window.messagesData = messages || [];
-
-        if (messages.length === 0) {
-            contentArea.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-comments"></i>
-                    <h3>No messages found</h3>
-                    <p>User messages will appear here.</p>
-                    <button class="btn btn-primary" onclick="renderAdminMessages()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            `;
-            return;
-        }
-
-        const unreadCount = messages.filter(m => (!m.isRead || m.status === 'unread') && !m.isBlocked).length;
-        const blockedCount = messages.filter(m => m.isBlocked).length;
-
-        contentArea.innerHTML = `
-            <div class="admin-section-header">
-                <div class="section-title">
-                    <h2>Messages Management</h2>
-                    <span class="count-badge">${messages.length} total</span>
-                    ${unreadCount > 0 ? `<span class="count-badge unread">${unreadCount} unread</span>` : ''}
-                    ${blockedCount > 0 ? `<span class="count-badge blocked">${blockedCount} blocked</span>` : ''}
-                </div>
-                <div class="section-actions">
-                     <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search messages..." id="message-search" oninput="filterMessagesByTerm(this.value)">
-                    </div>
-                    <select id="message-status-filter" onchange="filterMessagesByStatus(this.value)">
-                        <option value="">All Messages</option>
-                        <option value="unread">Unread Only</option>
-                        <option value="read">Read Only</option>
-                        <option value="blocked">Blocked Only</option>
-                        <option value="replied">Replied</option>
-                    </select>
-                    ${unreadCount > 0 ? `
-                        <button class="btn btn-success" onclick="markAllAsRead()">
-                            <i class="fas fa-check-double"></i> Mark All Read
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-            <div class="admin-table-container">
-                <table class="admin-table" id="messages-table">
-                    <thead>
-                        <tr>
-                            <th>From</th>
-                            <th>Subject</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${messages.map(message => {
-                            const messageId = message._id || message.id;
-                            const isUnread = !message.isRead || message.status === 'unread';
-                            const isBlocked = message.isBlocked;
-                            let rowClass = '';
-
-                            if (isBlocked) {
-                                rowClass = 'blocked-row';
-                            } else if (isUnread) {
-                                rowClass = 'unread-row';
-                            }
-
-                            return `
-                                <tr class="${rowClass}" data-message-id="${messageId}"
-                                    data-status="${isBlocked ? 'blocked' : (message.status || (isRead ? 'read' : 'unread'))}"
-                                    data-sender-name="${message.senderName || ''}"
-                                    data-sender-email="${message.senderEmail || ''}"
-                                    data-subject="${message.subject || ''}">
-                                    <td>
-                                        <div class="user-info">
-                                            <strong>${message.senderName || 'Anonymous'}</strong>
-                                            <small>${message.senderEmail || 'No email'}</small>
-                                            ${isBlocked ? '<span class="status-badge blocked">BLOCKED</span>' : ''}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="${isUnread && !isBlocked ? 'font-weight-bold' : ''}">
-                                            ${message.subject || 'No subject'}
-                                        </span>
-                                    </td>
-                                    <td><span class="type-badge ${message.type || 'general'}">${(message.type || 'general').toUpperCase()}</span></td>
-                                    <td>
-                                        <span class="status-badge ${isBlocked ? 'blocked' : (message.status || (message.isRead ? 'read' : 'unread'))}">
-                                            ${isBlocked ? 'Blocked' : (message.status || (message.isRead ? 'Read' : 'Unread'))}
-                                        </span>
-                                    </td>
-                                    <td>${message.createdAt ? formatDate(message.createdAt) : 'N/A'}</td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${messageId}')" title="View Message"><i class="fas fa-eye"></i></button>
-                                            ${!isBlocked ? `
-                                                <button class="btn btn-sm btn-primary" onclick="replyToMessage('${messageId}')" title="Reply"><i class="fas fa-reply"></i></button>
-                                                ${isUnread ? `<button class="btn btn-sm btn-success" onclick="markAsRead('${messageId}')" title="Mark as Read"><i class="fas fa-check"></i></button>` : ''}
-                                                <button class="btn btn-sm btn-warning" onclick="blockMessage('${messageId}', true)" title="Block Message"><i class="fas fa-ban"></i></button>
-                                            ` : `
-                                                <button class="btn btn-sm btn-success" onclick="blockMessage('${messageId}', false)" title="Unblock Message"><i class="fas fa-check-circle"></i></button>
-                                            `}
-                                            <button class="btn btn-sm btn-secondary" onclick="blockUserMessages('${message.senderEmail || message.email}', ${!isBlocked})" title="${isBlocked ? 'Unblock User' : 'Block User from Messaging'}"><i class="fas fa-user-${isBlocked ? 'check' : 'ban'}"></i></button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteMessage('${messageId}')" title="Delete"><i class="fas fa-trash"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    } catch (error) {
-        contentArea.innerHTML = `
-            <div class="error-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to load messages</h3>
-                <button class="btn btn-primary" onclick="renderAdminMessages()">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-function filterMessagesByTerm(searchTerm) {
-    const table = document.getElementById('messages-table');
-    const rows = table.querySelectorAll('tbody tr');
-    const term = searchTerm.toLowerCase();
-
-    rows.forEach(row => {
-        const senderName = row.dataset.senderName.toLowerCase();
-        const senderEmail = row.dataset.senderEmail.toLowerCase();
-        const subject = row.dataset.subject.toLowerCase();
-        const shouldShow = senderName.includes(term) || senderEmail.includes(term) || subject.includes(term);
-        row.style.display = shouldShow ? '' : 'none';
-    });
-}
-
-function filterMessagesByStatus(filterValue) {
-    const rows = document.querySelectorAll('#messages-table tbody tr');
-    rows.forEach(row => {
-        const message = window.messagesData.find(m => m._id === row.dataset.messageId);
-        if (!message) return;
-
-        let shouldShow = true;
-        if (filterValue) {
-            switch (filterValue) {
-                case 'unread':
-                    shouldShow = (!message.isRead || message.status === 'unread') && !message.isBlocked;
-                    break;
-                case 'read':
-                    shouldShow = message.isRead && message.status !== 'unread' && !message.isBlocked;
-                    break;
-                case 'blocked':
-                    shouldShow = message.isBlocked;
-                    break;
-                case 'replied':
-                    shouldShow = message.status === 'replied';
-                    break;
-            }
-        }
-        row.style.display = shouldShow ? '' : 'none';
-    });
-}
-
-async function viewMessageDetails(messageId) {
-    try {
-        const data = await apiCall(`/admin/messages/${messageId}`);
-        const message = data.message;
-
-        if (message.status === 'unread') {
-            await updateMessageStatus(messageId, 'read', false);
-        }
-
-        let blockingInfo = '';
-        if (message.isBlocked) {
-            blockingInfo = `
-                <div class="blocking-info">
-                    <h4>Blocking Information</h4>
-                    <p><strong>Blocked At:</strong> ${message.blockedAt ? new Date(message.blockedAt).toLocaleString() : 'N/A'}</p>
-                    <p><strong>Reason:</strong> ${message.blockReason || 'No reason provided'}</p>
-                </div>
-            `;
-        }
-
-        showModal('message-details-modal', `
-            <div class="message-details-modal">
-                <h3>Message Details</h3>
-                <div class="message-full-header">
-                    <div class="sender-info">
-                         <strong>From:</strong> ${message.senderName} &lt;${message.senderEmail}&gt;
-                         <p><small>Sent: ${new Date(message.createdAt).toLocaleString()}</small></p>
-                    </div>
-                    <span class="status-badge ${message.isBlocked ? 'blocked' : message.status}">
-                        ${message.isBlocked ? 'Blocked' : message.status}
-                    </span>
-                </div>
-                <div class="message-subject"><h4>${message.subject}</h4></div>
-                <div class="message-full-content"><p>${message.content.replace(/\n/g, '<br>')}</p></div>
-                ${blockingInfo}
-                <div class="modal-actions">
-                     <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                </div>
-            </div>
-        `);
-    } catch (error) {
-        showNotification('Failed to load message details', 'error');
-    }
-}
-
-async function replyToMessage(messageId) {
-    try {
-        const { message } = await apiCall(`/admin/messages/${messageId}`);
-        
-        if (message.isBlocked) {
-            showNotification('Cannot reply to a blocked message.', 'error');
-            return;
-        }
-        
-        showModal('reply-message-modal', `
-            <div class="reply-message-modal">
-                <h3>Reply to: ${message.subject}</h3>
-                <form id="reply-form">
-                    <div class="form-group"><input type="text" value="To: ${message.senderName} <${message.senderEmail}>" readonly></div>
-                    <div class="form-group"><textarea id="reply-content" placeholder="Type your reply..." required></textarea></div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Reply</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        `);
-        
-        document.getElementById('reply-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const content = document.getElementById('reply-content').value;
-            try {
-                await apiCall(`/admin/messages/${messageId}/reply`, 'POST', { content });
-                showNotification('Reply sent successfully', 'success');
-                closeModal();
-                renderAdminMessages();
-            } catch (error) { /* Handled by apiCall */ }
-        });
-    } catch (error) {
-        showNotification('Failed to load message for reply', 'error');
-    }
-}
-
-async function updateMessageStatus(messageId, newStatus, showNotif = true) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: newStatus });
-        if (showNotif) {
-            showNotification('Message status updated successfully', 'success');
-            renderAdminMessages();
-        }
-    } catch (error) {
-        // Error already handled by apiCall
-    }
-}
-
-async function markAsRead(messageId) {
-    try {
-        showNotification('Marking message as read...', 'info');
-        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: 'read', isRead: true });
-        renderAdminMessages();
-        showNotification('Message marked as read', 'success');
-    } catch (error) {
-        showNotification(`Failed to mark message as read: ${error.message}`, 'error');
-    }
-}
-
-
-async function markAllAsRead() {
-    if (!confirm('Mark all unread messages as read?')) return;
-    
-    const unreadMessages = window.messagesData.filter(m => (!m.isRead || m.status === 'unread') && !m.isBlocked);
-    if (unreadMessages.length === 0) {
-        showNotification('No unread messages to mark', 'info');
-        return;
-    }
-
-    try {
-        showNotification(`Marking ${unreadMessages.length} messages as read...`, 'info');
-        const promises = unreadMessages.map(message =>
-            apiCall(`/admin/messages/${message._id}/status`, 'PATCH', { status: 'read', isRead: true })
-        );
-        await Promise.all(promises);
-        renderAdminMessages();
-        showNotification(`${unreadMessages.length} messages marked as read`, 'success');
-    } catch (error) {
-        showNotification(`Failed to mark all messages as read: ${error.message}`, 'error');
-    }
-}
-
-
-async function deleteMessage(messageId) {
-    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
-        try {
-            await apiCall(`/admin/messages/${messageId}`, 'DELETE');
-            showNotification('Message deleted successfully', 'success');
-            renderAdminMessages();
-        } catch (error) { /* Handled by apiCall */ }
-    }
-}
-
-async function blockMessage(messageId, block = true) {
-    const action = block ? 'block' : 'unblock';
-    const reason = block ? prompt(`Enter reason for blocking this message:`) : '';
-
-    if (block && reason === null) return; // User cancelled prompt
-
-    try {
-        showNotification(`${block ? 'Blocking' : 'Unblocking'} message...`, 'info');
-        await apiCall(`/admin/messages/${messageId}/block`, 'PATCH', { block, reason });
-        showNotification(`Message ${action}ed successfully`, 'success');
-        renderAdminMessages();
-    } catch (error) {
-        showNotification(`Failed to ${action} message: ${error.message}`, 'error');
-    }
-}
-
-async function blockUserMessages(userEmail, block = true) {
-    const action = block ? 'block' : 'unblock';
-    const confirmMessage = block ?
-        `Block user "${userEmail}" from sending messages? This will also block all their existing messages.` :
-        `Unblock user "${userEmail}"? This will restore their ability to send messages.`;
-
-    if (!confirm(confirmMessage)) return;
-
-    const reason = block ? prompt(`Enter reason for blocking this user:`) : '';
-    if (block && reason === null) return; // User cancelled prompt
-
-    try {
-        showNotification(`${block ? 'Blocking' : 'Unblocking'} user messages...`, 'info');
-        await apiCall(`/admin/users/block-messages`, 'PATCH', { email: userEmail, block, reason });
-        showNotification(`User ${action}ed successfully`, 'success');
-        renderAdminMessages();
-    } catch (error) {
-        showNotification(`Failed to ${action} user: ${error.message}`, 'error');
-    }
-}
-
 // --- QUOTES MANAGEMENT ---
 async function renderAdminQuotes() {
     const contentArea = document.getElementById('admin-content-area');
@@ -2218,6 +1456,7 @@ async function viewEstimationDetails(estimationId) {
         showNotification('Failed to load estimation details', 'error');
     }
 }
+/ Estimation File Functions & Upload Result
 
 async function viewEstimationFiles(estimationId) {
     try {
@@ -2253,7 +1492,6 @@ async function viewEstimationFiles(estimationId) {
     }
 }
 
-
 function getFileIcon(fileType) {
     const icons = { 'pdf': 'file-pdf', 'doc': 'file-word', 'docx': 'file-word', 'xls': 'file-excel', 'xlsx': 'file-excel', 'jpg': 'file-image', 'jpeg': 'file-image', 'png': 'file-image', 'gif': 'file-image', 'zip': 'file-archive', 'rar': 'file-archive', 'txt': 'file-alt' };
     const extension = fileType?.split('.').pop().toLowerCase() || fileType;
@@ -2286,30 +1524,58 @@ async function uploadEstimationResult(estimationId) {
         <div class="upload-result-modal">
             <h3>Upload Estimation Result</h3>
             <form id="upload-result-form">
-                <div class="form-group"><input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required></div>
-                <div class="form-group"><textarea id="result-notes" placeholder="Add any notes..."></textarea></div>
-                <div class="form-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button></div>
+                <div class="form-group">
+                    <label for="result-file">Select Result File:</label>
+                    <input type="file" id="result-file" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
+                </div>
+                <div class="form-group">
+                    <label for="result-amount">Estimated Amount ($):</label>
+                    <input type="number" id="result-amount" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="result-notes">Notes:</label>
+                    <textarea id="result-notes" placeholder="Add any notes..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-upload"></i> Upload Result</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
             </form>
         </div>
     `);
 
     document.getElementById('upload-result-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
         const fileInput = document.getElementById('result-file');
+        const amountInput = document.getElementById('result-amount');
+        const notesInput = document.getElementById('result-notes');
+        
         if (!fileInput.files[0]) {
             showNotification('Please select a file', 'error');
             return;
         }
+        
         const formData = new FormData();
         formData.append('resultFile', fileInput.files[0]);
-        formData.append('notes', document.getElementById('result-notes').value);
-
+        
+        if (amountInput.value) {
+            formData.append('amount', amountInput.value);
+        }
+        
+        if (notesInput.value.trim()) {
+            formData.append('notes', notesInput.value.trim());
+        }
+        
         try {
+            showNotification('Uploading result...', 'info');
             await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
             showNotification('Estimation result uploaded successfully', 'success');
             closeModal();
             renderAdminEstimations();
-        } catch (error) { /* Handled by apiCall */ }
+        } catch (error) {
+            // Error already handled by apiCall
+        }
     });
 }
 
@@ -2380,8 +1646,6 @@ async function deleteEstimation(estimationId) {
         } catch (error) { /* Handled by apiCall */ }
     }
 }
-
-
 // --- JOBS MANAGEMENT ---
 async function renderAdminJobs() {
     const contentArea = document.getElementById('admin-content-area');
@@ -2625,113 +1889,502 @@ async function deleteJob(jobId) {
         }
     }
 }
-// --- ANALYTICS ---
-async function renderAdminAnalytics() {
+// Message Detail and Action Functions
+
+async function viewMessageDetails(messageId) {
+    try {
+        const data = await apiCall(`/admin/messages/${messageId}`);
+        const message = data.message;
+
+        if (message.status === 'unread') {
+            await updateMessageStatus(messageId, 'read', false);
+        }
+
+        let blockingInfo = '';
+        if (message.isBlocked) {
+            blockingInfo = `
+                <div class="blocking-info">
+                    <h4>Blocking Information</h4>
+                    <p><strong>Blocked At:</strong> ${message.blockedAt ? new Date(message.blockedAt).toLocaleString() : 'N/A'}</p>
+                    <p><strong>Reason:</strong> ${message.blockReason || 'No reason provided'}</p>
+                </div>
+            `;
+        }
+
+        showModal('message-details-modal', `
+            <div class="message-details-modal">
+                <h3>Message Details</h3>
+                <div class="message-full-header">
+                    <div class="sender-info">
+                         <strong>From:</strong> ${message.senderName} &lt;${message.senderEmail}&gt;
+                         <p><small>Sent: ${new Date(message.createdAt).toLocaleString()}</small></p>
+                    </div>
+                    <span class="status-badge ${message.isBlocked ? 'blocked' : message.status}">
+                        ${message.isBlocked ? 'Blocked' : message.status}
+                    </span>
+                </div>
+                <div class="message-subject"><h4>${message.subject}</h4></div>
+                <div class="message-full-content"><p>${message.content.replace(/\n/g, '<br>')}</p></div>
+                ${blockingInfo}
+                <div class="modal-actions">
+                     <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load message details', 'error');
+    }
+}
+
+async function replyToMessage(messageId) {
+    try {
+        const { message } = await apiCall(`/admin/messages/${messageId}`);
+        
+        if (message.isBlocked) {
+            showNotification('Cannot reply to a blocked message.', 'error');
+            return;
+        }
+        
+        showModal('reply-message-modal', `
+            <div class="reply-message-modal">
+                <h3>Reply to: ${message.subject}</h3>
+                <form id="reply-form">
+                    <div class="form-group"><input type="text" value="To: ${message.senderName} <${message.senderEmail}>" readonly></div>
+                    <div class="form-group"><textarea id="reply-content" placeholder="Type your reply..." required></textarea></div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Reply</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        `);
+        
+        document.getElementById('reply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('reply-content').value;
+            try {
+                await apiCall(`/admin/messages/${messageId}/reply`, 'POST', { content });
+                showNotification('Reply sent successfully', 'success');
+                closeModal();
+                renderAdminMessages();
+            } catch (error) { /* Handled by apiCall */ }
+        });
+    } catch (error) {
+        showNotification('Failed to load message for reply', 'error');
+    }
+}
+
+async function updateMessageStatus(messageId, newStatus, showNotif = true) {
+    try {
+        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: newStatus });
+        if (showNotif) {
+            showNotification('Message status updated successfully', 'success');
+            renderAdminMessages();
+        }
+    } catch (error) {
+        // Error already handled by apiCall
+    }
+}
+
+async function markAsRead(messageId) {
+    try {
+        showNotification('Marking message as read...', 'info');
+        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: 'read', isRead: true });
+        renderAdminMessages();
+        showNotification('Message marked as read', 'success');
+    } catch (error) {
+        showNotification(`Failed to mark message as read: ${error.message}`, 'error');
+    }
+}
+
+async function markAllAsRead() {
+    if (!confirm('Mark all unread messages as read?')) return;
+    
+    const unreadMessages = window.messagesData.filter(m => (!m.isRead || m.status === 'unread') && !m.isBlocked);
+    if (unreadMessages.length === 0) {
+        showNotification('No unread messages to mark', 'info');
+        return;
+    }
+
+    try {
+        showNotification(`Marking ${unreadMessages.length} messages as read...`, 'info');
+        const promises = unreadMessages.map(message =>
+            apiCall(`/admin/messages/${message._id}/status`, 'PATCH', { status: 'read', isRead: true })
+        );
+        await Promise.all(promises);
+        renderAdminMessages();
+        showNotification(`${unreadMessages.length} messages marked as read`, 'success');
+    } catch (error) {
+        showNotification(`Failed to mark all messages as read: ${error.message}`, 'error');
+    }
+}
+
+async function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/messages/${messageId}`, 'DELETE');
+            showNotification('Message deleted successfully', 'success');
+            renderAdminMessages();
+        } catch (error) { /* Handled by apiCall */ }
+    }
+}
+
+async function blockMessage(messageId, block = true) {
+    const action = block ? 'block' : 'unblock';
+    const reason = block ? prompt(`Enter reason for blocking this message:`) : '';
+
+    if (block && reason === null) return; // User cancelled prompt
+
+    try {
+        showNotification(`${block ? 'Blocking' : 'Unblocking'} message...`, 'info');
+        await apiCall(`/admin/messages/${messageId}/block`, 'PATCH', { block, reason });
+        showNotification(`Message ${action}ed successfully`, 'success');
+        renderAdminMessages();
+    } catch (error) {
+        showNotification(`Failed to ${action} message: ${error.message}`, 'error');
+    }
+}
+
+async function blockUserMessages(userEmail, block = true) {
+    const action = block ? 'block' : 'unblock';
+    const confirmMessage = block ?
+        `Block user "${userEmail}" from sending messages? This will also block all their existing messages.` :
+        `Unblock user "${userEmail}"? This will restore their ability to send messages.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const reason = block ? prompt(`Enter reason for blocking this user:`) : '';
+    if (block && reason === null) return; // User cancelled prompt
+
+    try {
+        showNotification(`${block ? 'Blocking' : 'Unblocking'} user messages...`, 'info');
+        await apiCall(`/admin/users/block-messages`, 'PATCH', { email: userEmail, block, reason });
+        showNotification(`User ${action}ed successfully`, 'success');
+        renderAdminMessages();
+    } catch (error) {
+        showNotification(`Failed to ${action} user: ${error.message}`, 'error');
+    }
+}
+
+// --- SUBSCRIPTION MANAGEMENT ---
+async function renderAdminSubscriptions() {
     const contentArea = document.getElementById('admin-content-area');
     try {
-        const data = await apiCall('/admin/analytics');
+        const [subscriptionsData, plansData] = await Promise.all([
+            apiCall('/admin/subscriptions'),
+            apiCall('/admin/subscription-plans')
+        ]);
 
         contentArea.innerHTML = `
-            <div class="analytics-dashboard">
-                <div class="analytics-header">
-                    <h2>Analytics Dashboard</h2>
-                    <div class="date-range-selector">
-                        <select id="analytics-period" onchange="updateAnalyticsPeriod(this.value)">
-                            <option value="7d">Last 7 Days</option>
-                            <option value="30d" selected>Last 30 Days</option>
-                            <option value="90d">Last 90 Days</option>
-                            <option value="1y">Last Year</option>
-                        </select>
+            <div class="subscriptions-management">
+                <div class="subscription-tabs">
+                    <button class="tab-button active" onclick="switchSubscriptionTab('plans')">
+                        <i class="fas fa-layer-group"></i> Subscription Plans
+                    </button>
+                    <button class="tab-button" onclick="switchSubscriptionTab('users')">
+                        <i class="fas fa-users"></i> User Subscriptions
+                    </button>
+                    <button class="tab-button" onclick="switchSubscriptionTab('analytics')">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </button>
+                </div>
+
+                <div id="plans-tab" class="tab-content active">
+                    <div class="admin-section-header">
+                        <div class="section-title">
+                            <h2>Subscription Plans</h2>
+                            <span class="count-badge">${plansData.plans?.length || 0} plans</span>
+                        </div>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="createSubscriptionPlan()">
+                                <i class="fas fa-plus"></i> Create New Plan
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="plans-grid">
+                        ${plansData.plans?.length ? plansData.plans.map(plan => `
+                            <div class="plan-card">
+                                <div class="plan-header">
+                                    <h4>${plan.name}</h4>
+                                    <div class="plan-price">
+                                        ${formatCurrency(plan.price)}
+                                        <small>/${plan.interval}</small>
+                                    </div>
+                                </div>
+                                <div class="plan-body">
+                                    <div class="plan-description">
+                                        ${plan.description || 'No description available'}
+                                    </div>
+                                    <div class="plan-features">
+                                        <h5>Features:</h5>
+                                        <ul>
+                                            ${plan.features?.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('') || '<li>No features listed</li>'}
+                                        </ul>
+                                    </div>
+                                    <div class="plan-stats">
+                                        <div class="stat-item">
+                                            <i class="fas fa-users"></i>
+                                            <span>${plan.subscriberCount || 0} subscribers</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="plan-actions">
+                                    <button class="btn btn-sm btn-info" onclick="editSubscriptionPlan('${plan._id}')">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriptionPlan('${plan._id}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><i class="fas fa-layer-group"></i><h3>No subscription plans</h3><p>Create your first subscription plan to get started.</p></div>'}
                     </div>
                 </div>
 
-                <div class="analytics-grid">
-                    <div class="analytics-card">
-                        <h3>Revenue Overview</h3>
-                        <div class="revenue-stats">
-                            <div class="stat-item"><span class="stat-value">${formatCurrency(data.revenue?.total || 0)}</span><span class="stat-label">Total Revenue</span></div>
-                            <div class="stat-item"><span class="stat-value">${formatCurrency(data.revenue?.monthly || 0)}</span><span class="stat-label">Monthly Average</span></div>
-                            <div class="stat-item"><span class="stat-value">${data.revenue?.growth || 0}%</span><span class="stat-label">Growth Rate</span></div>
+                <div id="users-tab" class="tab-content">
+                    <div class="admin-section-header">
+                        <div class="section-title">
+                            <h2>User Subscriptions</h2>
+                            <span class="count-badge">${subscriptionsData.subscriptions?.length || 0} subscriptions</span>
+                        </div>
+                        <div class="section-actions">
+                            <select id="subscription-status-filter" onchange="filterSubscriptionsByStatus(this.value)">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="expired">Expired</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="analytics-card">
-                        <h3>User Activity</h3>
-                        <div class="activity-stats">
-                            <div class="stat-item"><span class="stat-value">${data.users?.active || 0}</span><span class="stat-label">Active Users</span></div>
-                            <div class="stat-item"><span class="stat-value">${data.users?.new || 0}</span><span class="stat-label">New Registrations</span></div>
-                            <div class="stat-item"><span class="stat-value">${data.users?.retention || 0}%</span><span class="stat-label">Retention Rate</span></div>
+                    ${subscriptionsData.subscriptions?.length ? `
+                        <div class="admin-table-container">
+                            <table class="admin-table" id="subscriptions-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Plan</th>
+                                        <th>Status</th>
+                                        <th>Started</th>
+                                        <th>Next Billing</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${subscriptionsData.subscriptions.map(sub => `
+                                        <tr data-subscription-id="${sub._id}" data-status="${sub.status}">
+                                            <td>
+                                                <div class="user-info">
+                                                    <div class="user-avatar">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div class="user-details">
+                                                        <strong>${sub.userName}</strong>
+                                                        <small>${sub.userEmail}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="plan-info">
+                                                    <strong>${sub.planName}</strong>
+                                                    <small>${formatCurrency(sub.planPrice)}/${sub.planInterval}</small>
+                                                </div>
+                                            </td>
+                                            <td><span class="status-badge ${sub.status}">${sub.status}</span></td>
+                                            <td>${formatDate(sub.startDate)}</td>
+                                            <td>${sub.nextBillingDate ? formatDate(sub.nextBillingDate) : 'N/A'}</td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <button class="btn btn-sm btn-info" onclick="viewSubscriptionDetails('${sub._id}')" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    ${sub.status === 'active' ? `
+                                                        <button class="btn btn-sm btn-warning" onclick="cancelSubscription('${sub._id}')" title="Cancel">
+                                                            <i class="fas fa-ban"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
+                    ` : '<div class="empty-state"><i class="fas fa-users"></i><h3>No subscriptions found</h3><p>User subscriptions will appear here when they subscribe to plans.</p></div>'}
+                </div>
 
-                    <div class="analytics-card">
-                        <h3>Project Statistics</h3>
-                        <div class="project-stats">
-                            <div class="stat-item"><span class="stat-value">${data.projects?.total || 0}</span><span class="stat-label">Total Projects</span></div>
-                            <div class="stat-item"><span class="stat-value">${data.projects?.completed || 0}</span><span class="stat-label">Completed</span></div>
-                            <div class="stat-item"><span class="stat-value">${data.projects?.active || 0}</span><span class="stat-label">Active</span></div>
+                <div id="analytics-tab" class="tab-content">
+                    <div class="subscription-analytics">
+                        <h3>Subscription Analytics</h3>
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h4>Revenue Overview</h4>
+                                <div class="metrics-grid">
+                                    <div class="metric">
+                                        <span class="metric-value">${formatCurrency(calculateTotalRevenue(subscriptionsData.subscriptions))}</span>
+                                        <span class="metric-label">Total Revenue</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-value">${formatCurrency(calculateMonthlyRevenue(subscriptionsData.subscriptions))}</span>
+                                        <span class="metric-label">Monthly Revenue</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h4>Plan Performance</h4>
+                                <div class="plan-performance">
+                                    ${generatePlanPerformanceChart(plansData.plans)}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="analytics-card full-width">
-                        <h3>Performance Trends</h3>
-                        <div class="chart-container"><canvas id="performance-chart"></canvas></div>
                     </div>
                 </div>
             </div>
         `;
-
-        if (typeof Chart !== 'undefined') {
-            initializePerformanceChart(data.trends);
-        }
-
     } catch (error) {
         contentArea.innerHTML = `
             <div class="error-state">
                 <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to load analytics</h3>
-                <button class="btn btn-primary" onclick="renderAdminAnalytics()"><i class="fas fa-redo"></i> Retry</button>
+                <h3>Failed to load subscriptions</h3>
+                <button class="btn btn-primary" onclick="renderAdminSubscriptions()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
             </div>
         `;
     }
 }
+// Subscription Management Functions
 
-function initializePerformanceChart(trendsData) {
-    const ctx = document.getElementById('performance-chart');
-    if (!ctx || !trendsData) return;
+function switchSubscriptionTab(tabName) {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: trendsData.labels || [],
-            datasets: [{
-                label: 'Revenue',
-                data: trendsData.revenue || [],
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.4
-            }, {
-                label: 'Projects',
-                data: trendsData.projects || [],
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                tension: 0.4
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    document.querySelector(`[onclick="switchSubscriptionTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+}
+
+function createSubscriptionPlan() {
+    showModal('create-plan-modal', `
+        <div class="create-plan-modal">
+            <h3>Create Subscription Plan</h3>
+            <form id="create-plan-form">
+                <div class="form-group">
+                    <label for="plan-name">Plan Name:</label>
+                    <input type="text" id="plan-name" required placeholder="e.g., Premium Plan">
+                </div>
+                <div class="form-group">
+                    <label for="plan-price">Price:</label>
+                    <input type="number" id="plan-price" step="0.01" required placeholder="29.99">
+                </div>
+                <div class="form-group">
+                    <label for="plan-interval">Billing Interval:</label>
+                    <select id="plan-interval" required>
+                        <option value="month">Monthly</option>
+                        <option value="year">Yearly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="plan-description">Description:</label>
+                    <textarea id="plan-description" placeholder="Plan description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Features:</label>
+                    <div id="features-container">
+                        <div class="feature-input">
+                            <input type="text" placeholder="Feature 1">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addFeature()">
+                        <i class="fas fa-plus"></i> Add Feature
+                    </button>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Plan
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `);
+
+    document.getElementById('create-plan-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const features = Array.from(document.querySelectorAll('#features-container input'))
+            .map(input => input.value.trim())
+            .filter(value => value);
+
+        const planData = {
+            name: document.getElementById('plan-name').value,
+            price: parseFloat(document.getElementById('plan-price').value),
+            interval: document.getElementById('plan-interval').value,
+            description: document.getElementById('plan-description').value,
+            features
+        };
+
+        try {
+            await apiCall('/admin/subscription-plans', 'POST', planData);
+            showNotification('Subscription plan created successfully', 'success');
+            closeModal();
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
     });
 }
 
-async function updateAnalyticsPeriod(period) {
+function addFeature() {
+    const container = document.getElementById('features-container');
+    const featureDiv = document.createElement('div');
+    featureDiv.className = 'feature-input';
+    featureDiv.innerHTML = `
+        <input type="text" placeholder="New feature">
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeFeature(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(featureDiv);
+}
+
+function removeFeature(button) {
+    button.parentElement.remove();
+}
+
+async function editSubscriptionPlan(planId) {
     try {
-        await apiCall(`/admin/analytics?period=${period}`);
-        renderAdminAnalytics();
+        const plan = await apiCall(`/admin/subscription-plans/${planId}`);
+        showNotification('Edit plan functionality to be implemented', 'info');
     } catch (error) {
-        showNotification('Failed to update analytics period', 'error');
+        showNotification('Failed to load plan details', 'error');
     }
 }
 
-// --- SYSTEM STATS ---
+async function deleteSubscriptionPlan(planId) {
+    if (confirm('Are you sure you want to delete this subscription plan? This action cannot be undone.')) {
+        try {
+            await apiCall(`/admin/subscription-plans/${planId}`, 'DELETE');
+            showNotification('Subscription plan deleted successfully', 'success');
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by apiCall
+        }
+    }
+}
+
+async function cancelSubscription(subscriptionId) {
+    if (confirm('Are you sure you want to cancel this subscription?')) {
+        try {
+            await apiCall(`/admin/subscriptions/${subscriptionId}/cancel`, 'PATCH');
+            showNotification('Subscription cancelled successfully', 'success');
+            renderAdminSubscriptions();
+        } catch (error) {
+            // Error already handled by
+        // --- SYSTEM STATS ---
 async function renderSystemStats() {
     const contentArea = document.getElementById('admin-content-area');
     try {
@@ -2886,13 +2539,11 @@ async function exportData(type) {
     }
 }
 
-
 function exportUsers() { exportData('users'); }
 function exportQuotes() { exportData('quotes'); }
 function exportEstimations() { exportData('estimations'); }
 function exportJobs() { exportData('jobs'); }
 function exportMessages() { exportData('messages'); }
-
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', function() {
