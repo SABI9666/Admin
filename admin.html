@@ -166,6 +166,7 @@
         .stat-icon.estimations { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
         .stat-icon.messages { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #333; }
         .stat-icon.subscriptions { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); color: white; }
+        .stat-icon.reviews { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
         
         .stat-number {
             font-size: 36px;
@@ -341,6 +342,7 @@
         .status-badge.unread { background: #ffc107; color: #333; }
         .status-badge.blocked { background: #343a40; }
         .status-badge.replied { background: #667eea; }
+        .status-badge.approved { background: #28a745; }
         
         .type-badge {
             padding: 4px 8px;
@@ -726,6 +728,7 @@
         let messagesData = [];
         let subscriptionsData = [];
         let subscriptionPlans = [];
+        let profileReviewsData = [];
         let currentEstimationId = null;
         let currentUploadEstimationId = null;
         
@@ -970,11 +973,18 @@
                 
                 console.log('✅ Dashboard data loaded:', dashboardData);
                 
-                // Update auth status and admin name
+                // Add profile reviews count to dashboard
+                let profileReviewsCount = 0;
+                try {
+                    const profileData = await apiCall('/admin/profile-reviews');
+                    profileReviewsCount = (profileData.reviews || profileData.data || []).filter(r => r.status === 'pending').length;
+                } catch (profileError) {
+                    console.warn('Could not load profile reviews count for dashboard:', profileError);
+                }
+                
                 updateAuthStatus(true, dashboardData.adminUser?.split('@')[0] || 'Admin');
                 
-                // Render stats cards
-                renderStatsGrid(dashboardData.stats);
+                renderStatsGrid(dashboardData.stats, profileReviewsCount);
                 
             } catch (error) {
                 console.error('❌ Error loading dashboard:', error);
@@ -1002,7 +1012,7 @@
         }
         
         // Render stats grid
-        function renderStatsGrid(stats) {
+        function renderStatsGrid(stats, profileReviewsCount = 0) {
             const statsGrid = document.getElementById('statsGrid');
             
             statsGrid.innerHTML = `
@@ -1028,6 +1038,14 @@
                     </div>
                     <div class="stat-number">${stats.designers || 0}</div>
                     <div class="stat-label">Designers</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon reviews">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-number">${profileReviewsCount}</div>
+                    <div class="stat-label">Pending Reviews</div>
                 </div>
                 
                 <div class="stat-card">
@@ -1060,14 +1078,6 @@
                     </div>
                     <div class="stat-number">${stats.totalSubscriptions || 0}</div>
                     <div class="stat-label">Subscriptions</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-icon messages">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <div class="stat-number">${stats.totalMessages || 0}</div>
-                    <div class="stat-label">Messages</div>
                 </div>
             `;
         }
@@ -1105,16 +1115,151 @@
                 loadMessagesData();
             } else if (tabName === 'subscriptions' && subscriptionsData.length === 0) {
                 loadSubscriptionsData();
+            } else if (tabName === 'profile-reviews') {
+                loadProfileReviewsData();
             } else if (tabName === 'overview') {
                 renderOverviewTab();
             }
-            // Add a condition for the new tab, though its function is not yet defined
-            else if (tabName === 'profile-reviews') {
-                // Example: loadProfileReviewsData();
-                console.log("Profile Reviews tab clicked. Implement data loading here.");
-            }
         }
         
+        // --- PROFILE REVIEWS FUNCTIONS ---
+
+        // Load profile reviews data
+        async function loadProfileReviewsData() {
+            try {
+                console.log('🔍 Loading profile reviews...');
+                const profileReviewsTab = document.getElementById('profile-reviews-tab');
+                profileReviewsTab.innerHTML = `<div class="loading"><div class="spinner"></div><p>Loading reviews...</p></div>`;
+
+                const data = await apiCall('/admin/profile-reviews');
+                profileReviewsData = data.reviews || data.data || [];
+                console.log('✅ Profile reviews loaded:', profileReviewsData.length, 'reviews');
+                renderProfileReviewsTab();
+            } catch (error) {
+                console.error('❌ Error loading profile reviews:', error);
+                document.getElementById('profile-reviews-tab').innerHTML = `
+                    <div class="error">Failed to load profile reviews: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Render profile reviews tab
+        function renderProfileReviewsTab() {
+            const reviewsTab = document.getElementById('profile-reviews-tab');
+            
+            if (!profileReviewsData || profileReviewsData.length === 0) {
+                reviewsTab.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-user-check"></i>
+                        <h3>No pending profile reviews</h3>
+                        <p>All profiles are up to date.</p>
+                        <button class="btn btn-primary" onclick="loadProfileReviewsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const pendingReviewsCount = profileReviewsData.filter(r => r.status === 'pending').length;
+
+            reviewsTab.innerHTML = `
+                <div class="section-header">
+                    <h3><i class="fas fa-user-check"></i> Profile Reviews (${profileReviewsData.length})
+                        ${pendingReviewsCount > 0 ? `<span style="color: #ffc107; font-size: 14px; margin-left: 10px;">• ${pendingReviewsCount} pending</span>` : ''}
+                    </h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadProfileReviewsData()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>User Type</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${profileReviewsData.map(review => {
+                                const reviewId = review._id || review.id;
+                                const user = review.user || {};
+                                const userName = user.name || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Unknown');
+                                const userEmail = user.email || 'N/A';
+                                const userType = user.type || user.role || 'user';
+                                const status = review.status || 'pending';
+                                const submittedDate = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'N/A';
+                                
+                                return `
+                                    <tr>
+                                        <td>
+                                            <div class="user-info">
+                                                <strong>${userName}</strong>
+                                                <small>${userEmail}</small>
+                                            </div>
+                                        </td>
+                                        <td><span class="type-badge ${userType}">${userType.toUpperCase()}</span></td>
+                                        <td><span class="status-badge ${status}">${status.toUpperCase()}</span></td>
+                                        <td>${submittedDate}</td>
+                                        <td>
+                                            <div class="action-group">
+                                                ${status === 'pending' ? `
+                                                    <button class="btn btn-sm btn-success" onclick="updateProfileReviewStatus('${reviewId}', 'approved')" title="Approve">
+                                                        <i class="fas fa-check"></i> Approve
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" onclick="updateProfileReviewStatus('${reviewId}', 'rejected')" title="Reject">
+                                                        <i class="fas fa-times"></i> Reject
+                                                    </button>
+                                                ` : `
+                                                    <button class="btn btn-sm btn-secondary" disabled>Reviewed</button>
+                                                `}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Update profile review status (Approve/Reject)
+        async function updateProfileReviewStatus(reviewId, newStatus) {
+            const actionText = newStatus === 'approved' ? 'Approving' : 'Rejecting';
+            if (!confirm(`Are you sure you want to ${newStatus} this profile?`)) {
+                return;
+            }
+
+            try {
+                showNotification(`${actionText} profile...`, 'info');
+                
+                await apiCall(`/admin/profile-reviews/${reviewId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                // Update local data
+                const review = profileReviewsData.find(r => (r._id || r.id) === reviewId);
+                if (review) {
+                    review.status = newStatus;
+                }
+                
+                loadDashboardStats(); // Refresh stats to update count
+                renderProfileReviewsTab();
+                showNotification(`Profile review ${newStatus} successfully!`, 'success');
+
+            } catch (error) {
+                console.error(`Error ${actionText.toLowerCase()} profile:`, error);
+                showNotification(`Failed to ${newStatus} profile: ${error.message}`, 'error');
+            }
+        }
+
         // Load users data
         async function loadUsersData() {
             try {
@@ -1173,9 +1318,9 @@
                         <tbody>
                             ${usersData.map(user => {
                                 const userName = user.name || 
-                                               (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : null) || 
-                                               user.email?.split('@')[0] || 
-                                               'Unknown User';
+                                                (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : null) || 
+                                                user.email?.split('@')[0] || 
+                                                'Unknown User';
                                 
                                 const userType = user.type || user.role || 'user';
                                 const isActive = user.isActive !== false && user.status !== 'inactive';
@@ -1864,35 +2009,35 @@ Location: ${user.location || 'N/A'}
             try {
                 showNotification('Preparing file download...', 'info');
                 const data = await apiCall(`/admin/estimations/${estimationId}/files`);
-                            
+                                
                 if (!data.data?.files || data.data.files.length === 0) {
                     showNotification('No files found for this estimation', 'warning');
                     return;
                 }
-                            
+                                
                 const files = data.data.files;
                 console.log(`Found ${files.length} files to download:`, files);
-                            
+                                
                 let downloadedCount = 0;
                 let failedCount = 0;
-                            
+                                
                 // Download each file using the API endpoint
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     console.log(`Downloading file ${i + 1}:`, file);
-                                    
+                                        
                     try {
                         // Use the API download endpoint for secure downloads
                         const downloadUrl = `/admin/estimations/${estimationId}/files/${encodeURIComponent(file.name)}/download`;
-                                            
+                                                
                         // We will try to open the download link in a new tab.
                         // For this to work with authentication, the server must handle session/token auth via cookies or a short-lived token in the URL.
                         // A direct fetch() with an Authorization header cannot trigger a file download dialog directly.
                         // Opening a new window is a common workaround.
                         window.open(`${API_BASE}${downloadUrl}`, '_blank');
-                                            
+                                                
                         downloadedCount++;
-                                            
+                                                
                         // Add small delay between downloads to prevent browser blocking
                         if (i < files.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 800));
@@ -1902,13 +2047,13 @@ Location: ${user.location || 'N/A'}
                         failedCount++;
                     }
                 }
-                            
+                                
                 if (downloadedCount > 0) {
                     showNotification(`Downloaded ${downloadedCount} files successfully${failedCount > 0 ? ` (${failedCount} failed)` : ''}`, 'success');
                 } else {
                     showNotification('No files could be downloaded', 'error');
                 }
-                        
+                                
             } catch (error) {
                 console.error('Error downloading files:', error);
                 showNotification(`Failed to download files: ${error.message}`, 'error');
@@ -2254,22 +2399,22 @@ Notes: ${estimation.notes || 'No notes provided'}
             if (!confirm('Are you sure you want to permanently delete this message? This action cannot be undone.')) {
                 return;
             }
-    
+        
             try {
                 showNotification('Deleting message...', 'info');
                 await apiCall(`/admin/messages/${messageId}`, {
                     method: 'DELETE'
                 });
-    
+        
                 // Remove from local data
                 const messageIndex = messagesData.findIndex(m => (m._id || m.id) === messageId);
                 if (messageIndex > -1) {
                     messagesData.splice(messageIndex, 1);
                 }
-    
+        
                 renderMessagesTab();
                 showNotification('Message deleted successfully', 'success');
-    
+        
             } catch (error) {
                 console.error('Error deleting message:', error);
                 showNotification(`Failed to delete message: ${error.message}`, 'error');
@@ -2431,6 +2576,7 @@ Notes: ${estimation.notes || 'No notes provided'}
             if (estimationsData.length > 0) loadEstimationsData();
             if (messagesData.length > 0) loadMessagesData();
             if (subscriptionsData.length > 0) loadSubscriptionsData();
+            if (profileReviewsData.length > 0) loadProfileReviewsData();
         }
 
         function exportData() {
@@ -2484,6 +2630,7 @@ Notes: ${estimation.notes || 'No notes provided'}
             document.body.appendChild(debugControls);
             
             loadDashboardStats();
+            renderOverviewTab();
             
             // Set up auto-refresh every 5 minutes
             setInterval(() => {
@@ -2686,13 +2833,3 @@ Notes: ${estimation.notes || 'No notes provided'}
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
