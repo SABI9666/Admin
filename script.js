@@ -90,7 +90,7 @@ function showModal(content) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
         <div class="modal-overlay" onclick="closeModal()">
-            <div class.modal-content" onclick="event.stopPropagation()">
+            <div class="modal-content" onclick="event.stopPropagation()">
                 <button class="modal-close" onclick="closeModal()">&times;</button>
                 ${content}
             </div>
@@ -203,6 +203,7 @@ function renderProfileReviewsTab() {
                     <h4>${review.user.name} (${review.user.type})</h4>
                     <p>${review.user.email}</p>
                     <div class="actions">
+                        <button class="btn" onclick="viewProfileDetails('${review._id}')">View Details</button>
                         <button class="btn btn-success" onclick="approveProfile('${review._id}')">Approve</button>
                         <button class="btn btn-danger" onclick="showRejectModal('${review._id}')">Reject</button>
                     </div>
@@ -210,6 +211,43 @@ function renderProfileReviewsTab() {
             `).join('')}
         </div>
         `}`;
+}
+
+function viewProfileDetails(reviewId) {
+    const review = state.profileReviews.find(r => r._id === reviewId);
+    if (!review) {
+        showNotification('Could not find the selected profile review.', 'error');
+        return;
+    }
+
+    // Assuming documents are stored in review.user.documents from the API
+    const documents = review.user.documents || [];
+    
+    let filesHtml = '<h4>No documents uploaded.</h4>';
+    if (documents.length > 0) {
+        filesHtml = `
+            <h4>Uploaded Documents:</h4>
+            <ul class="file-list">
+                ${documents.map(doc => `
+                    <li>
+                        <a href="${doc.url}" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-file-alt"></i> ${doc.filename || 'View File'}
+                        </a>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    const modalContent = `
+        <h3>Profile Details: ${review.user.name}</h3>
+        <p><strong>Email:</strong> ${review.user.email}</p>
+        <p><strong>User Type:</strong> ${review.user.type}</p>
+        <hr>
+        ${filesHtml}
+    `;
+    
+    showModal(modalContent);
 }
 
 function showRejectModal(reviewId) {
@@ -266,7 +304,11 @@ function renderEstimationsTab() {
                         <td>${est.projectName || 'N/A'}</td>
                         <td>${est.userEmail}</td>
                         <td><span class="status ${est.status}">${est.status}</span></td>
-                        <td>${(est.uploadedFiles || []).length} file(s)</td>
+                        <td>
+                            ${(est.uploadedFiles && est.uploadedFiles.length > 0) ? 
+                            `<button class="btn btn-sm" onclick="showEstimationFiles('${est._id}')">View Files (${est.uploadedFiles.length})</button>` : 
+                            'No files'}
+                        </td>
                         <td>${est.resultFile ? `<a href="${est.resultFile.url}" target="_blank">View</a>` : 'Not uploaded'}</td>
                         <td>
                             <button class="btn" onclick="showUploadResultModal('${est._id}')">Upload/Edit</button>
@@ -276,6 +318,39 @@ function renderEstimationsTab() {
                 `).join('')}
             </tbody>
         </table>`;
+}
+
+function showEstimationFiles(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    if (!estimation) {
+        showNotification('Could not find the selected estimation.', 'error');
+        return;
+    }
+
+    const files = estimation.uploadedFiles || [];
+    
+    let filesHtml = '<h4>No documents uploaded for this estimation.</h4>';
+    if (files.length > 0) {
+        filesHtml = `
+            <ul class="file-list">
+                ${files.map(file => `
+                    <li>
+                        <a href="${file.url}" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-file-alt"></i> ${file.originalname || 'View File'}
+                        </a>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    const modalContent = `
+        <h3>Uploaded Files for "${estimation.projectName || 'Estimation'}"</h3>
+        <hr>
+        ${filesHtml}
+    `;
+    
+    showModal(modalContent);
 }
 
 function showUploadResultModal(estimationId) {
