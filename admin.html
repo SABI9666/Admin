@@ -4,25 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Admin Dashboard</title>
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- These containers are placed at the top for script-generated content like notifications and modals -->
     <div id="notification-container"></div>
-    <div id="modal-container"></div>
-
-    <!-- Main application container -->
-    <div class="container">
+    <div id="modal-container"></div> <div class="container">
         <header class="header">
             <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
             <div class="header-actions">
-                <div class="admin-badge">
+                <div class="admin-badge" id="adminBadge">
                     <i class="fas fa-user-circle"></i>
-                    <!-- The admin's name will be inserted here by the script -->
                     <span id="adminName">Loading...</span>
                 </div>
                 <button class="btn btn-danger" onclick="logout()">
@@ -31,24 +23,19 @@
             </div>
         </header>
 
-        <!-- Dashboard statistics will be loaded into this grid by the script -->
         <div id="statsGrid" class="stats-grid">
-            <!-- Loader/Placeholder while stats are fetched -->
-            <div class="loader">Loading Dashboard Stats...</div>
-        </div>
+            </div>
 
         <main class="section">
-            <!-- Tab navigation buttons -->
             <nav class="tabs">
-                <button class="tab active" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
-                <button class="tab" onclick="showTab('profile-reviews')"><i class="fas fa-user-check"></i> Profile Reviews</button>
-                <button class="tab" onclick="showTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
-                <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
-                <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
-                <button class="tab" onclick="showTab('messages')"><i class="fas fa-comments"></i> Messages</button>
+                <button class="tab active" onclick="safeShowTab('users')"><i class="fas fa-users"></i> Users</button>
+                <button class="tab" onclick="safeShowTab('profile-reviews')"><i class="fas fa-user-check"></i> Profile Reviews</button>
+                <button class="tab" onclick="safeShowTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
+                <button class="tab" onclick="safeShowTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
+                <button class="tab" onclick="safeShowTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
+                <button class="tab" onclick="safeShowTab('messages')"><i class="fas fa-comments"></i> Messages</button>
             </nav>
             
-            <!-- Tab content panels that will be populated by the script -->
             <div id="users-tab" class="tab-content active"></div>
             <div id="profile-reviews-tab" class="tab-content"></div>
             <div id="estimations-tab" class="tab-content"></div>
@@ -58,7 +45,6 @@
         </main>
     </div>
 
-    <!-- The 'defer' attribute ensures the script runs after the HTML is fully parsed, preventing loading errors -->
-    <script src="script.js" defer></script>
+    <script src="script.js"></script>
 </body>
 </html>
