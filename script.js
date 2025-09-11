@@ -687,3 +687,283 @@ async function deleteGenericItem(type, id) {
         await loadGenericData(type);
     } catch (error) {}
 }
+
+
+// --- SAFE ADMIN SCRIPT FUNCTIONS (Added for improved error handling) ---
+
+// Enhanced error handling for API calls
+async function safeApiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
+    try {
+        return await apiCall(endpoint, method, body, isFileUpload);
+    } catch (error) {
+        console.error('API Call Error:', error);
+        showNotification('An error occurred: ' + error.message, 'error');
+        throw error;
+    }
+}
+
+// Safe tab switching with error handling
+function safeShowTab(tabName) {
+    try {
+        console.log('Switching to tab:', tabName);
+
+        // Remove active classes
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+
+        // Add active classes
+        const tabContent = document.getElementById(`${tabName}-tab`);
+        const tabButton = document.querySelector(`.tab[onclick="showTab('${tabName}')"]`);
+
+        if (tabContent) tabContent.classList.add('active');
+        if (tabButton) tabButton.classList.add('active');
+        
+        // Load data for specific tabs if needed
+        if (tabName === 'messages' && state.messages.length === 0) {
+            safeLoadMessagesData();
+        }
+        if (tabName === 'estimations' && state.estimations.length === 0) {
+            safeLoadEstimationsData();
+        }
+            
+    } catch (error) {
+        console.error('Tab switching error:', error);
+        showNotification('Error switching tabs', 'error');
+    }
+}
+
+// Safe message loading
+async function safeLoadMessagesData() {
+    const container = document.getElementById('messages-tab');
+    if (!container) return;
+
+    try {
+        showLoader(container);
+        const { messages } = await safeApiCall('/messages');
+        state.messages = messages || [];
+        safeRenderMessagesTab();
+    } catch (error) {
+        container.innerHTML = `
+            <p class="error">Failed to load messages: ${error.message}</p>
+            <button class="btn" onclick="safeLoadMessagesData()">Retry</button>
+        `;
+    }
+}
+
+// Safe message rendering
+function safeRenderMessagesTab() {
+    const container = document.getElementById('messages-tab');
+    if (!container) return;
+
+    try {
+        container.innerHTML = `
+            <div class="section-header">
+                <h3>All Messages (${state.messages.length})</h3>
+                <button class="btn" onclick="safeLoadMessagesData()">Refresh</button>
+            </div>
+            ${state.messages.length === 0 ? '<p>No messages found.</p>' : `
+            <table>
+                <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${state.messages.map(msg => `
+                        <tr>
+                            <td>
+                                <strong>${msg.senderName || 'N/A'}</strong><br>
+                                <small>${msg.senderEmail || 'N/A'}</small>
+                            </td>
+                            <td>
+                                <strong>${msg.subject || 'No Subject'}</strong><br>
+                                <small>${(msg.content || '').substring(0, 50)}...</small>
+                            </td>
+                            <td>${msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : 'N/A'}</td>
+                            <td>
+                                <button class="btn btn-sm" onclick="safeViewMessage('${msg._id}')">View</button>
+                                <button class="btn btn-danger btn-sm" onclick="safeDeleteMessage('${msg._id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            `}
+        `;
+    } catch (error) {
+        console.error('Error rendering messages:', error);
+        container.innerHTML = '<p class="error">Error displaying messages</p>';
+    }
+}
+
+// Safe message viewing
+async function safeViewMessage(messageId) {
+    try {
+        const { message } = await safeApiCall(`/messages/${messageId}`);
+        showModal(`
+            <h3>Message Details</h3>
+            <div class="message-details">
+                <p><strong>From:</strong> ${message.senderName || 'N/A'} (${message.senderEmail || 'N/A'})</p>
+                <p><strong>Subject:</strong> ${message.subject || 'No Subject'}</p>
+                <p><strong>Date:</strong> ${message.createdAt ? new Date(message.createdAt).toLocaleString() : 'N/A'}</p>
+                <div class="content-box" style="margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">
+                    ${message.content || message.message || 'No content'}
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        `);
+    } catch (error) {
+        showNotification('Failed to load message details', 'error');
+    }
+}
+
+// Safe message deletion
+async function safeDeleteMessage(messageId) {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+
+    try {
+        await safeApiCall(`/messages/${messageId}`, 'DELETE');
+        showNotification('Message deleted successfully', 'success');
+        await safeLoadMessagesData();
+    } catch (error) {
+        // Error already handled by safeApiCall
+    }
+}
+
+// Safe estimation loading
+async function safeLoadEstimationsData() {
+    const container = document.getElementById('estimations-tab');
+    if (!container) return;
+
+    try {
+        showLoader(container);
+        const { estimations } = await safeApiCall('/estimations');
+        state.estimations = estimations || [];
+        safeRenderEstimationsTab();
+    } catch (error) {
+        container.innerHTML = `
+            <p class="error">Failed to load estimations: ${error.message}</p>
+            <button class="btn" onclick="safeLoadEstimationsData()">Retry</button>
+        `;
+    }
+}
+
+// Safe estimation rendering
+function safeRenderEstimationsTab() {
+    const container = document.getElementById('estimations-tab');
+    if (!container) return;
+
+    try {
+        container.innerHTML = `
+            <div class="section-header">
+                <h3>All Estimations (${state.estimations.length})</h3>
+                <button class="btn" onclick="safeLoadEstimationsData()">Refresh</button>
+            </div>
+            ${state.estimations.length === 0 ? '<p>No estimations found.</p>' : `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Files</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${state.estimations.map(est => `
+                        <tr>
+                            <td>${est.projectName || 'N/A'}</td>
+                            <td>${est.userName || est.userEmail || 'N/A'}</td>
+                            <td><span class="status ${est.status || 'pending'}">${est.status || 'pending'}</span></td>
+                            <td>${(est.uploadedFiles || []).length} file(s)</td>
+                            <td>
+                                <button class="btn btn-sm" onclick="safeViewEstimationFiles('${est._id}')">View Files</button>
+                                <button class="btn btn-danger btn-sm" onclick="safeDeleteEstimation('${est._id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            `}
+        `;
+    } catch (error) {
+        console.error('Error rendering estimations:', error);
+        container.innerHTML = '<p class="error">Error displaying estimations</p>';
+    }
+}
+
+// Safe estimation file viewing
+function safeViewEstimationFiles(estimationId) {
+    try {
+        const estimation = state.estimations.find(e => e._id === estimationId);
+        if (!estimation) {
+            showNotification('Estimation not found', 'error');
+            return;
+        }
+
+        const files = estimation.uploadedFiles || [];
+        showModal(`
+            <h3>Estimation Files - ${estimation.projectName || 'Project'}</h3>
+            ${files.length === 0 ? '<p>No files uploaded</p>' : `
+            <div class="files-list">
+                ${files.map((file, index) => `
+                    <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px;">
+                        <span>📁 ${file.name || 'Unknown file'}</span>
+                        ${file.url ? `<a href="${file.url}" target="_blank" class="btn btn-sm" style="float: right;">Download</a>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+            `}
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        `);
+    } catch (error) {
+        console.error('Error viewing estimation files:', error);
+        showNotification('Error viewing files', 'error');
+    }
+}
+
+// Safe estimation deletion
+async function safeDeleteEstimation(estimationId) {
+    if (!confirm('Are you sure you want to delete this estimation?')) return;
+
+    try {
+        await safeApiCall(`/estimations/${estimationId}`, 'DELETE');
+        showNotification('Estimation deleted successfully', 'success');
+        await safeLoadEstimationsData();
+    } catch (error) {
+        // Error already handled by safeApiCall
+    }
+}
+
+// Override the original showTab function to use the safe version
+if (typeof showTab !== 'undefined') {
+    window.originalShowTab = showTab;
+}
+window.showTab = safeShowTab;
+
+// Add console logging to help debug
+console.log('Safe admin functions loaded successfully');
+console.log('Available functions:', [
+    'safeShowTab', 'safeLoadMessagesData', 'safeViewMessage',
+    'safeDeleteMessage', 'safeLoadEstimationsData', 'safeViewEstimationFiles'
+]);
+
+// Test if the basic functionality works
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, testing admin panel...');
+
+    // Test if required elements exist
+    const requiredElements = ['users-tab', 'messages-tab', 'estimations-tab'];
+    requiredElements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`Element ${id}:`, element ? 'Found' : 'Missing');
+    });
+});
