@@ -1,4 +1,4 @@
-// script.js - Complete Frontend Logic for the SteelConnect Admin Panel
+// script.js - Complete, robust frontend logic for the Admin Panel
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -14,18 +14,22 @@ const state = {
 };
 
 // --- INITIALIZATION ---
-function initializeAdminPanel() {
+async function initializeAdminPanel() {
     const token = getToken();
     const user = JSON.parse(localStorage.getItem('currentUser'));
-
     if (!token || !user || user.role !== 'admin') {
-        window.location.href = 'index.html'; // Redirect to login if not authenticated
+        window.location.href = 'index.html';
         return;
     }
-
     document.getElementById('adminName').textContent = user.name || user.email;
-    loadDashboardStats();
-    showTab('users'); // Load the users tab by default
+    
+    // Auto-fetch core data on startup for a faster experience
+    await loadDashboardStats();
+    await loadUsersData();
+    await loadProfileReviewsData();
+    
+    // Set the default tab view
+    showTab('users');
 }
 
 // --- API & UTILITY FUNCTIONS ---
@@ -72,7 +76,7 @@ function logout() {
 
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container');
-    if (!container) return; // Add a container div to your HTML if it doesn't exist
+    if (!container) return;
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
@@ -86,7 +90,7 @@ function showModal(content) {
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
         <div class="modal-overlay" onclick="closeModal()">
-            <div class="modal-content" onclick="event.stopPropagation()">
+            <div class.modal-content" onclick="event.stopPropagation()">
                 <button class="modal-close" onclick="closeModal()">&times;</button>
                 ${content}
             </div>
@@ -103,18 +107,16 @@ function showTab(tabName) {
     document.getElementById(`${tabName}-tab`).classList.add('active');
     document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
 
-    const loadMap = {
-        'users': { data: state.users, loader: loadUsersData },
-        'profile-reviews': { data: state.profileReviews, loader: loadProfileReviewsData },
+    // Manually trigger data load for non-core tabs if they are empty
+    const manualLoadMap = {
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
         'quotes': { data: state.quotes, loader: () => loadGenericData('quotes') },
         'messages': { data: state.messages, loader: () => loadGenericData('messages') },
     };
 
-    const tabInfo = loadMap[tabName];
-    if (tabInfo && tabInfo.data.length === 0) {
-        tabInfo.loader();
+    if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
+        manualLoadMap[tabName].loader();
     }
 }
 
@@ -143,13 +145,14 @@ async function loadUsersData() {
         state.users = users;
         renderUsersTab();
     } catch (error) {
-        container.innerHTML = `<p class="error">Failed to load users.</p>`;
+        container.innerHTML = `<p class="error">Failed to load users.</p><button class="btn" onclick="loadUsersData()">Retry</button>`;
     }
 }
 
 function renderUsersTab() {
     const container = document.getElementById('users-tab');
     container.innerHTML = `
+        <div class="section-header"><h3>All Users (${state.users.length})</h3><button class="btn" onclick="loadUsersData()">Refresh</button></div>
         <table>
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
@@ -171,7 +174,7 @@ async function toggleUserStatus(userId, newStatus) {
     try {
         const data = await apiCall(`/users/${userId}/status`, 'PATCH', { isActive: newStatus });
         showNotification(data.message, 'success');
-        await loadUsersData(); // Refresh data
+        await loadUsersData();
     } catch (error) {}
 }
 
@@ -184,18 +187,16 @@ async function loadProfileReviewsData() {
         state.profileReviews = reviews;
         renderProfileReviewsTab();
     } catch (error) {
-        container.innerHTML = `<p class="error">Failed to load profile reviews.</p>`;
+        container.innerHTML = `<p class="error">Failed to load profile reviews.</p><button class="btn" onclick="loadProfileReviewsData()">Retry</button>`;
     }
 }
 
 function renderProfileReviewsTab() {
     const container = document.getElementById('profile-reviews-tab');
     const pendingReviews = state.profileReviews.filter(r => r.status === 'pending');
-    if (pendingReviews.length === 0) {
-        container.innerHTML = '<p>No pending profile reviews.</p>';
-        return;
-    }
     container.innerHTML = `
+        <div class="section-header"><h3>Pending Reviews (${pendingReviews.length})</h3><button class="btn" onclick="loadProfileReviewsData()">Refresh</button></div>
+        ${pendingReviews.length === 0 ? '<p>No pending profile reviews.</p>' : `
         <div class="review-grid">
             ${pendingReviews.map(review => `
                 <div class="review-card">
@@ -207,13 +208,14 @@ function renderProfileReviewsTab() {
                     </div>
                 </div>
             `).join('')}
-        </div>`;
+        </div>
+        `}`;
 }
 
 function showRejectModal(reviewId) {
     showModal(`
         <h3>Reject Profile</h3>
-        <p>Provide a reason for rejection. The user will see this comment and be able to log in to resubmit their profile.</p>
+        <p>Provide a reason for rejection. The user will see this comment and be able to log in to resubmit.</p>
         <textarea id="rejection-reason" rows="4" placeholder="e.g., Please upload a clearer copy of your business license."></textarea>
         <button class="btn btn-danger" onclick="rejectProfile('${reviewId}')">Submit Rejection</button>
     `);
@@ -226,8 +228,7 @@ async function rejectProfile(reviewId) {
         const data = await apiCall(`/profile-reviews/${reviewId}/reject`, 'POST', { reason });
         showNotification(data.message, 'success');
         closeModal();
-        await loadProfileReviewsData();
-        await loadDashboardStats();
+        await Promise.all([loadProfileReviewsData(), loadDashboardStats()]);
     } catch (error) {}
 }
 
@@ -236,8 +237,7 @@ async function approveProfile(reviewId) {
     try {
         const data = await apiCall(`/profile-reviews/${reviewId}/approve`, 'POST');
         showNotification(data.message, 'success');
-        await loadProfileReviewsData();
-        await loadDashboardStats();
+        await Promise.all([loadProfileReviewsData(), loadDashboardStats()]);
     } catch (error) {}
 }
 
@@ -250,13 +250,14 @@ async function loadEstimationsData() {
         state.estimations = estimations;
         renderEstimationsTab();
     } catch (error) {
-        container.innerHTML = `<p class="error">Failed to load estimations.</p>`;
+        container.innerHTML = `<p class="error">Failed to load estimations.</p><button class="btn" onclick="loadEstimationsData()">Retry</button>`;
     }
 }
 
 function renderEstimationsTab() {
     const container = document.getElementById('estimations-tab');
     container.innerHTML = `
+        <div class="section-header"><h3>All Estimations (${state.estimations.length})</h3><button class="btn" onclick="loadEstimationsData()">Refresh</button></div>
         <table>
             <thead><tr><th>Project</th><th>User</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
             <tbody>
@@ -317,19 +318,16 @@ async function loadGenericData(type) {
         state[type] = data[type];
         renderGenericTab(type);
     } catch (error) {
-        container.innerHTML = `<p class="error">Failed to load ${type}.</p>`;
+        container.innerHTML = `<p class="error">Failed to load ${type}.</p><button class="btn" onclick="loadGenericData('${type}')">Retry</button>`;
     }
 }
 
 function renderGenericTab(type) {
     const container = document.getElementById(`${type}-tab`);
     const items = state[type];
-    const headers = {
-        jobs: ['Job ID', 'User', 'Status'],
-        quotes: ['Quote ID', 'User', 'Status'],
-        messages: ['Message ID', 'Sender', 'Subject'],
-    };
+    const headers = { jobs: ['Job ID', 'User', 'Status'], quotes: ['Quote ID', 'User', 'Status'], messages: ['Message ID', 'Sender', 'Subject'] };
     container.innerHTML = `
+        <div class="section-header"><h3>All ${type.charAt(0).toUpperCase() + type.slice(1)} (${items.length})</h3><button class="btn" onclick="loadGenericData('${type}')">Refresh</button></div>
         <table>
             <thead><tr><th>${headers[type][0]}</th><th>${headers[type][1]}</th><th>${headers[type][2]}</th><th>Actions</th></tr></thead>
             <tbody>
@@ -350,6 +348,6 @@ async function deleteGenericItem(type, id) {
     try {
         const data = await apiCall(`/${type}/${id}`, 'DELETE');
         showNotification(data.message, 'success');
-        await loadGenericData(type); // Refresh data
+        await loadGenericData(type);
     } catch (error) {}
 }
