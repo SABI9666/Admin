@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notification-container"></div>
+    <div id="modal-container"></div> <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+            <div class="header-actions">
+                <div class="admin-badge" id="adminBadge">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="adminName">Loading...</span>
+                </div>
+                <button class="btn btn-danger" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <div id="statsGrid" class="stats-grid">
+            </div>
+
+        <main class="section">
+            <nav class="tabs">
+                <button class="tab active" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
+                <button class="tab" onclick="showTab('profile-reviews')"><i class="fas fa-user-check"></i> Profile Reviews</button>
+                <button class="tab" onclick="showTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
+                <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
+                <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
+                <button class="tab" onclick="showTab('messages')"><i class="fas fa-comments"></i> Messages</button>
+            </nav>
+            
+            <div id="users-tab" class="tab-content active"></div>
+            <div id="profile-reviews-tab" class="tab-content"></div>
+            <div id="estimations-tab" class="tab-content"></div>
+            <div id="jobs-tab" class="tab-content"></div>
+            <div id="quotes-tab" class="tab-content"></div>
+            <div id="messages-tab" class="tab-content"></div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
