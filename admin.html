@@ -1,14 +1,371 @@
 <!DOCTYPE html>
-<html>
-<head><title>JS Test</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelConnect - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
-<h1>JavaScript Test</h1>
-<button onclick="alert('JavaScript is working!')">Test Button</button>
-<script>
-console.log('Script loaded');
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM ready');
-});
-</script>
+    <div id="notification-container"></div>
+    
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+            <div class="header-actions">
+                <div class="admin-badge">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="adminName">Loading...</span>
+                </div>
+                <button class="btn btn-danger" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <div id="statsGrid" class="stats-grid">
+            <div class="stat-card"><h3 id="totalUsers">0</h3><p>Total Users</p></div>
+            <div class="stat-card"><h3 id="pendingReviews">0</h3><p>Pending Reviews</p></div>
+            <div class="stat-card"><h3 id="totalJobs">0</h3><p>Total Jobs</p></div>
+            <div class="stat-card"><h3 id="totalQuotes">0</h3><p>Total Quotes</p></div>
+        </div>
+
+        <main class="section">
+            <nav class="tabs">
+                <button class="tab active" onclick="showTab('users')">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="tab" onclick="showTab('profile-reviews')">
+                    <i class="fas fa-user-check"></i> Profile Reviews
+                </button>
+            </nav>
+            
+            <div id="users-tab" class="tab-content active">
+                <h3>Loading...</h3>
+            </div>
+            <div id="profile-reviews-tab" class="tab-content">
+                <h3>Loading...</h3>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        console.log('Starting admin panel...');
+        
+        // Global variables
+        let adminData = {
+            users: [],
+            reviews: [],
+            currentUser: null,
+            token: null
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready, initializing...');
+            setTimeout(initializeAdmin, 100); // Small delay to ensure DOM is fully ready
+        });
+
+        function initializeAdmin() {
+            try {
+                console.log('Checking authentication...');
+                
+                // Get stored data
+                const token = localStorage.getItem('jwtToken');
+                const userStr = localStorage.getItem('currentUser');
+                
+                console.log('Token exists:', !!token);
+                console.log('User data exists:', !!userStr);
+                
+                if (!token) {
+                    console.log('No token found, redirecting...');
+                    showError('No authentication token found. Redirecting to login...');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+
+                if (!userStr) {
+                    console.log('No user data found, redirecting...');
+                    showError('No user data found. Redirecting to login...');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+
+                let user;
+                try {
+                    user = JSON.parse(userStr);
+                    console.log('User parsed:', user);
+                } catch (e) {
+                    console.log('Error parsing user data:', e);
+                    showError('Invalid user data. Redirecting to login...');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+
+                if (!user || user.role !== 'admin') {
+                    console.log('User is not admin:', user?.role);
+                    showError('Access denied. Admin role required.');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+
+                // Store globally
+                adminData.currentUser = user;
+                adminData.token = token;
+
+                // Set admin name
+                const adminNameEl = document.getElementById('adminName');
+                if (adminNameEl) {
+                    adminNameEl.textContent = user.name || user.email || 'Admin';
+                    console.log('Admin name set to:', user.name || user.email);
+                }
+
+                // Load dashboard data
+                console.log('Loading dashboard data...');
+                loadDashboard();
+                loadUsers();
+                loadProfileReviews();
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Error initializing admin panel: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            console.error('Error:', message);
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                background: #dc3545; color: white; padding: 15px 20px;
+                border-radius: 4px; max-width: 400px;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+        }
+
+        function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            try {
+                // Remove active from all
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active to selected
+                const tab = document.getElementById(tabName + '-tab');
+                const button = event?.target?.closest('.tab');
+                
+                if (tab) {
+                    tab.classList.add('active');
+                    console.log('Activated tab content:', tabName);
+                }
+                if (button) {
+                    button.classList.add('active');
+                    console.log('Activated tab button:', tabName);
+                }
+                
+            } catch (error) {
+                console.error('Tab switching error:', error);
+                showError('Error switching tabs');
+            }
+        }
+
+        function logout() {
+            console.log('Logging out...');
+            try {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                showError('Error during logout');
+            }
+        }
+
+        async function makeApiCall(endpoint) {
+            try {
+                console.log('Making API call to:', endpoint);
+                
+                const response = await fetch('https://steelconnect-backend.onrender.com/api/admin' + endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + adminData.token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('API response status:', response.status);
+                
+                if (response.status === 401) {
+                    console.log('Unauthorized, redirecting...');
+                    showError('Session expired. Redirecting to login...');
+                    setTimeout(() => {
+                        localStorage.clear();
+                        window.location.href = 'index.html';
+                    }, 2000);
+                    return null;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('API response data:', data);
+                return data;
+                
+            } catch (error) {
+                console.error('API call error:', error);
+                throw error;
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                console.log('Loading dashboard stats...');
+                const data = await makeApiCall('/dashboard');
+                
+                if (data && data.success && data.stats) {
+                    const stats = data.stats;
+                    document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+                    document.getElementById('pendingReviews').textContent = stats.pendingProfileReviews || 0;
+                    document.getElementById('totalJobs').textContent = stats.totalJobs || 0;
+                    document.getElementById('totalQuotes').textContent = stats.totalQuotes || 0;
+                    console.log('Dashboard stats loaded successfully');
+                }
+            } catch (error) {
+                console.error('Dashboard loading error:', error);
+                showError('Failed to load dashboard stats');
+            }
+        }
+
+        async function loadUsers() {
+            const container = document.getElementById('users-tab');
+            if (!container) return;
+            
+            try {
+                console.log('Loading users...');
+                container.innerHTML = '<h3>Loading users...</h3>';
+                
+                const data = await makeApiCall('/users');
+                
+                if (data && data.success && data.users) {
+                    adminData.users = data.users;
+                    displayUsers(data.users);
+                    console.log('Users loaded successfully:', data.users.length);
+                } else {
+                    throw new Error('Invalid users response');
+                }
+                
+            } catch (error) {
+                console.error('Users loading error:', error);
+                container.innerHTML = `
+                    <h3>Users</h3>
+                    <p style="color: red;">Failed to load users: ${error.message}</p>
+                    <button class="btn" onclick="loadUsers()">Retry</button>
+                `;
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('users-tab');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h3>Users (${users.length})</h3>
+                    <button class="btn" onclick="loadUsers()">Refresh</button>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Name</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Email</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Role</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #ddd;">${user.name || 'N/A'}</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">${user.email || 'N/A'}</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">${user.role || user.type || 'N/A'}</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <span style="padding: 4px 8px; border-radius: 12px; ${user.isActive ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                                        ${user.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadProfileReviews() {
+            const container = document.getElementById('profile-reviews-tab');
+            if (!container) return;
+            
+            try {
+                console.log('Loading profile reviews...');
+                container.innerHTML = '<h3>Loading profile reviews...</h3>';
+                
+                const data = await makeApiCall('/profile-reviews');
+                
+                if (data && data.success && data.reviews) {
+                    adminData.reviews = data.reviews;
+                    displayProfileReviews(data.reviews);
+                    console.log('Profile reviews loaded successfully:', data.reviews.length);
+                } else {
+                    throw new Error('Invalid reviews response');
+                }
+                
+            } catch (error) {
+                console.error('Profile reviews loading error:', error);
+                container.innerHTML = `
+                    <h3>Profile Reviews</h3>
+                    <p style="color: red;">Failed to load profile reviews: ${error.message}</p>
+                    <button class="btn" onclick="loadProfileReviews()">Retry</button>
+                `;
+            }
+        }
+
+        function displayProfileReviews(reviews) {
+            const pendingReviews = reviews.filter(r => r.status === 'pending');
+            const container = document.getElementById('profile-reviews-tab');
+            
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h3>Pending Profile Reviews (${pendingReviews.length})</h3>
+                    <button class="btn" onclick="loadProfileReviews()">Refresh</button>
+                </div>
+                ${pendingReviews.length === 0 ? '<p>No pending profile reviews.</p>' : `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                    ${pendingReviews.map(review => `
+                        <div style="border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #f8f9fa;">
+                            <h4>${review.user?.name || 'Unknown'} (${review.user?.type || 'Unknown'})</h4>
+                            <p><strong>Email:</strong> ${review.user?.email || 'N/A'}</p>
+                            <p><strong>Company:</strong> ${review.user?.company || 'N/A'}</p>
+                            <div style="margin-top: 15px;">
+                                <button onclick="alert('Approve function coming soon')" 
+                                        class="btn" 
+                                        style="background: #28a745; margin-right: 10px;">
+                                    Approve
+                                </button>
+                                <button onclick="alert('Reject function coming soon')" 
+                                        class="btn" 
+                                        style="background: #dc3545;">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                `}
+            `;
+        }
+
+        console.log('Admin script loaded successfully');
+    </script>
 </body>
 </html>
