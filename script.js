@@ -364,6 +364,18 @@ async function renderAdminDashboard() {
     }
 }
 
+async function loadDashboardStats() {
+    // This function is called after profile reviews to update dashboard stats.
+    // It will only re-render the dashboard if it's the currently active section
+    // to avoid unexpectedly changing the user's view.
+    if (appState.currentSection === 'dashboard') {
+        console.log('Dashboard is active, refreshing stats...');
+        await renderAdminDashboard();
+    } else {
+        console.log('Dashboard not active, stats will update on next view.');
+    }
+}
+
 function getStatIcon(key) {
     const icons = {
         totalUsers: 'users',
@@ -576,24 +588,143 @@ function renderProfileReviewCard(review) {
 async function viewProfileDetails(reviewId) {
     try {
         showNotification('Loading profile details...', 'info');
-        const response = await apiCall(`/admin/profile-reviews/${reviewId}`);
-        const review = response.review || response.data?.review || response.data;
+        const [profileResponse, filesResponse] = await Promise.all([
+            apiCall(`/admin/profile-reviews/${reviewId}`),
+            apiCall(`/admin/profile-reviews/${reviewId}/files`)
+        ]);
+        const review = profileResponse.review || profileResponse.data?.review || profileResponse.data;
+        const files = filesResponse.data?.files || [];
         if (!review) throw new Error("Could not find review data in API response.");
         const user = review.user || {};
-        const profile = review.profileData || {};
+        const profile = review.profileData || user.profileData || {};
+        let filesSection = '';
+        if (files.length > 0) {
+            filesSection = `
+                <div class="profile-section">
+                    <h4><i class="fas fa-paperclip"></i> Uploaded Files (${files.length})</h4>
+                    <div class="files-grid">
+                        ${files.map(file => `
+                            <div class="file-item">
+                                <i class="fas fa-file-pdf"></i>
+                                <div class="file-details">
+                                    <h5>${file.name}</h5>
+                                    <span>Size: ${formatFileSize(file.size)}</span>
+                                    <small>Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}</small>
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="downloadProfileFile('${reviewId}', '${file.name}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
         showGenericModal(`
-            <div class="modal-header premium-modal-header"><h3><i class="fas fa-user-circle"></i> Profile Review Details</h3><p class="modal-subtitle">${user.name} - ${user.type?.charAt(0).toUpperCase() + user.type?.slice(1) || 'User'}</p></div>
+            <div class="modal-header premium-modal-header">
+                <h3><i class="fas fa-user-circle"></i> Profile Review Details</h3>
+                <p class="modal-subtitle">${user.name} - ${user.type?.charAt(0).toUpperCase() + user.type?.slice(1) || 'User'}</p>
+            </div>
             <div class="profile-details-content">
-                <div class="profile-section"><h4><i class="fas fa-user"></i> Basic Information</h4><p><strong>Name:</strong> ${user.name || 'N/A'}</p><p><strong>Email:</strong> ${user.email || 'N/A'}</p><p><strong>Account Type:</strong> ${user.type || 'N/A'}</p><p><strong>Status:</strong> <span class="status-badge ${review.status}">${review.status}</span></p></div>
-                ${user.type === 'contractor' ? `<div class="profile-section"><h4><i class="fas fa-building"></i> Contractor Information</h4><p><strong>Company:</strong> ${profile.companyName || 'N/A'}</p><p><strong>Website:</strong> ${profile.companyWebsite ? `<a href="${profile.companyWebsite}" target="_blank">${profile.companyWebsite}</a>` : 'N/A'}</p><p><strong>Description:</strong> ${profile.description || 'N/A'}</p></div>` : ''}
-                ${user.type === 'designer' ? `<div class="profile-section"><h4><i class="fas fa-drafting-compass"></i> Designer Information</h4><p><strong>Skills:</strong> ${(Array.isArray(profile.skills) ? profile.skills : (profile.skills || '').split(',')).map(s => `<span class="skill-tag">${s.trim()}</span>`).join(' ')}</p><p><strong>LinkedIn:</strong> ${profile.linkedinProfile ? `<a href="${profile.linkedinProfile}" target="_blank">${profile.linkedinProfile}</a>` : 'N/A'}</p><p><strong>Bio:</strong> ${profile.bio || 'N/A'}</p></div>` : ''}
-                ${review.status !== 'pending' && review.reviewNotes ? `<div class="profile-section"><h4><i class="fas fa-comment-alt"></i> Review Notes</h4><div class="review-notes-display"><p>${review.reviewNotes}</p></div></div>` : ''}
+                <div class="profile-section">
+                    <h4><i class="fas fa-user"></i> Basic Information</h4>
+                    <div class="profile-info-grid">
+                        <div class="info-item">
+                            <label>Name:</label>
+                            <span>${user.name || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email:</label>
+                            <span>${user.email || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Account Type:</label>
+                            <span>${user.type || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status:</label>
+                            <span class="status-badge ${review.status}">${review.status}</span>
+                        </div>
+                    </div>
+                </div>
+                ${user.type === 'contractor' ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-building"></i> Contractor Information</h4>
+                        <div class="profile-info-grid">
+                            <div class="info-item">
+                                <label>Company:</label>
+                                <span>${profile.companyName || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Website:</label>
+                                <span>${profile.companyWebsite ? `<a href="${profile.companyWebsite}" target="_blank">${profile.companyWebsite}</a>` : 'N/A'}</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Description:</label>
+                                <span>${profile.description || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                ${user.type === 'designer' ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-drafting-compass"></i> Designer Information</h4>
+                        <div class="profile-info-grid">
+                            <div class="info-item">
+                                <label>Skills:</label>
+                                <div class="skills-display">
+                                    ${(Array.isArray(profile.skills) ? profile.skills : (profile.skills || '').split(',')).map(s => `<span class="skill-tag">${s.trim()}</span>`).join('')}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <label>LinkedIn:</label>
+                                <span>${profile.linkedinProfile ? `<a href="${profile.linkedinProfile}" target="_blank">${profile.linkedinProfile}</a>` : 'N/A'}</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Bio:</label>
+                                <span>${profile.bio || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                ${filesSection}
+                ${review.status !== 'pending' && review.reviewNotes ? `
+                    <div class="profile-section">
+                        <h4><i class="fas fa-comment-alt"></i> Review Notes</h4>
+                        <div class="review-notes-display">
+                            <p>${review.reviewNotes}</p>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
             <div class="modal-actions">
-                ${review.status === 'pending' ? `<button class="btn btn-success" onclick="closeModal(); showApproveModal('${reviewId}')"><i class="fas fa-check"></i> Approve</button><button class="btn btn-danger" onclick="closeModal(); showRejectModal('${reviewId}')"><i class="fas fa-times"></i> Reject</button>` : ''}
+                ${review.status === 'pending' ? `
+                    <button class="btn btn-success" onclick="closeModal(); showApproveModal('${reviewId}')">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-danger" onclick="closeModal(); showRejectModal('${reviewId}')">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                ` : ''}
                 <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-            </div>`, 'max-width: 800px; max-height: 90vh; overflow-y: auto;');
-    } catch (error) { /* Handled by apiCall */ }
+            </div>
+        `, 'max-width: 900px; max-height: 90vh; overflow-y: auto;');
+    } catch (error) {
+        console.error('Error viewing profile details:', error);
+        showNotification('Failed to load profile details: ' + error.message, 'error');
+    }
+}
+
+async function downloadProfileFile(reviewId, fileName) {
+    try {
+        showNotification('Downloading file...', 'info');
+        const downloadUrl = `${API_BASE}/admin/profile-reviews/${reviewId}/files/${encodeURIComponent(fileName)}/download`;
+        window.open(downloadUrl, '_blank');
+        showNotification('File download started', 'success');
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        showNotification('Failed to download file: ' + error.message, 'error');
+    }
 }
 
 function showApproveModal(reviewId) {
@@ -630,18 +761,32 @@ async function handleProfileApproval(reviewId) {
     btn.innerHTML = '<div class="btn-spinner"></div> Approving...';
     try {
         const notes = document.getElementById('approval-notes').value.trim();
-        await apiCall(`/admin/profile-reviews/${reviewId}/approve`, 'POST', { notes: notes || 'Profile approved' });
+        await apiCall(`/admin/profile-reviews/${reviewId}/approve`, 'POST', {
+             notes: notes || 'Profile approved by admin'
+         });
         showNotification('Profile approved successfully!', 'success');
         closeModal();
-        setTimeout(renderProfileReviewsTab, 500);
-    } catch (error) { /* Handled by apiCall */ } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+        setTimeout(() => {
+            renderProfileReviewsTab();
+            loadDashboardStats();
+        }, 500);
+    } catch (error) {
+        console.error('Error approving profile:', error);
+        showNotification('Failed to approve profile: ' + error.message, 'error');
+    } finally {
+        if (btn) {
+             btn.disabled = false;
+             btn.innerHTML = originalText;
+         }
     }
 }
 
 async function handleProfileRejection(reviewId) {
     const reason = document.getElementById('rejection-reason').value.trim();
-    if (!reason) { showNotification('Please provide a reason for rejection', 'warning'); return; }
+    if (!reason) {
+         showNotification('Please provide a reason for rejection', 'warning');
+         return;
+     }
     const btn = document.querySelector('#reject-profile-form button[type="submit"]');
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -650,9 +795,18 @@ async function handleProfileRejection(reviewId) {
         await apiCall(`/admin/profile-reviews/${reviewId}/reject`, 'POST', { reason });
         showNotification('Profile rejected and user notified.', 'success');
         closeModal();
-        setTimeout(renderProfileReviewsTab, 500);
-    } catch (error) { /* Handled by apiCall */ } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+        setTimeout(() => {
+            renderProfileReviewsTab();
+            loadDashboardStats();
+        }, 500);
+    } catch (error) {
+        console.error('Error rejecting profile:', error);
+        showNotification('Failed to reject profile: ' + error.message, 'error');
+    } finally {
+        if (btn) {
+             btn.disabled = false;
+             btn.innerHTML = originalText;
+         }
     }
 }
 
@@ -1088,6 +1242,12 @@ async function renderAdminSubscriptions() {
     renderComingSoon('subscriptions');
 }
 
+// --- ANALYTICS ---
+async function renderAdminAnalytics() {
+    // Placeholder for analytics rendering
+    renderComingSoon('analytics');
+}
+
 // --- SYSTEM STATS ---
 async function renderSystemStats() {
     // Placeholder for system stats rendering
@@ -1110,7 +1270,7 @@ async function exportData(type) {
         window.URL.revokeObjectURL(url);
         a.remove();
         showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} exported successfully`, 'success');
-    } catch (error) { 
+    } catch (error) {
         showNotification(`Failed to export ${type}: ${error.message}`, 'error');
     }
 }
