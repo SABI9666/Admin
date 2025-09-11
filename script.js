@@ -240,11 +240,13 @@ function viewProfileDetails(reviewId) {
     }
 
     const modalContent = `
-        <h3>Profile Details: ${review.user.name}</h3>
-        <p><strong>Email:</strong> ${review.user.email}</p>
-        <p><strong>User Type:</strong> ${review.user.type}</p>
-        <hr>
-        ${filesHtml}
+        <div class="modal-body">
+            <h3>Profile Details: ${review.user.name}</h3>
+            <p><strong>Email:</strong> ${review.user.email}</p>
+            <p><strong>User Type:</strong> ${review.user.type}</p>
+            <hr>
+            ${filesHtml}
+        </div>
     `;
     
     showModal(modalContent);
@@ -252,10 +254,12 @@ function viewProfileDetails(reviewId) {
 
 function showRejectModal(reviewId) {
     showModal(`
-        <h3>Reject Profile</h3>
-        <p>Provide a reason for rejection. The user will see this comment and be able to log in to resubmit.</p>
-        <textarea id="rejection-reason" rows="4" placeholder="e.g., Please upload a clearer copy of your business license."></textarea>
-        <button class="btn btn-danger" onclick="rejectProfile('${reviewId}')">Submit Rejection</button>
+        <div class="modal-body">
+            <h3>Reject Profile</h3>
+            <p>Provide a reason for rejection. The user will see this comment and be able to log in to resubmit.</p>
+            <textarea id="rejection-reason" rows="4" placeholder="e.g., Please upload a clearer copy of your business license."></textarea>
+            <button class="btn btn-danger" onclick="rejectProfile('${reviewId}')">Submit Rejection</button>
+        </div>
     `);
 }
 
@@ -313,8 +317,8 @@ function renderEstimationsTab() {
                         </td>
                         <td>${est.resultFile ? `<a href="${est.resultFile.url}" target="_blank">View</a>` : 'Not uploaded'}</td>
                         <td>
-                            <button class="btn" onclick="showUploadResultModal('${est._id}')">Upload/Edit</button>
-                            <button class="btn btn-danger" onclick="deleteEstimation('${est._id}')">Delete</button>
+                            <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">Upload/Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">Delete</button>
                         </td>
                     </tr>
                 `).join('')}
@@ -347,9 +351,11 @@ function showEstimationFiles(estimationId) {
     }
 
     const modalContent = `
-        <h3>Uploaded Files for "${estimation.projectName || 'Estimation'}"</h3>
-        <hr>
-        ${filesHtml}
+        <div class="modal-body">
+            <h3>Uploaded Files for "${estimation.projectName || 'Estimation'}"</h3>
+            <hr>
+            ${filesHtml}
+        </div>
     `;
     
     showModal(modalContent);
@@ -357,10 +363,12 @@ function showEstimationFiles(estimationId) {
 
 function showUploadResultModal(estimationId) {
     showModal(`
-        <h3>Upload Estimation Result</h3>
-        <p>This will overwrite any existing result.</p>
-        <input type="file" id="result-file-input">
-        <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">Upload File</button>
+        <div class="modal-body">
+            <h3>Upload Estimation Result</h3>
+            <p>This will overwrite any existing result.</p>
+            <input type="file" id="result-file-input">
+            <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">Upload File</button>
+        </div>
     `);
 }
 
@@ -413,7 +421,7 @@ function renderGenericTab(type) {
                         <td>${item._id.slice(-6)}</td>
                         <td>${item.userEmail || item.clientEmail || item.senderEmail || 'N/A'}</td>
                         <td>${item.status || item.subject || 'N/A'}</td>
-                        <td><button class="btn btn-danger" onclick="deleteGenericItem('${type}', '${item._id}')">Delete</button></td>
+                        <td><button class="btn btn-sm btn-danger" onclick="deleteGenericItem('${type}', '${item._id}')">Delete</button></td>
                     </tr>
                 `).join('')}
             </tbody>
