@@ -6,11 +6,19 @@ const appState = {
     uploadProgress: 0,
     currentProfileReview: null
 };
-// Updated API base URL configuration
+
+// API base URL configuration
 const API_BASE = 'https://steelconnect-backend.onrender.com/api';
-const API_BASE_URL = 'https://steelconnect-backend.onrender.com'; // Kept for functions using the full URL
+const API_BASE_URL = 'https://steelconnect-backend.onrender.com';
 
 // --- CORE UTILITY FUNCTIONS ---
+
+/**
+ * Displays a notification message on the screen.
+ * @param {string} message - The message to display.
+ * @param {string} [type='info'] - The type of notification ('success', 'error', 'warning', 'info').
+ * @param {number} [duration=5000] - How long the notification stays visible in milliseconds.
+ */
 function showNotification(message, type = 'info', duration = 5000) {
     const container = document.getElementById('notification-container');
     if (!container) return;
@@ -27,6 +35,11 @@ function showNotification(message, type = 'info', duration = 5000) {
     setTimeout(() => { notification.remove(); }, duration);
 }
 
+/**
+ * Returns the Font Awesome icon class for a given notification type.
+ * @param {string} type - The notification type.
+ * @returns {string} The icon class name.
+ */
 function getNotificationIcon(type) {
     const icons = {
         'success': 'check-circle',
@@ -37,11 +50,18 @@ function getNotificationIcon(type) {
     return icons[type] || 'info-circle';
 }
 
+/**
+ * Hides the global loading spinner.
+ */
 function hideGlobalLoader() {
     const loader = document.getElementById('global-loader');
     if (loader) loader.style.display = 'none';
 }
 
+/**
+ * Shows a loading spinner inside a specified container.
+ * @param {HTMLElement} container - The element to display the loader in.
+ */
 function showLoader(container) {
     container.innerHTML = `
         <div class="loading-spinner">
@@ -51,11 +71,22 @@ function showLoader(container) {
     `;
 }
 
+/**
+ * Retrieves the JWT token from local storage.
+ * @returns {string|null} The JWT token.
+ */
 function getToken() {
     return localStorage.getItem('jwtToken');
 }
 
-// Enhanced API call with better error handling
+/**
+ * A generic function for making authenticated API calls.
+ * @param {string} endpoint - The API endpoint (e.g., '/users').
+ * @param {string} [method='GET'] - The HTTP method.
+ * @param {object|FormData|null} [body=null] - The request body for POST, PATCH, etc.
+ * @param {boolean} [isFileUpload=false] - Set to true if uploading a FormData object.
+ * @returns {Promise<any>} The JSON response from the API or the raw response for non-JSON content.
+ */
 async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
     const token = getToken();
     if (!token) {
@@ -70,7 +101,6 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
         },
     };
 
-    // Adjust for file uploads vs. JSON
     if (body) {
         if (isFileUpload) {
             options.body = body; // FormData handles its own content type
@@ -84,24 +114,21 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
 
     try {
         const response = await fetch(`${API_BASE_URL}/api${endpoint}`, options);
-
         let responseData;
         const contentType = response.headers.get('content-type');
 
         if (!response.ok) {
-            // Try to parse error message from JSON response
             if (contentType && contentType.includes('application/json')) {
                 responseData = await response.json();
                 console.error('API Error:', response.status, responseData);
                 throw new Error(responseData.message || responseData.error || `HTTP error! Status: ${response.status}`);
             } else {
-                 const text = await response.text();
-                 console.error('Non-JSON API Error:', response.status, text);
-                 throw new Error(text || `HTTP error! Status: ${response.status}`);
+                const text = await response.text();
+                console.error('Non-JSON API Error:', response.status, text);
+                throw new Error(text || `HTTP error! Status: ${response.status}`);
             }
         }
 
-        // Handle successful but potentially non-JSON responses (like file downloads)
         if (contentType && contentType.includes('application/json')) {
             responseData = await response.json();
             console.log(`✅ API Success:`, responseData);
@@ -118,12 +145,20 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
     }
 }
 
+/**
+ * Logs the admin out, clears local storage, and redirects to the login page.
+ */
 function logout() {
     localStorage.clear();
     showNotification('You have been logged out.', 'success');
     setTimeout(() => { window.location.href = 'index.html'; }, 1000);
 }
 
+/**
+ * Formats a date string into a more readable format.
+ * @param {string} dateString - The ISO date string.
+ * @returns {string} The formatted date.
+ */
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -133,6 +168,11 @@ function formatDate(dateString) {
     });
 }
 
+/**
+ * Formats a number as a USD currency string.
+ * @param {number} amount - The amount to format.
+ * @returns {string} The formatted currency string.
+ */
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -140,7 +180,27 @@ function formatCurrency(amount) {
     }).format(amount || 0);
 }
 
+/**
+ * Formats file size in bytes to a human-readable string.
+ * @param {number} bytes - The file size in bytes.
+ * @returns {string} The formatted file size.
+ */
+function formatFileSize(bytes) {
+    if (!bytes) return '0 Bytes';
+    const k = 1024,
+        sizes = ['Bytes', 'KB', 'MB', 'GB'],
+        i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
+
+
 // --- MODAL UTILITIES ---
+
+/**
+ * Shows a modal with a specific ID and content.
+ * @param {string} modalId - The ID for the modal content element.
+ * @param {string} content - The HTML content for the modal.
+ */
 function showModal(modalId, content) {
     const existingModal = document.getElementById('dynamic-modal');
     if (existingModal) existingModal.remove();
@@ -159,6 +219,11 @@ function showModal(modalId, content) {
     modal.style.display = 'flex';
 }
 
+/**
+ * Shows a generic modal with custom content and optional inline styles.
+ * @param {string} content - The HTML content for the modal.
+ * @param {string} [style=''] - Inline CSS styles for the modal content container.
+ */
 function showGenericModal(content, style = '') {
     const existingModal = document.getElementById('dynamic-modal');
     if (existingModal) existingModal.remove();
@@ -176,6 +241,9 @@ function showGenericModal(content, style = '') {
     modal.style.display = 'flex';
 }
 
+/**
+ * Closes any active modal.
+ */
 function closeModal() {
     const modal = document.getElementById('dynamic-modal');
     if (modal) modal.remove();
@@ -365,9 +433,6 @@ async function renderAdminDashboard() {
 }
 
 async function loadDashboardStats() {
-    // This function is called after profile reviews to update dashboard stats.
-    // It will only re-render the dashboard if it's the currently active section
-    // to avoid unexpectedly changing the user's view.
     if (appState.currentSection === 'dashboard') {
         console.log('Dashboard is active, refreshing stats...');
         await renderAdminDashboard();
@@ -979,7 +1044,7 @@ async function updateEstimationStatus(estimationId, newStatus) {
     try {
         await apiCall(`/admin/estimations/${estimationId}/status`, 'PATCH', { status: newStatus });
         showNotification('Status updated', 'success');
-        document.querySelector(`tr[data-estimation-id="${estimationId}"]`).dataset.status = newStatus;
+        renderAdminEstimations(); // Rerender to update action buttons
     } catch (error) {
         const select = document.querySelector(`select[onchange*="${estimationId}"]`);
         if (select) select.value = select.dataset.current;
@@ -989,37 +1054,69 @@ async function updateEstimationStatus(estimationId, newStatus) {
 async function viewEstimationDetails(estimationId) {
     try {
         const { estimation } = await apiCall(`/admin/estimations/${estimationId}`);
-        showModal('estimation-details-modal', `
-            <div class="estimation-details-modal">
-                <h3>Estimation Details</h3>
-                <div>...</div> 
-                <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
-            </div>`);
-    } catch(e){/* handled */}
+        showGenericModal(`
+            <div class="modal-header"><h3>Estimation Details</h3></div>
+            <div class="profile-details-content">
+                <div class="profile-section">
+                    <h4><i class="fas fa-info-circle"></i> Project Information</h4>
+                    <div class="profile-info-grid">
+                        <div class="info-item"><label>Project Title:</label><span>${estimation.projectTitle || 'N/A'}</span></div>
+                        <div class="info-item"><label>Project Type:</label><span>${estimation.projectType || 'N/A'}</span></div>
+                        <div class="info-item"><label>Status:</label><span><span class="status-badge ${estimation.status}">${estimation.status}</span></span></div>
+                        <div class="info-item"><label>Amount:</label><span>${estimation.estimatedAmount ? formatCurrency(estimation.estimatedAmount) : 'Pending'}</span></div>
+                        <div class="info-item full-width"><label>Description:</label><span>${estimation.description || 'No description provided.'}</span></div>
+                    </div>
+                </div>
+                 <div class="profile-section">
+                    <h4><i class="fas fa-user-tie"></i> Contractor</h4>
+                    <div class="profile-info-grid">
+                        <div class="info-item"><label>Name:</label><span>${estimation.contractorName || 'N/A'}</span></div>
+                        <div class="info-item"><label>Email:</label><span>${estimation.contractorEmail || 'N/A'}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+        `, 'max-width: 800px');
+    } catch(e){
+        showNotification('Failed to load estimation details.', 'error');
+    }
 }
 
 async function viewEstimationFiles(estimationId) {
     try {
         const { files } = await apiCall(`/admin/estimations/${estimationId}/files`);
-        showModal('files-modal', `
-            <div class="files-modal">
-                <h3>Uploaded Files</h3>
-                <div class="files-grid">${files.map(file => `...`).join('')}</div>
-                <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
-            </div>`);
-    } catch(e){/* handled */}
+        if (!files || files.length === 0) {
+            showNotification('No files found for this estimation.', 'info');
+            return;
+        }
+
+        showGenericModal(`
+            <div class="modal-header"><h3><i class="fas fa-paperclip"></i> Uploaded Files</h3></div>
+            <div class="files-grid" style="margin-top: 1rem;">
+                ${files.map(file => `
+                    <div class="file-item">
+                        <i class="fas fa-${getFileIcon(file.name)}"></i>
+                        <div class="file-details">
+                            <h5>${file.name}</h5>
+                            <span>Size: ${formatFileSize(file.size)}</span>
+                        </div>
+                        <a href="${file.downloadURL}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+        `, 'max-width: 700px');
+    } catch(e){
+        showNotification('Could not retrieve file list.', 'error');
+    }
 }
 
-function getFileIcon(fileType) {
-    const icons = {'pdf':'file-pdf', 'doc':'file-word', 'docx':'file-word', 'xls':'file-excel', 'xlsx':'file-excel', 'jpg':'file-image', 'png':'file-image', 'zip':'file-archive'};
-    const ext = fileType?.split('.').pop().toLowerCase() || fileType;
+function getFileIcon(fileName) {
+    const icons = {'pdf':'file-pdf', 'doc':'file-word', 'docx':'file-word', 'xls':'file-excel', 'xlsx':'file-excel', 'jpg':'file-image', 'jpeg':'file-image', 'png':'file-image', 'zip':'file-archive', 'dwg': 'file-code'};
+    const ext = fileName?.split('.').pop().toLowerCase();
     return icons[ext] || 'file';
-}
-
-function formatFileSize(bytes) {
-    if (!bytes) return '0 Bytes';
-    const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'], i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
 async function setEstimationDueDate(estimationId) {
@@ -1031,26 +1128,99 @@ async function setEstimationDueDate(estimationId) {
             renderAdminEstimations();
         } catch (error) { /* Handled */ }
     } else if (dueDate) {
-        showNotification('Invalid date format', 'error');
+        showNotification('Invalid date format. Please use YYYY-MM-DD.', 'error');
     }
 }
 
-async function uploadEstimationResult(estimationId) {
-    showModal('upload-result-modal', `...`); // Modal content for upload
+function uploadEstimationResult(estimationId) {
+    showGenericModal(`
+        <div class="modal-header"><h3><i class="fas fa-upload"></i> Upload Estimation Result</h3></div>
+        <form id="upload-result-form">
+            <div class="form-group">
+                <label for="resultFile">Result File (PDF, Excel, etc.)</label>
+                <input type="file" id="resultFile" class="form-control" required>
+            </div>
+             <div class="form-group">
+                <label for="estimatedAmount">Final Estimated Amount ($)</label>
+                <input type="number" id="estimatedAmount" class="form-control" placeholder="e.g., 15000.00" step="0.01" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-success">Upload and Complete</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    `, 'max-width: 500px');
+    
     document.getElementById('upload-result-form').addEventListener('submit', async (e) => {
-        // Form submission logic
+        e.preventDefault();
+        const fileInput = document.getElementById('resultFile');
+        const amountInput = document.getElementById('estimatedAmount');
+        const file = fileInput.files[0];
+        const amount = parseFloat(amountInput.value);
+
+        if (!file || isNaN(amount)) {
+            showNotification('Please provide both a file and a valid amount.', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('resultFile', file);
+        formData.append('estimatedAmount', amount);
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+        try {
+            await apiCall(`/admin/estimations/${estimationId}/result`, 'POST', formData, true);
+            showNotification('Estimation result uploaded successfully!', 'success');
+            closeModal();
+            renderAdminEstimations();
+        } catch (error) {
+            showNotification('File upload failed: ' + error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Upload and Complete';
+        }
     });
 }
 
 async function downloadEstimationResult(estimationId) {
-    // Logic to trigger file download
+    showNotification('Starting download...', 'info');
+    try {
+        const response = await apiCall(`/admin/estimations/${estimationId}/result/download`, 'GET');
+        const blob = await response.blob();
+        
+        // Extract filename from Content-Disposition header
+        const disposition = response.headers.get('content-disposition');
+        let filename = 'estimation-result.zip'; // fallback
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showNotification('Download complete!', 'success');
+    } catch(error) {
+        showNotification('Download failed: ' + error.message, 'error');
+    }
 }
 
 async function deleteEstimation(estimationId) {
-    if (confirm('Delete this estimation?')) {
+    if (confirm('Are you sure you want to delete this estimation? This action cannot be undone.')) {
         try {
             await apiCall(`/admin/estimations/${estimationId}`, 'DELETE');
-            showNotification('Estimation deleted', 'success');
+            showNotification('Estimation deleted successfully', 'success');
             renderAdminEstimations();
         } catch (error) { /* Handled */ }
     }
@@ -1139,12 +1309,33 @@ async function updateJobProgress(jobId, currentProgress) {
 async function viewJobDetails(jobId) {
     try {
         const { job } = await apiCall(`/admin/jobs/${jobId}`);
-        showModal('job-details-modal', `...`); // Modal content for job details
+        showGenericModal(`
+            <div class="modal-header"><h3>Job Details - #${job.jobNumber}</h3></div>
+            <div class="profile-details-content">
+                 <div class="profile-section">
+                    <h4><i class="fas fa-info-circle"></i> Job Information</h4>
+                    <div class="profile-info-grid">
+                        <div class="info-item"><label>Project:</label><span>${job.projectTitle}</span></div>
+                        <div class="info-item"><label>Value:</label><span>${formatCurrency(job.value)}</span></div>
+                        <div class="info-item"><label>Status:</label><span><span class="status-badge ${job.status}">${job.status}</span></span></div>
+                        <div class="info-item"><label>Progress:</label><span>${job.progress || 0}%</span></div>
+                    </div>
+                </div>
+                 <div class="profile-section">
+                    <h4><i class="fas fa-user-tie"></i> Parties Involved</h4>
+                    <div class="profile-info-grid">
+                        <div class="info-item"><label>Client:</label><span>${job.clientName} (${job.clientEmail})</span></div>
+                        <div class="info-item"><label>Contractor:</label><span>${job.contractorName} (${job.contractorCompany})</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+        `, 'max-width: 800px');
     } catch (error) { /* Handled */ }
 }
 
 async function deleteJob(jobId) {
-    if (confirm('Delete this job?')) {
+    if (confirm('Are you sure you want to delete this job?')) {
         try {
             await apiCall(`/admin/jobs/${jobId}`, 'DELETE');
             showNotification('Job deleted', 'success');
@@ -1158,8 +1349,6 @@ async function renderAdminMessages() {
     const contentArea = document.getElementById('admin-content-area');
     try {
         const { messages } = await apiCall('/admin/messages');
-        window.messagesData = messages; // Store for global access by helpers
-
         if (!messages || messages.length === 0) {
             contentArea.innerHTML = `<div class="empty-state"><i class="fas fa-envelope-open-text"></i><h3>No messages found</h3><p>Messages from users will appear here.</p></div>`;
             return;
@@ -1169,8 +1358,7 @@ async function renderAdminMessages() {
             <div class="admin-section-header">
                 <div class="section-title"><h2>Messages</h2><span class="count-badge">${messages.length} total</span></div>
                 <div class="section-actions">
-                    <button class="btn btn-info" onclick="markAllAsRead()"><i class="fas fa-check-double"></i> Mark All as Read</button>
-                    <button class="btn btn-primary" onclick="exportMessages()"><i class="fas fa-download"></i> Export CSV</button>
+                     <button class="btn btn-primary" onclick="exportMessages()"><i class="fas fa-download"></i> Export CSV</button>
                 </div>
             </div>
             <div class="admin-table-container">
@@ -1181,13 +1369,11 @@ async function renderAdminMessages() {
                             <tr class="message-row ${!msg.isRead ? 'unread' : ''}" data-message-id="${msg._id}">
                                 <td><div><strong>${msg.senderName}</strong><small>${msg.senderEmail}</small></div></td>
                                 <td>${msg.subject}</td>
-                                <td><span class="status-badge ${msg.isBlocked ? 'blocked' : (msg.status || 'read')}">${msg.isBlocked ? 'Blocked' : (msg.status || 'read')}</span></td>
+                                <td><span class="status-badge ${msg.isRead ? 'read' : 'unread'}">${msg.isRead ? 'Read' : 'Unread'}</span></td>
                                 <td>${new Date(msg.createdAt).toLocaleString()}</td>
                                 <td><div class="action-buttons">
-                                    <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${msg._id}')"><i class="fas fa-eye"></i></button>
-                                    <button class="btn btn-sm btn-primary" onclick="replyToMessage('${msg._id}')"><i class="fas fa-reply"></i></button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteMessage('${msg._id}')"><i class="fas fa-trash"></i></button>
-                                    <button class="btn btn-sm ${msg.isBlocked ? 'btn-success' : 'btn-warning'}" onclick="blockMessage('${msg._id}', ${!msg.isBlocked})"><i class="fas fa-shield-alt"></i></button>
+                                    <button class="btn btn-sm btn-info" onclick="viewMessageDetails('${msg._id}')"><i class="fas fa-eye"></i> View</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteMessage('${msg._id}')"><i class="fas fa-trash"></i> Delete</button>
                                 </div></td>
                             </tr>`).join('')}
                     </tbody>
@@ -1201,56 +1387,45 @@ async function renderAdminMessages() {
 async function viewMessageDetails(messageId) {
     try {
         const { message } = await apiCall(`/admin/messages/${messageId}`);
-        if (!message.isRead) await updateMessageStatus(messageId, 'read', false);
-        showModal('message-details-modal', `...`); // Modal for message details
-    } catch (error) { /* Handled */ }
-}
-
-async function replyToMessage(messageId) {
-    // Reply modal logic
-}
-
-async function updateMessageStatus(messageId, newStatus, showNotif = true) {
-    try {
-        await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { status: newStatus, isRead: true });
-        if (showNotif) {
-            showNotification('Message status updated', 'success');
-            renderAdminMessages();
+        // Mark as read on the backend when viewed
+        if (!message.isRead) {
+            await apiCall(`/admin/messages/${messageId}/status`, 'PATCH', { isRead: true });
         }
+        showGenericModal(`
+            <div class="modal-header"><h3>Message from ${message.senderName}</h3></div>
+            <div class="message-content">
+                <p><strong>From:</strong> ${message.senderName} &lt;${message.senderEmail}&gt;</p>
+                <p><strong>Subject:</strong> ${message.subject}</p>
+                <hr>
+                <p>${message.body.replace(/\n/g, '<br>')}</p>
+            </div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal(); renderAdminMessages();">Close</button></div>
+        `, 'max-width: 700px');
     } catch (error) { /* Handled */ }
-}
-
-async function markAllAsRead() {
-    if (confirm('Mark all unread messages as read?')) {
-        // Logic to mark all as read
-    }
 }
 
 async function deleteMessage(messageId) {
-    if (confirm('Delete this message?')) {
-        // Deletion logic
+    if (confirm('Are you sure you want to delete this message?')) {
+        try {
+            await apiCall(`/admin/messages/${messageId}`, 'DELETE');
+            showNotification('Message deleted', 'success');
+            renderAdminMessages();
+        } catch (error) { /* Handled */ }
     }
-}
-
-async function blockMessage(messageId, block = true) {
-    // Block/unblock logic
 }
 
 // --- SUBSCRIPTION MANAGEMENT ---
 async function renderAdminSubscriptions() {
-    // Placeholder for subscription rendering
     renderComingSoon('subscriptions');
 }
 
 // --- ANALYTICS ---
 async function renderAdminAnalytics() {
-    // Placeholder for analytics rendering
     renderComingSoon('analytics');
 }
 
 // --- SYSTEM STATS ---
 async function renderSystemStats() {
-    // Placeholder for system stats rendering
     renderComingSoon('system-stats');
 }
 
