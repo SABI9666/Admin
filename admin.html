@@ -26,10 +26,22 @@
         </header>
 
         <div id="statsGrid" class="stats-grid">
-            <div class="stat-card"><h3 id="totalUsers">0</h3><p>Total Users</p></div>
-            <div class="stat-card"><h3 id="pendingReviews">0</h3><p>Pending Reviews</p></div>
-            <div class="stat-card"><h3 id="totalJobs">0</h3><p>Total Jobs</p></div>
-            <div class="stat-card"><h3 id="totalQuotes">0</h3><p>Total Quotes</p></div>
+            <div class="stat-card">
+                <h3 id="totalUsers">0</h3>
+                <p>Total Users</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="pendingReviews">0</h3>
+                <p>Pending Reviews</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalJobs">0</h3>
+                <p>Total Jobs</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalQuotes">0</h3>
+                <p>Total Quotes</p>
+            </div>
         </div>
 
         <main class="section">
@@ -40,183 +52,29 @@
                 <button class="tab" onclick="showTab('profile-reviews')">
                     <i class="fas fa-user-check"></i> Profile Reviews
                 </button>
+                <button class="tab" onclick="showTab('estimations')">
+                    <i class="fas fa-calculator"></i> Estimations
+                </button>
+                <button class="tab" onclick="showTab('messages')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
             </nav>
             
             <div id="users-tab" class="tab-content active">
-                <h3>Loading...</h3>
+                <h3>Loading users...</h3>
             </div>
             <div id="profile-reviews-tab" class="tab-content">
-                <h3>Loading...</h3>
+                <h3>Loading profile reviews...</h3>
+            </div>
+            <div id="estimations-tab" class="tab-content">
+                <h3>Loading estimations...</h3>
+            </div>
+            <div id="messages-tab" class="tab-content">
+                <h3>Loading messages...</h3>
             </div>
         </main>
     </div>
 
-    <script>
-        console.log('Admin panel starting...');
-        
-        let adminData = { users: [], reviews: [], currentUser: null, token: null };
-
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initializeAdmin, 100);
-        });
-
-        function initializeAdmin() {
-            try {
-                const token = localStorage.getItem('jwtToken');
-                const userStr = localStorage.getItem('currentUser');
-                
-                if (!token || !userStr) {
-                    showError('Authentication required');
-                    setTimeout(() => window.location.href = 'index.html', 2000);
-                    return;
-                }
-
-                let user = JSON.parse(userStr);
-                if (!user || user.role !== 'admin') {
-                    showError('Admin access required');
-                    setTimeout(() => window.location.href = 'index.html', 2000);
-                    return;
-                }
-
-                adminData.currentUser = user;
-                adminData.token = token;
-                document.getElementById('adminName').textContent = user.name || user.email || 'Admin';
-
-                loadDashboard();
-                loadUsers();
-                loadProfileReviews();
-                
-            } catch (error) {
-                showError('Initialization error: ' + error.message);
-            }
-        }
-
-        function showError(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; background: #dc3545; color: white; padding: 15px 20px; border-radius: 4px;';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 5000);
-        }
-
-        function showTab(tabName) {
-            try {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                const tab = document.getElementById(tabName + '-tab');
-                const button = event?.target?.closest('.tab');
-                
-                if (tab) tab.classList.add('active');
-                if (button) button.classList.add('active');
-                
-            } catch (error) {
-                showError('Error switching tabs');
-            }
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        async function apiCall(endpoint) {
-            try {
-                const response = await fetch('https://steelconnect-backend.onrender.com/api/admin' + endpoint, {
-                    headers: {
-                        'Authorization': 'Bearer ' + adminData.token,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.status === 401) {
-                    showError('Session expired');
-                    setTimeout(() => window.location.href = 'index.html', 2000);
-                    return null;
-                }
-                
-                if (!response.ok) throw new Error('API call failed');
-                return await response.json();
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        async function loadDashboard() {
-            try {
-                const data = await apiCall('/dashboard');
-                if (data && data.stats) {
-                    document.getElementById('totalUsers').textContent = data.stats.totalUsers || 0;
-                    document.getElementById('pendingReviews').textContent = data.stats.pendingProfileReviews || 0;
-                    document.getElementById('totalJobs').textContent = data.stats.totalJobs || 0;
-                    document.getElementById('totalQuotes').textContent = data.stats.totalQuotes || 0;
-                }
-            } catch (error) {
-                showError('Failed to load dashboard');
-            }
-        }
-
-        async function loadUsers() {
-            const container = document.getElementById('users-tab');
-            try {
-                container.innerHTML = '<h3>Loading users...</h3>';
-                const data = await apiCall('/users');
-                
-                if (data && data.users) {
-                    adminData.users = data.users;
-                    container.innerHTML = `
-                        <h3>Users (${data.users.length})</h3>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                            <tr style="background: #f5f5f5;">
-                                <th style="padding: 10px; border: 1px solid #ddd;">Name</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Email</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Role</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Status</th>
-                            </tr>
-                            ${data.users.map(user => `
-                                <tr>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${user.name || 'N/A'}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${user.email || 'N/A'}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${user.role || 'N/A'}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd;">${user.isActive ? 'Active' : 'Inactive'}</td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                    `;
-                }
-            } catch (error) {
-                container.innerHTML = '<p style="color: red;">Error loading users</p>';
-            }
-        }
-
-        async function loadProfileReviews() {
-            const container = document.getElementById('profile-reviews-tab');
-            try {
-                container.innerHTML = '<h3>Loading profile reviews...</h3>';
-                const data = await apiCall('/profile-reviews');
-                
-                if (data && data.reviews) {
-                    const pending = data.reviews.filter(r => r.status === 'pending');
-                    container.innerHTML = `
-                        <h3>Pending Reviews (${pending.length})</h3>
-                        ${pending.length === 0 ? '<p>No pending reviews</p>' : 
-                        pending.map(review => `
-                            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
-                                <h4>${review.user?.name || 'Unknown'}</h4>
-                                <p>Email: ${review.user?.email || 'N/A'}</p>
-                                <p>Type: ${review.user?.type || 'N/A'}</p>
-                                <button onclick="alert('Approve function - coming soon')" style="background: #28a745; color: white; padding: 5px 10px; border: none; border-radius: 3px; margin-right: 5px;">Approve</button>
-                                <button onclick="alert('Reject function - coming soon')" style="background: #dc3545; color: white; padding: 5px 10px; border: none; border-radius: 3px;">Reject</button>
-                            </div>
-                        `).join('')}
-                    `;
-                }
-            } catch (error) {
-                container.innerHTML = '<p style="color: red;">Error loading reviews</p>';
-            }
-        }
-
-        console.log('Admin script loaded');
-    </script>
+    <script src="admin-script.js"></script>
 </body>
 </html>
