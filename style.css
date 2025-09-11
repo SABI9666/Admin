@@ -1486,3 +1486,39 @@ body {
         justify-content: center;
     }
 }
+
+/* === FILE LIST FOR MODALS (NEW) === */
+.file-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.file-list li {
+    margin-bottom: 15px;
+}
+
+.file-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: #3b82f6;
+    font-weight: 500;
+    padding: 10px 15px;
+    border-radius: 8px;
+    background-color: #f3f4f6;
+    transition: all 0.2s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.file-list a:hover {
+    background-color: #e5e7eb;
+    color: #1d4ed8;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.file-list a i {
+    font-size: 1.2rem;
+    color: #6b7280;
+}
