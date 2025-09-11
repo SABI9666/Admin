@@ -204,6 +204,7 @@ function renderProfileReviewsTab() {
                     <p>${review.user.email}</p>
                     <div class="actions">
                         <button class="btn" onclick="viewProfileDetails('${review._id}')">View Details</button>
+                        <button class="btn" onclick="viewProfileFiles('${review._id}')">View & Download Files</button>
                         <button class="btn btn-success" onclick="approveProfile('${review._id}')">Approve</button>
                         <button class="btn btn-danger" onclick="showRejectModal('${review._id}')">Reject</button>
                     </div>
@@ -220,6 +221,26 @@ function viewProfileDetails(reviewId) {
         return;
     }
 
+    const modalContent = `
+        <div class="modal-body">
+            <h3>Profile Details: ${review.user.name}</h3>
+            <p><strong>Email:</strong> ${review.user.email}</p>
+            <p><strong>User Type:</strong> ${review.user.type}</p>
+            <p><strong>Status:</strong> ${review.status}</p>
+            <p><strong>Submitted:</strong> ${new Date(review.submittedAt).toLocaleDateString()}</p>
+        </div>
+    `;
+    
+    showModal(modalContent);
+}
+
+function viewProfileFiles(reviewId) {
+    const review = state.profileReviews.find(r => r._id === reviewId);
+    if (!review) {
+        showNotification('Could not find the selected profile review.', 'error');
+        return;
+    }
+
     // Assuming documents are stored in review.user.documents from the API
     const documents = review.user.documents || [];
     
@@ -227,12 +248,28 @@ function viewProfileDetails(reviewId) {
     if (documents.length > 0) {
         filesHtml = `
             <h4>Uploaded Documents:</h4>
+            <div class="file-actions">
+                <button class="btn btn-primary" onclick="downloadAllFiles('${reviewId}')">
+                    <i class="fas fa-download"></i> Download All Files
+                </button>
+            </div>
             <ul class="file-list">
-                ${documents.map(doc => `
+                ${documents.map((doc, index) => `
                     <li>
-                        <a href="${doc.url}" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-file-alt"></i> ${doc.filename || 'View File'}
-                        </a>
+                        <div class="file-item">
+                            <div class="file-info">
+                                <i class="fas fa-file-alt"></i> 
+                                <span class="file-name">${doc.filename || `Document ${index + 1}`}</span>
+                            </div>
+                            <div class="file-actions-inline">
+                                <a href="${doc.url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="${doc.url}" download="${doc.filename || `document_${index + 1}`}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-download"></i> Download
+                                </a>
+                            </div>
+                        </div>
                     </li>
                 `).join('')}
             </ul>
@@ -241,7 +278,7 @@ function viewProfileDetails(reviewId) {
 
     const modalContent = `
         <div class="modal-body">
-            <h3>Profile Details: ${review.user.name}</h3>
+            <h3>Files for ${review.user.name}</h3>
             <p><strong>Email:</strong> ${review.user.email}</p>
             <p><strong>User Type:</strong> ${review.user.type}</p>
             <hr>
@@ -250,6 +287,29 @@ function viewProfileDetails(reviewId) {
     `;
     
     showModal(modalContent);
+}
+
+function downloadAllFiles(reviewId) {
+    const review = state.profileReviews.find(r => r._id === reviewId);
+    if (!review || !review.user.documents) {
+        showNotification('No files available for download.', 'warning');
+        return;
+    }
+
+    const documents = review.user.documents;
+    documents.forEach((doc, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = doc.url;
+            link.download = doc.filename || `document_${index + 1}`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, index * 500); // Stagger downloads by 500ms to avoid browser blocking
+    });
+
+    showNotification(`Downloading ${documents.length} files...`, 'success');
 }
 
 function showRejectModal(reviewId) {
@@ -301,13 +361,21 @@ function renderEstimationsTab() {
     container.innerHTML = `
         <div class="section-header"><h3>All Estimations (${state.estimations.length})</h3><button class="btn" onclick="loadEstimationsData()">Refresh</button></div>
         <table>
-            <thead><tr><th>Project</th><th>User</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Project</th><th>User Details</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
             <tbody>
                 ${state.estimations.map(est => `
                     <tr>
                         <td>${est.projectName || 'N/A'}</td>
                         <td>
-                            ${est.user ? `<strong>${est.user.name || 'N/A'}</strong><br><small>${est.user.email || ''}</small>` : est.userEmail}
+                            ${est.user ? 
+                                `<strong>${est.user.name || 'N/A'}</strong><br>
+                                 <small><i class="fas fa-envelope"></i> ${est.user.email || 'N/A'}</small><br>
+                                 <small><i class="fas fa-user-tag"></i> ${est.user.type || 'N/A'}</small><br>
+                                 <button class="btn btn-sm btn-info" onclick="viewEstimationUserDetails('${est._id}')">View Details</button>` 
+                                : 
+                                `<span class="text-muted">User data unavailable</span><br>
+                                 <small><i class="fas fa-envelope"></i> ${est.userEmail || 'N/A'}</small>`
+                            }
                         </td>
                         <td><span class="status ${est.status}">${est.status}</span></td>
                         <td>
@@ -324,6 +392,50 @@ function renderEstimationsTab() {
                 `).join('')}
             </tbody>
         </table>`;
+}
+
+function viewEstimationUserDetails(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    if (!estimation || !estimation.user) {
+        showNotification('Could not find user details for this estimation.', 'error');
+        return;
+    }
+
+    const user = estimation.user;
+    const modalContent = `
+        <div class="modal-body">
+            <h3>User Details for Estimation</h3>
+            <div class="user-details">
+                <h4><i class="fas fa-user"></i> ${user.name || 'N/A'}</h4>
+                <p><strong><i class="fas fa-envelope"></i> Email:</strong> ${user.email || 'N/A'}</p>
+                <p><strong><i class="fas fa-user-tag"></i> User Type:</strong> ${user.type || 'N/A'}</p>
+                <p><strong><i class="fas fa-toggle-${user.isActive ? 'on' : 'off'}"></i> Status:</strong> 
+                   <span class="status ${user.isActive ? 'active' : 'inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span>
+                </p>
+                <p><strong><i class="fas fa-calendar"></i> User Created:</strong> ${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
+                ${user.phone ? `<p><strong><i class="fas fa-phone"></i> Phone:</strong> ${user.phone}</p>` : ''}
+                ${user.company ? `<p><strong><i class="fas fa-building"></i> Company:</strong> ${user.company}</p>` : ''}
+            </div>
+            <hr>
+            <div class="estimation-details">
+                <h4><i class="fas fa-calculator"></i> Estimation Details</h4>
+                <p><strong>Project Name:</strong> ${estimation.projectName || 'N/A'}</p>
+                <p><strong>Status:</strong> <span class="status ${estimation.status}">${estimation.status}</span></p>
+                <p><strong>Submitted:</strong> ${estimation.createdAt ? new Date(estimation.createdAt).toLocaleDateString() : 'N/A'}</p>
+                ${estimation.description ? `<p><strong>Description:</strong> ${estimation.description}</p>` : ''}
+            </div>
+            <div class="modal-actions">
+                <a href="mailto:${user.email}" class="btn btn-primary">
+                    <i class="fas fa-envelope"></i> Send Email
+                </a>
+                ${user.phone ? `<a href="tel:${user.phone}" class="btn btn-success">
+                    <i class="fas fa-phone"></i> Call User
+                </a>` : ''}
+            </div>
+        </div>
+    `;
+    
+    showModal(modalContent);
 }
 
 function showEstimationFiles(estimationId) {
