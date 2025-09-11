@@ -6,9 +6,160 @@
     <title>SteelConnect - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Enhanced Admin Panel Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            width: 90%;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .profile-details {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .detail-section {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        .detail-section h4 {
+            margin-top: 0;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        .files-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+        }
+        .message-details {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .message-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
+        .content-box {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .btn-info {
+            background: #17a2b8;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.unread {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .status.read {
+            background: #cce7ff;
+            color: #004085;
+        }
+        .unread {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .unread td {
+            border-left: 4px solid #007bff;
+        }
+    </style>
 </head>
 <body>
     <div id="notification-container"></div>
+    <div id="modal-container"></div>
     
     <div class="container">
         <header class="header">
@@ -39,6 +190,12 @@
                 <button class="tab" onclick="showTab('profile-reviews')">
                     <i class="fas fa-user-check"></i> Profile Reviews
                 </button>
+                <button class="tab" onclick="showTab('estimations')">
+                    <i class="fas fa-calculator"></i> Estimations
+                </button>
+                <button class="tab" onclick="showTab('messages')">
+                    <i class="fas fa-comments"></i> Messages
+                </button>
             </nav>
             
             <div id="users-tab" class="tab-content active">
@@ -47,47 +204,43 @@
             <div id="profile-reviews-tab" class="tab-content">
                 <h3>Loading...</h3>
             </div>
+            <div id="estimations-tab" class="tab-content">
+                <h3>Loading...</h3>
+            </div>
+            <div id="messages-tab" class="tab-content">
+                <h3>Loading...</h3>
+            </div>
         </main>
     </div>
 
     <script>
-        console.log('Starting admin panel...');
+        console.log('Starting complete admin panel...');
         
-        // Global variables
+        // Global state
         let adminData = {
             users: [],
             reviews: [],
+            estimations: [],
+            messages: [],
             currentUser: null,
             token: null
         };
 
-        // Initialize when page loads
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM ready, initializing...');
-            setTimeout(initializeAdmin, 100); // Small delay to ensure DOM is fully ready
+            setTimeout(initializeAdmin, 100);
         });
 
         function initializeAdmin() {
             try {
                 console.log('Checking authentication...');
                 
-                // Get stored data
                 const token = localStorage.getItem('jwtToken');
                 const userStr = localStorage.getItem('currentUser');
                 
-                console.log('Token exists:', !!token);
-                console.log('User data exists:', !!userStr);
-                
-                if (!token) {
-                    console.log('No token found, redirecting...');
-                    showError('No authentication token found. Redirecting to login...');
-                    setTimeout(() => window.location.href = 'index.html', 2000);
-                    return;
-                }
-
-                if (!userStr) {
-                    console.log('No user data found, redirecting...');
-                    showError('No user data found. Redirecting to login...');
+                if (!token || !userStr) {
+                    showError('No authentication found. Redirecting to login...');
                     setTimeout(() => window.location.href = 'index.html', 2000);
                     return;
                 }
@@ -95,34 +248,23 @@
                 let user;
                 try {
                     user = JSON.parse(userStr);
-                    console.log('User parsed:', user);
                 } catch (e) {
-                    console.log('Error parsing user data:', e);
                     showError('Invalid user data. Redirecting to login...');
                     setTimeout(() => window.location.href = 'index.html', 2000);
                     return;
                 }
 
                 if (!user || user.role !== 'admin') {
-                    console.log('User is not admin:', user?.role);
                     showError('Access denied. Admin role required.');
                     setTimeout(() => window.location.href = 'index.html', 2000);
                     return;
                 }
 
-                // Store globally
                 adminData.currentUser = user;
                 adminData.token = token;
 
-                // Set admin name
-                const adminNameEl = document.getElementById('adminName');
-                if (adminNameEl) {
-                    adminNameEl.textContent = user.name || user.email || 'Admin';
-                    console.log('Admin name set to:', user.name || user.email);
-                }
+                document.getElementById('adminName').textContent = user.name || user.email || 'Admin';
 
-                // Load dashboard data
-                console.log('Loading dashboard data...');
                 loadDashboard();
                 loadUsers();
                 loadProfileReviews();
@@ -133,37 +275,64 @@
             }
         }
 
-        function showError(message) {
-            console.error('Error:', message);
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            
             const notification = document.createElement('div');
             notification.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 1000;
-                background: #dc3545; color: white; padding: 15px 20px;
-                border-radius: 4px; max-width: 400px;
+                position: fixed; top: 20px; right: 20px; z-index: 1001;
+                padding: 12px 20px; margin: 10px 0; border-radius: 4px; color: white;
+                ${type === 'error' ? 'background: #dc3545;' : ''}
+                ${type === 'success' ? 'background: #28a745;' : ''}
+                ${type === 'warning' ? 'background: #ffc107; color: black;' : ''}
+                ${type === 'info' ? 'background: #17a2b8;' : ''}
             `;
             notification.textContent = message;
-            document.body.appendChild(notification);
+            container.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        }
+
+        function showError(message) {
+            console.error('Error:', message);
+            showNotification(message, 'error');
+        }
+
+        function showModal(content) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `
+                <div class="modal-overlay" onclick="closeModal()">
+                    <div class="modal-content" onclick="event.stopPropagation()">
+                        <button class="modal-close" onclick="closeModal()">&times;</button>
+                        ${content}
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').innerHTML = '';
         }
 
         function showTab(tabName) {
             console.log('Switching to tab:', tabName);
             
             try {
-                // Remove active from all
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 
-                // Add active to selected
                 const tab = document.getElementById(tabName + '-tab');
                 const button = event?.target?.closest('.tab');
                 
-                if (tab) {
-                    tab.classList.add('active');
-                    console.log('Activated tab content:', tabName);
+                if (tab) tab.classList.add('active');
+                if (button) button.classList.add('active');
+                
+                // Load data on first access
+                if (tabName === 'estimations' && adminData.estimations.length === 0) {
+                    loadEstimations();
                 }
-                if (button) {
-                    button.classList.add('active');
-                    console.log('Activated tab button:', tabName);
+                if (tabName === 'messages' && adminData.messages.length === 0) {
+                    loadMessages();
                 }
                 
             } catch (error) {
@@ -183,22 +352,27 @@
             }
         }
 
-        async function makeApiCall(endpoint) {
+        async function makeApiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
             try {
-                console.log('Making API call to:', endpoint);
+                console.log('API call:', method, endpoint);
                 
-                const response = await fetch('https://steelconnect-backend.onrender.com/api/admin' + endpoint, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + adminData.token,
-                        'Content-Type': 'application/json'
+                const options = {
+                    method,
+                    headers: { 'Authorization': 'Bearer ' + adminData.token }
+                };
+                
+                if (body) {
+                    if (isFileUpload) {
+                        options.body = body;
+                    } else {
+                        options.headers['Content-Type'] = 'application/json';
+                        options.body = JSON.stringify(body);
                     }
-                });
+                }
                 
-                console.log('API response status:', response.status);
+                const response = await fetch('https://steelconnect-backend.onrender.com/api/admin' + endpoint, options);
                 
                 if (response.status === 401) {
-                    console.log('Unauthorized, redirecting...');
                     showError('Session expired. Redirecting to login...');
                     setTimeout(() => {
                         localStorage.clear();
@@ -212,7 +386,6 @@
                 }
                 
                 const data = await response.json();
-                console.log('API response data:', data);
                 return data;
                 
             } catch (error) {
@@ -223,43 +396,30 @@
 
         async function loadDashboard() {
             try {
-                console.log('Loading dashboard stats...');
                 const data = await makeApiCall('/dashboard');
-                
                 if (data && data.success && data.stats) {
                     const stats = data.stats;
                     document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
                     document.getElementById('pendingReviews').textContent = stats.pendingProfileReviews || 0;
                     document.getElementById('totalJobs').textContent = stats.totalJobs || 0;
                     document.getElementById('totalQuotes').textContent = stats.totalQuotes || 0;
-                    console.log('Dashboard stats loaded successfully');
                 }
             } catch (error) {
-                console.error('Dashboard loading error:', error);
                 showError('Failed to load dashboard stats');
             }
         }
 
         async function loadUsers() {
             const container = document.getElementById('users-tab');
-            if (!container) return;
-            
             try {
-                console.log('Loading users...');
                 container.innerHTML = '<h3>Loading users...</h3>';
-                
                 const data = await makeApiCall('/users');
                 
                 if (data && data.success && data.users) {
                     adminData.users = data.users;
                     displayUsers(data.users);
-                    console.log('Users loaded successfully:', data.users.length);
-                } else {
-                    throw new Error('Invalid users response');
                 }
-                
             } catch (error) {
-                console.error('Users loading error:', error);
                 container.innerHTML = `
                     <h3>Users</h3>
                     <p style="color: red;">Failed to load users: ${error.message}</p>
@@ -282,6 +442,7 @@
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Email</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Role</th>
                             <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -291,9 +452,15 @@
                                 <td style="padding: 12px; border: 1px solid #ddd;">${user.email || 'N/A'}</td>
                                 <td style="padding: 12px; border: 1px solid #ddd;">${user.role || user.type || 'N/A'}</td>
                                 <td style="padding: 12px; border: 1px solid #ddd;">
-                                    <span style="padding: 4px 8px; border-radius: 12px; ${user.isActive ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                                    <span class="status ${user.isActive ? 'completed' : 'pending'}">
                                         ${user.isActive ? 'Active' : 'Inactive'}
                                     </span>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <button onclick="toggleUserStatus('${user._id}', ${!user.isActive})" 
+                                            class="btn ${user.isActive ? 'btn-danger' : 'btn-success'} btn-sm">
+                                        ${user.isActive ? 'Deactivate' : 'Activate'}
+                                    </button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -302,26 +469,28 @@
             `;
         }
 
+        async function toggleUserStatus(userId, newStatus) {
+            if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'deactivate'} this user?`)) return;
+            try {
+                const data = await makeApiCall(`/users/${userId}/status`, 'PATCH', { isActive: newStatus });
+                showNotification(data.message, 'success');
+                await loadUsers();
+            } catch (error) {
+                showError('Failed to update user status');
+            }
+        }
+
         async function loadProfileReviews() {
             const container = document.getElementById('profile-reviews-tab');
-            if (!container) return;
-            
             try {
-                console.log('Loading profile reviews...');
                 container.innerHTML = '<h3>Loading profile reviews...</h3>';
-                
                 const data = await makeApiCall('/profile-reviews');
                 
                 if (data && data.success && data.reviews) {
                     adminData.reviews = data.reviews;
                     displayProfileReviews(data.reviews);
-                    console.log('Profile reviews loaded successfully:', data.reviews.length);
-                } else {
-                    throw new Error('Invalid reviews response');
                 }
-                
             } catch (error) {
-                console.error('Profile reviews loading error:', error);
                 container.innerHTML = `
                     <h3>Profile Reviews</h3>
                     <p style="color: red;">Failed to load profile reviews: ${error.message}</p>
@@ -347,14 +516,16 @@
                             <p><strong>Email:</strong> ${review.user?.email || 'N/A'}</p>
                             <p><strong>Company:</strong> ${review.user?.company || 'N/A'}</p>
                             <div style="margin-top: 15px;">
-                                <button onclick="alert('Approve function coming soon')" 
-                                        class="btn" 
-                                        style="background: #28a745; margin-right: 10px;">
+                                <button onclick="viewProfileDetails('${review._id}')" 
+                                        class="btn btn-info btn-sm" style="margin-right: 5px;">
+                                    View Details
+                                </button>
+                                <button onclick="showApprovalModal('${review._id}')" 
+                                        class="btn btn-success btn-sm" style="margin-right: 5px;">
                                     Approve
                                 </button>
-                                <button onclick="alert('Reject function coming soon')" 
-                                        class="btn" 
-                                        style="background: #dc3545;">
+                                <button onclick="showRejectModal('${review._id}')" 
+                                        class="btn btn-danger btn-sm">
                                     Reject
                                 </button>
                             </div>
@@ -365,7 +536,457 @@
             `;
         }
 
-        console.log('Admin script loaded successfully');
+        function viewProfileDetails(reviewId) {
+            const review = adminData.reviews.find(r => r._id === reviewId);
+            if (!review) return;
+            
+            showModal(`
+                <h3>Profile Details - ${review.user?.name || 'Unknown'}</h3>
+                <div class="profile-details">
+                    <div class="detail-section">
+                        <h4>Basic Information</h4>
+                        <p><strong>Name:</strong> ${review.user?.name || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${review.user?.email || 'N/A'}</p>
+                        <p><strong>Type:</strong> ${review.user?.type || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${review.user?.phone || 'N/A'}</p>
+                        <p><strong>Company:</strong> ${review.user?.company || 'N/A'}</p>
+                        <p><strong>Address:</strong> ${review.user?.address || 'N/A'}</p>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4>Uploaded Files</h4>
+                        ${review.files?.resume ? `<p><a href="${review.files.resume.url}" target="_blank">📄 Resume: ${review.files.resume.name}</a></p>` : '<p>No resume uploaded</p>'}
+                        ${review.files?.businessLicense ? `<p><a href="${review.files.businessLicense.url}" target="_blank">📋 Business License: ${review.files.businessLicense.name}</a></p>` : '<p>No business license uploaded</p>'}
+                        ${review.files?.insurance ? `<p><a href="${review.files.insurance.url}" target="_blank">🛡️ Insurance: ${review.files.insurance.name}</a></p>` : '<p>No insurance uploaded</p>'}
+                        ${review.files?.certifications && review.files.certifications.length > 0 ? 
+                            review.files.certifications.map(cert => `<p><a href="${cert.url}" target="_blank">🎓 Certification: ${cert.name}</a></p>`).join('') : 
+                            '<p>No certifications uploaded</p>'}
+                    </div>
+                    
+                    ${review.reviewNotes ? `
+                    <div class="detail-section">
+                        <h4>Previous Rejection Notes</h4>
+                        <p style="color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px;">${review.reviewNotes}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `);
+        }
+
+        function showApprovalModal(reviewId) {
+            showModal(`
+                <h3>Approve Profile</h3>
+                <p>Add any comments for the user (optional):</p>
+                <div class="form-group">
+                    <textarea id="approval-comments" rows="3" class="form-control" placeholder="Welcome to SteelConnect! Your profile has been approved."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-success" onclick="approveProfile('${reviewId}')">Approve Profile</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `);
+        }
+
+        function showRejectModal(reviewId) {
+            showModal(`
+                <h3>Reject Profile</h3>
+                <p>Provide a reason for rejection. The user will see this comment and be able to log in to resubmit.</p>
+                <div class="form-group">
+                    <textarea id="rejection-reason" rows="4" class="form-control" placeholder="e.g., Please upload a clearer copy of your business license." required></textarea>
+                </div>
+                <p>Additional admin comments (optional):</p>
+                <div class="form-group">
+                    <textarea id="rejection-comments" rows="3" class="form-control" placeholder="Internal notes for admin use"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-danger" onclick="rejectProfile('${reviewId}')">Submit Rejection</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `);
+        }
+
+        async function approveProfile(reviewId) {
+            const comments = document.getElementById('approval-comments').value;
+            try {
+                const data = await makeApiCall(`/profile-reviews/${reviewId}/approve`, 'POST', { adminComments: comments });
+                showNotification(data.message, 'success');
+                closeModal();
+                await Promise.all([loadProfileReviews(), loadDashboard()]);
+            } catch (error) {
+                showError('Failed to approve profile');
+            }
+        }
+
+        async function rejectProfile(reviewId) {
+            const reason = document.getElementById('rejection-reason').value;
+            const comments = document.getElementById('rejection-comments').value;
+            if (!reason.trim()) return showNotification('Rejection reason is required.', 'warning');
+            try {
+                const data = await makeApiCall(`/profile-reviews/${reviewId}/reject`, 'POST', { reason, adminComments: comments });
+                showNotification(data.message, 'success');
+                closeModal();
+                await Promise.all([loadProfileReviews(), loadDashboard()]);
+            } catch (error) {
+                showError('Failed to reject profile');
+            }
+        }
+
+        async function loadEstimations() {
+            const container = document.getElementById('estimations-tab');
+            try {
+                container.innerHTML = '<h3>Loading estimations...</h3>';
+                const data = await makeApiCall('/estimations');
+                
+                if (data && data.success && data.estimations) {
+                    adminData.estimations = data.estimations;
+                    displayEstimations(data.estimations);
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <h3>Estimations</h3>
+                    <p style="color: red;">Failed to load estimations: ${error.message}</p>
+                    <button class="btn" onclick="loadEstimations()">Retry</button>
+                `;
+            }
+        }
+
+        function displayEstimations(estimations) {
+            const container = document.getElementById('estimations-tab');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h3>All Estimations (${estimations.length})</h3>
+                    <button class="btn" onclick="loadEstimations()">Refresh</button>
+                </div>
+                ${estimations.length === 0 ? '<p>No estimations found.</p>' : `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Project</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">User</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Files</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Result</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estimations.map(est => `
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <strong>${est.projectName || 'N/A'}</strong>
+                                    ${est.projectDescription ? `<br><small>${est.projectDescription.substring(0, 50)}...</small>` : ''}
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    ${est.userName || 'N/A'}<br>
+                                    <small>${est.userEmail || 'N/A'}</small>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <span class="status ${est.status || 'pending'}">${est.status || 'pending'}</span>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    ${(est.uploadedFiles || []).length} file(s)
+                                    ${est.uploadedFiles && est.uploadedFiles.length > 0 ? 
+                                        `<br><button class="btn btn-sm btn-info" onclick="viewEstimationFiles('${est._id}')">View Files</button>` : 
+                                        ''}
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    ${est.resultFile ? 
+                                        `<a href="${est.resultFile.url}" target="_blank" class="btn btn-sm">Download Result</a>` : 
+                                        'Not uploaded'}
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">Upload Result</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est._id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                `}
+            `;
+        }
+
+        function viewEstimationFiles(estimationId) {
+            const estimation = adminData.estimations.find(e => e._id === estimationId);
+            if (!estimation || !estimation.uploadedFiles) return;
+            
+            showModal(`
+                <h3>Estimation Files - ${estimation.projectName}</h3>
+                <div class="files-list">
+                    ${estimation.uploadedFiles.map((file, index) => `
+                        <div class="file-item">
+                            <span class="file-name">📁 ${file.name}</span>
+                            <a href="${file.url}" target="_blank" class="btn btn-sm btn-primary">Download</a>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="detail-section">
+                    <h4>Project Description</h4>
+                    <p>${estimation.projectDescription || 'No description provided'}</p>
+                </div>
+            `);
+        }
+
+        function showUploadResultModal(estimationId) {
+            const estimation = adminData.estimations.find(e => e._id === estimationId);
+            showModal(`
+                <h3>Upload Estimation Result</h3>
+                <p><strong>Project:</strong> ${estimation?.projectName || 'N/A'}</p>
+                <p><strong>User:</strong> ${estimation?.userName || 'N/A'}</p>
+                ${estimation?.resultFile ? '<p style="color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px;">⚠️ This will overwrite the existing result file.</p>' : ''}
+                <div class="form-group">
+                    <input type="file" id="result-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx" class="form-control">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">Upload File</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `);
+        }
+
+        async function uploadEstimationResult(estimationId) {
+            const fileInput = document.getElementById('result-file-input');
+            if (!fileInput.files[0]) return showNotification('Please select a file.', 'warning');
+            
+            const formData = new FormData();
+            formData.append('resultFile', fileInput.files[0]);
+            
+            try {
+                const data = await makeApiCall(`/estimations/${estimationId}/result`, 'POST', formData, true);
+                showNotification(data.message, 'success');
+                closeModal();
+                await loadEstimations();
+            } catch (error) {
+                showError('Failed to upload result file');
+            }
+        }
+
+        async function deleteEstimation(estimationId) {
+            if (!confirm('Are you sure you want to delete this estimation request?')) return;
+            try {
+                const data = await makeApiCall(`/estimations/${estimationId}`, 'DELETE');
+                showNotification(data.message, 'success');
+                await loadEstimations();
+            } catch (error) {
+                showError('Failed to delete estimation');
+            }
+        }
+
+        async function loadMessages() {
+            const container = document.getElementById('messages-tab');
+            try {
+                container.innerHTML = '<h3>Loading messages...</h3>';
+                const data = await makeApiCall('/messages');
+                
+                if (data && data.success && data.messages) {
+                    adminData.messages = data.messages;
+                    displayMessages(data.messages);
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <h3>Messages</h3>
+                    <p style="color: red;">Failed to load messages: ${error.message}</p>
+                    <button class="btn" onclick="loadMessages()">Retry</button>
+                `;
+            }
+        }
+
+        function displayMessages(messages) {
+            const container = document.getElementById('messages-tab');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h3>All Messages (${messages.length})</h3>
+                    <button class="btn" onclick="loadMessages()">Refresh</button>
+                </div>
+                ${messages.length === 0 ? '<p>No messages found.</p>' : `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">From</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">To</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Subject</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Date</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${messages.map(msg => `
+                            <tr class="${msg.status === 'unread' ? 'unread' : ''}">
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <strong>${msg.senderName || 'N/A'}</strong><br>
+                                    <small>${msg.senderEmail}</small>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <strong>${msg.recipientName || 'N/A'}</strong><br>
+                                    <small>${msg.recipientEmail}</small>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <strong>${msg.subject || 'No Subject'}</strong><br>
+                                    <small>${(msg.content || '').substring(0, 50)}...</small>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <span class="status ${msg.status}">${msg.status || 'unknown'}</span>
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    ${msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : 'N/A'}
+                                </td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">
+                                    <button class="btn btn-sm btn-info" onclick="viewMessage('${msg._id}')">View</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteMessage('${msg._id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                `}
+            `;
+        }
+
+        async function viewMessage(messageId) {
+            try {
+                const data = await makeApiCall(`/messages/${messageId}`);
+                if (data && data.success && data.message) {
+                    const message = data.message;
+                    showModal(`
+                        <h3>Message Details</h3>
+                        <div class="message-details">
+                            <div class="message-header">
+                                <p><strong>From:</strong> ${message.senderName || 'N/A'} (${message.senderEmail})</p>
+                                <p><strong>To:</strong> ${message.recipientName || 'N/A'} (${message.recipientEmail})</p>
+                                <p><strong>Subject:</strong> ${message.subject || 'No Subject'}</p>
+                                <p><strong>Date:</strong> ${new Date(message.createdAt).toLocaleString()}</p>
+                                <p><strong>Status:</strong> <span class="status ${message.status}">${message.status}</span></p>
+                            </div>
+                            
+                            <div class="message-content">
+                                <h4>Message Content</h4>
+                                <div class="content-box">${message.content || message.message || 'No content'}</div>
+                            </div>
+                            
+                            ${message.attachments && message.attachments.length > 0 ? `
+                            <div class="detail-section">
+                                <h4>Attachments</h4>
+                                ${message.attachments.map(att => `
+                                    <div class="file-item">
+                                        <a href="${att.url}" target="_blank">${att.name}</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                            
+                            ${message.adminNotes ? `
+                            <div class="detail-section">
+                                <h4>Admin Notes</h4>
+                                <p>${message.adminNotes}</p>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button class="btn btn-primary" onclick="showReplyModal('${messageId}')">Reply</button>
+                            <button class="btn btn-warning" onclick="showUpdateStatusModal('${messageId}')">Update Status</button>
+                            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                        </div>
+                    `);
+                }
+            } catch (error) {
+                showError('Failed to load message details');
+            }
+        }
+
+        function showReplyModal(messageId) {
+            const message = adminData.messages.find(m => m._id === messageId);
+            showModal(`
+                <h3>Reply to Message</h3>
+                <p><strong>To:</strong> ${message.senderName} (${message.senderEmail})</p>
+                <div class="form-group">
+                    <label>Subject:</label>
+                    <input type="text" id="reply-subject" value="Re: ${message.subject || 'Your Message'}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Reply Content:</label>
+                    <textarea id="reply-content" rows="6" class="form-control" placeholder="Type your reply here..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="sendReply('${messageId}')">Send Reply</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `);
+        }
+
+        function showUpdateStatusModal(messageId) {
+            showModal(`
+                <h3>Update Message Status</h3>
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select id="message-status" class="form-control">
+                        <option value="unread">Unread</option>
+                        <option value="read">Read</option>
+                        <option value="replied">Replied</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Admin Notes:</label>
+                    <textarea id="admin-notes" rows="3" class="form-control" placeholder="Add internal notes about this message..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-warning" onclick="updateMessageStatus('${messageId}')">Update Status</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `);
+        }
+
+        async function sendReply(messageId) {
+            const subject = document.getElementById('reply-subject').value;
+            const content = document.getElementById('reply-content').value;
+            
+            if (!content.trim()) return showNotification('Reply content is required.', 'warning');
+            
+            try {
+                const data = await makeApiCall(`/messages/${messageId}/reply`, 'POST', { 
+                    replyContent: content, 
+                    subject: subject 
+                });
+                showNotification(data.message, 'success');
+                closeModal();
+                await loadMessages();
+            } catch (error) {
+                showError('Failed to send reply');
+            }
+        }
+
+        async function updateMessageStatus(messageId) {
+            const status = document.getElementById('message-status').value;
+            const adminNotes = document.getElementById('admin-notes').value;
+            
+            try {
+                const data = await makeApiCall(`/messages/${messageId}/status`, 'PATCH', { 
+                    status, 
+                    adminNotes: adminNotes || undefined 
+                });
+                showNotification(data.message, 'success');
+                closeModal();
+                await loadMessages();
+            } catch (error) {
+                showError('Failed to update message status');
+            }
+        }
+
+        async function deleteMessage(messageId) {
+            if (!confirm('Are you sure you want to delete this message? This action cannot be undone.')) return;
+            try {
+                const data = await makeApiCall(`/messages/${messageId}`, 'DELETE');
+                showNotification(data.message, 'success');
+                await loadMessages();
+            } catch (error) {
+                showError('Failed to delete message');
+            }
+        }
+
+        console.log('Complete admin script loaded successfully');
     </script>
 </body>
 </html>
