@@ -302,7 +302,9 @@ function renderEstimationsTab() {
                 ${state.estimations.map(est => `
                     <tr>
                         <td>${est.projectName || 'N/A'}</td>
-                        <td>${est.userEmail}</td>
+                        <td>
+                            ${est.user ? `<strong>${est.user.name || 'N/A'}</strong><br><small>${est.user.email || ''}</small>` : est.userEmail}
+                        </td>
                         <td><span class="status ${est.status}">${est.status}</span></td>
                         <td>
                             ${(est.uploadedFiles && est.uploadedFiles.length > 0) ? 
