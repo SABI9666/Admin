@@ -1341,44 +1341,13 @@ async function exportData(dataType, format = 'csv') {
 
 // --- REAL-TIME UPDATES ---
 function initializeRealTimeUpdates() {
-    if (typeof WebSocket !== 'undefined') {
-        try {
-            const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
-            
-            ws.onmessage = (event) => {
-                const update = JSON.parse(event.data);
-                
-                switch (update.type) {
-                    case 'new_message':
-                        showAdvancedNotification('New message received', 'info', 0, [
-                            { text: 'View', callback: () => showTab('messages') }
-                        ]);
-                        break;
-                    case 'profile_review':
-                        showAdvancedNotification('New profile review pending', 'warning', 0, [
-                            { text: 'Review', callback: () => showTab('profile-reviews') }
-                        ]);
-                        break;
-                    case 'estimation_request':
-                        showAdvancedNotification('New estimation request', 'info', 0, [
-                            { text: 'View', callback: () => showTab('estimations') }
-                        ]);
-                        break;
-                }
-            };
-            
-            ws.onclose = () => {
-                // Attempt to reconnect after 5 seconds
-                setTimeout(initializeRealTimeUpdates, 5000);
-            };
-            
-            ws.onerror = () => {
-                console.log('WebSocket connection failed, continuing without real-time updates');
-            };
-        } catch (error) {
-            console.log('WebSocket not available, continuing without real-time updates');
+    console.log('Real-time updates disabled - using polling instead');
+    // Optional: Set up periodic refresh instead
+    setInterval(() => {
+        if (document.getElementById('messages-tab').classList.contains('active')) {
+            loadMessagesData();
         }
-    }
+    }, 30000); // Refresh every 30 seconds
 }
 
 // --- UTILITY FUNCTIONS ---
