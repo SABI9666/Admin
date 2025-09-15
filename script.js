@@ -1,5 +1,6 @@
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
+// This version incorporates enhanced file management for estimations and jobs.
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -383,7 +384,7 @@ function viewProfileDetails(reviewId) {
                 <ul class="file-list">
                     ${documents.map(doc => `
                         <li>
-                            <i class="fas ${getFileIcon(doc.type)}"></i> ${doc.filename}
+                            <i class="fas ${getFileIcon(doc.type, doc.filename)}"></i> ${doc.filename}
                             <a href="${doc.url}" target="_blank" class="btn btn-sm">View</a>
                             <a href="${doc.url}" download="${doc.filename}" class="btn btn-sm btn-primary">Download</a>
                         </li>
@@ -490,51 +491,170 @@ async function loadEstimationsData() {
     }
 }
 
+// ** ENHANCED FUNCTION **
 function renderEstimationsTab() {
     const container = document.getElementById('estimations-tab');
     container.innerHTML = `
-        <div class="section-header"><h3>All Estimations (${state.estimations.length})</h3>
-            <div class="header-actions"><button class="btn" onclick="loadEstimationsData()">Refresh</button><button class="btn btn-primary" onclick="exportData('estimations')">Export</button></div></div>
+        <div class="section-header">
+            <h3>All Estimations (${state.estimations.length})</h3>
+            <div class="header-actions">
+                <button class="btn" onclick="loadEstimationsData()">Refresh</button>
+                <button class="btn btn-primary" onclick="exportData('estimations')">Export</button>
+            </div>
+        </div>
         <table>
-            <thead><tr><th>Project</th><th>User</th><th>Status</th><th>Files</th><th>Result</th><th>Actions</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Files</th>
+                    <th>Result</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
             <tbody>
-                ${state.estimations.map(est => `
-                    <tr>
-                        <td>${est.projectName || 'N/A'}</td>
-                        <td>${est.user ? `${est.user.name}<br><small>${est.user.email}</small>` : est.userEmail}</td>
-                        <td><span class="status ${est.status}">${est.status}</span></td>
-                        <td>${est.uploadedFiles?.length > 0 ? `<button class="btn btn-sm" onclick="showEstimationFiles('${est._id}')">View (${est.uploadedFiles.length})</button>` : 'None'}</td>
-                        <td>${est.resultFile ? `<a href="${est.resultFile.url}" target="_blank">View Result</a>` : 'Pending'}</td>
-                        <td>
-                            <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">Upload Result</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">Delete</button>
-                        </td>
-                    </tr>
-                `).join('')}
+                ${state.estimations.map(est => {
+                    const fileCount = est.uploadedFiles ? est.uploadedFiles.length : 0;
+                    const totalSize = est.uploadedFiles ?
+                        est.uploadedFiles.reduce((sum, file) => sum + (file.size || 0), 0) : 0;
+                    const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(1) + 'MB' : '';
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="project-cell">
+                                    <strong>${est.projectName || est.projectTitle || 'Untitled Project'}</strong>
+                                    ${est.description ? `<br><small class="project-desc">${est.description.substring(0, 60)}${est.description.length > 60 ? '...' : ''}</small>` : ''}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="client-info">
+                                    ${est.contractorName || 'N/A'}<br>
+                                    <small>${est.contractorEmail || est.userEmail || 'N/A'}</small>
+                                </div>
+                            </td>
+                            <td><span class="status ${est.status}">${est.status}</span></td>
+                            <td>
+                                ${fileCount > 0 ? `
+                                    <div class="files-summary">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span class="file-count">${fileCount} PDF${fileCount > 1 ? 's' : ''}</span>
+                                        ${totalSizeMB ? `<br><small class="file-size">${totalSizeMB}</small>` : ''}
+                                        <button class="btn btn-xs" onclick="showEstimationFiles('${est._id}')">View</button>
+                                    </div>
+                                ` : '<span class="no-files">No files</span>'}
+                            </td>
+                            <td>
+                                ${est.resultFile ? `
+                                    <a href="${est.resultFile.url}" target="_blank" class="result-link">
+                                        <i class="fas fa-file-alt"></i> View Result
+                                    </a>
+                                ` : '<span class="pending-result">Pending</span>'}
+                            </td>
+                            <td>
+                                <small>${new Date(est.createdAt).toLocaleDateString()}</small>
+                            </td>
+                            <td class="action-buttons">
+                                <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
+                                    <i class="fas fa-upload"></i> Upload Result
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
             </tbody>
         </table>`;
 }
 
+// ** ENHANCED FUNCTION **
 function showEstimationFiles(estimationId) {
     const estimation = state.estimations.find(e => e._id === estimationId);
     if (!estimation) return showNotification('Estimation not found.', 'error');
+
+    const files = estimation.uploadedFiles || [];
+    const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+
     const modalContent = `
         <div class="modal-body">
-            <h3>Files for: ${estimation.projectName}</h3>
-            ${estimation.uploadedFiles?.length > 0 ? `
-                <ul class="file-list">
-                    ${estimation.uploadedFiles.map(file => `
-                        <li>
-                            <i class="fas fa-file-alt"></i> ${file.originalname || file.name}
-                            <a href="${file.url}" target="_blank" class="btn btn-sm">View</a>
-                            <a href="${file.url}" download class="btn btn-sm btn-primary">Download</a>
-                        </li>
-                    `).join('')}
-                </ul>
-            ` : `<p>No files uploaded for this estimation.</p>`}
+            <h3><i class="fas fa-folder-open"></i> Project Files - ${estimation.projectName || estimation.projectTitle}</h3>
+            <div class="files-summary-header">
+                <span class="files-count">${files.length} PDF files</span>
+                ${totalSize > 0 ? `<span class="files-size">Total: ${totalSizeMB}MB</span>` : ''}
+            </div>
+            
+            ${files.length > 0 ? `
+                <div class="files-grid">
+                    ${files.map((file, index) => {
+                        const fileName = file.originalname || file.filename || file.name || `File ${index + 1}`;
+                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+
+                        return `
+                            <div class="file-item-card">
+                                <div class="file-icon">
+                                    <i class="fas fa-file-pdf"></i>
+                                </div>
+                                <div class="file-details">
+                                    <h4 class="file-name" title="${fileName}">${fileName}</h4>
+                                    <div class="file-meta">
+                                        <span class="file-size">${fileSize}</span>
+                                        <span class="file-date">${uploadDate}</span>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn btn-outline" onclick="downloadAllEstimationFiles('${estimationId}')">
+                        <i class="fas fa-download"></i> Download All Files
+                    </button>
+                </div>
+            ` : `
+                <div class="empty-state">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>No files found for this estimation.</p>
+                </div>
+            `}
         </div>
     `;
     showModal(modalContent);
+}
+
+// ** NEW FUNCTION **
+function downloadAllEstimationFiles(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    if (!estimation || !estimation.uploadedFiles) {
+        return showNotification('No files to download.', 'warning');
+    }
+
+    const files = estimation.uploadedFiles;
+    showNotification(`Downloading ${files.length} files...`, 'info');
+
+    files.forEach((file, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.download = file.originalname || file.filename || `estimation_file_${index + 1}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, index * 500); // Stagger downloads to avoid browser blocking
+    });
 }
 
 function showUploadResultModal(estimationId) {
@@ -575,7 +695,6 @@ async function deleteEstimation(estimationId) {
         await loadEstimationsData();
     } catch (error) {}
 }
-
 
 // --- MESSAGE MANAGEMENT (UPDATED) ---
 async function loadMessagesData() {
@@ -806,8 +925,7 @@ async function viewConversationMessages(conversationId) {
     }
 }
 
-
-// --- GENERIC TABLES for Jobs, Quotes ---
+// --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS) ---
 async function loadGenericData(type) {
     const container = document.getElementById(`${type}-tab`);
     showLoader(container);
@@ -820,26 +938,284 @@ async function loadGenericData(type) {
     }
 }
 
+// ** ENHANCED FUNCTION **
 function renderGenericTab(type) {
     const container = document.getElementById(`${type}-tab`);
     const items = state[type];
-    const headers = { jobs: ['Job ID', 'User', 'Status'], quotes: ['Quote ID', 'User', 'Status'] };
-    container.innerHTML = `
-        <div class="section-header"><h3>All ${type.charAt(0).toUpperCase() + type.slice(1)} (${items.length})</h3>
-            <div class="header-actions"><button class="btn" onclick="loadGenericData('${type}')">Refresh</button><button class="btn btn-primary" onclick="exportData('${type}')">Export</button></div></div>
-        <table>
-            <thead><tr><th>${headers[type][0]}</th><th>${headers[type][1]}</th><th>${headers[type][2]}</th><th>Actions</th></tr></thead>
-            <tbody>
-                ${items.map(item => `
+
+    if (type === 'jobs') {
+        container.innerHTML = `
+            <div class="section-header">
+                <h3>All Jobs (${items.length})</h3>
+                <div class="header-actions">
+                    <button class="btn" onclick="loadGenericData('jobs')">Refresh</button>
+                    <button class="btn btn-primary" onclick="exportData('jobs')">Export</button>
+                </div>
+            </div>
+            <table>
+                <thead>
                     <tr>
-                        <td>${item._id.slice(-6)}</td>
-                        <td>${item.userEmail || item.clientEmail || 'N/A'}</td>
-                        <td><span class="status">${item.status || 'N/A'}</span></td>
-                        <td><button class="btn btn-sm btn-danger" onclick="deleteGenericItem('${type}', '${item._id}')">Delete</button></td>
+                        <th>Title</th>
+                        <th>Client</th>
+                        <th>Budget</th>
+                        <th>Status</th>
+                        <th>Files</th>
+                        <th>Actions</th>
                     </tr>
-                `).join('')}
-            </tbody>
-        </table>`;
+                </thead>
+                <tbody>
+                    ${items.map(job => `
+                        <tr>
+                            <td>
+                                <div class="job-title-cell">
+                                    <strong>${job.title || 'Untitled Job'}</strong>
+                                    ${job.deadline ? `<br><small>Deadline: ${new Date(job.deadline).toLocaleDateString()}</small>` : ''}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="client-info">
+                                    ${job.posterName || 'N/A'}<br>
+                                    <small>${job.posterEmail || 'N/A'}</small>
+                                </div>
+                            </td>
+                            <td><span class="budget-amount">${job.budget || 'N/A'}</span></td>
+                            <td><span class="status ${job.status || 'unknown'}">${job.status || 'Unknown'}</span></td>
+                            <td>
+                                ${getJobFilesCell(job)}
+                            </td>
+                            <td class="action-buttons">
+                                <button class="btn btn-sm" onclick="viewJobDetails('${job._id}')">View Details</button>
+                                <button class="btn btn-sm btn-danger" onclick="confirmDeleteJob('${job._id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+    } else if (type === 'quotes') {
+        const headers = { quotes: ['Quote ID', 'User', 'Status'] };
+        container.innerHTML = `
+            <div class="section-header"><h3>All Quotes (${items.length})</h3>
+                <div class="header-actions"><button class="btn" onclick="loadGenericData('quotes')">Refresh</button><button class="btn btn-primary" onclick="exportData('quotes')">Export</button></div></div>
+            <table>
+                <thead><tr><th>${headers[type][0]}</th><th>${headers[type][1]}</th><th>${headers[type][2]}</th><th>Actions</th></tr></thead>
+                <tbody>
+                    ${items.map(item => `
+                        <tr>
+                            <td>${item._id.slice(-6)}</td>
+                            <td>${item.userEmail || item.clientEmail || 'N/A'}</td>
+                            <td><span class="status">${item.status || 'N/A'}</span></td>
+                            <td><button class="btn btn-sm btn-danger" onclick="deleteGenericItem('quotes', '${item._id}')">Delete</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+    }
+}
+
+// ** NEW HELPER FUNCTIONS FOR JOBS **
+function getJobFilesCell(job) {
+    const attachments = job.attachments || [];
+    const attachment = job.attachment; // Legacy single attachment
+
+    let totalFiles = 0;
+    if (attachments.length > 0) totalFiles += attachments.length;
+    if (attachment) totalFiles += 1;
+
+    if (totalFiles === 0) {
+        return '<span class="no-files">No files</span>';
+    }
+
+    return `
+        <div class="files-summary">
+            <i class="fas fa-file-pdf"></i>
+            <span class="file-count">${totalFiles} file${totalFiles > 1 ? 's' : ''}</span>
+            <button class="btn btn-xs" onclick="viewJobFiles('${job._id}')">View</button>
+        </div>
+    `;
+}
+
+function viewJobFiles(jobId) {
+    const job = state.jobs.find(j => j._id === jobId);
+    if (!job) return showNotification('Job not found.', 'error');
+
+    const attachments = job.attachments || [];
+    const legacyAttachment = job.attachment;
+
+    let allFiles = [...attachments];
+    if (legacyAttachment) {
+        allFiles.push({
+            url: legacyAttachment,
+            name: 'Project Attachment',
+            size: null,
+            uploadedAt: job.createdAt
+        });
+    }
+
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-folder-open"></i> Project Files - ${job.title}</h3>
+            <div class="job-info-summary">
+                <p><strong>Client:</strong> ${job.posterName || 'N/A'}</p>
+                <p><strong>Budget:</strong> ${job.budget || 'N/A'}</p>
+                <p><strong>Status:</strong> <span class="status ${job.status}">${job.status}</span></p>
+            </div>
+            ${allFiles.length > 0 ? `
+                <div class="files-grid">
+                    ${allFiles.map((file, index) => {
+                        const fileName = file.originalname || file.filename || file.name || `Attachment ${index + 1}`;
+                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+                        
+                        return `
+                            <div class="file-item-card">
+                                <div class="file-icon">
+                                    <i class="fas fa-file-pdf"></i>
+                                </div>
+                                <div class="file-details">
+                                    <h4 class="file-name" title="${fileName}">${fileName}</h4>
+                                    <div class="file-meta">
+                                        <span class="file-size">${fileSize}</span>
+                                        <span class="file-date">${uploadDate}</span>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn btn-outline" onclick="downloadAllJobFiles('${jobId}')">
+                        <i class="fas fa-download"></i> Download All Files
+                    </button>
+                </div>
+            ` : `
+                <div class="empty-state">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>No files attached to this project.</p>
+                </div>
+            `}
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+function viewJobDetails(jobId) {
+    const job = state.jobs.find(j => j._id === jobId);
+    if (!job) return showNotification('Job not found.', 'error');
+
+    const attachments = job.attachments || [];
+    const legacyAttachment = job.attachment;
+    const totalFiles = attachments.length + (legacyAttachment ? 1 : 0);
+
+    const modalContent = `
+        <div class="job-details-modal">
+            <h3><i class="fas fa-briefcase"></i> Job Details</h3>
+            <div class="job-details-grid">
+                <div class="detail-section">
+                    <h4>Basic Information</h4>
+                    <div class="info-grid">
+                        <div><label>Title:</label><span>${job.title || 'N/A'}</span></div>
+                        <div><label>Client:</label><span>${job.posterName || 'N/A'}</span></div>
+                        <div><label>Email:</label><span>${job.posterEmail || 'N/A'}</span></div>
+                        <div><label>Budget:</label><span>${job.budget || 'N/A'}</span></div>
+                        <div><label>Status:</label><span class="status ${job.status}">${job.status}</span></div>
+                        ${job.deadline ? `<div><label>Deadline:</label><span>${new Date(job.deadline).toLocaleDateString()}</span></div>` : ''}
+                        ${job.skills ? `<div><label>Skills:</label><span>${job.skills}</span></div>` : ''}
+                    </div>
+                </div>
+                                
+                <div class="detail-section">
+                    <h4>Description</h4>
+                    <p class="job-description">${job.description || 'No description provided.'}</p>
+                </div>
+                                
+                ${job.link ? `
+                    <div class="detail-section">
+                        <h4>Project Link</h4>
+                        <a href="${job.link}" target="_blank" class="external-link">
+                            <i class="fas fa-external-link-alt"></i> ${job.link}
+                        </a>
+                    </div>
+                ` : ''}
+                                
+                <div class="detail-section">
+                    <h4>Attachments (${totalFiles})</h4>
+                    ${totalFiles > 0 ? `
+                        <div class="attachments-summary">
+                            <p>${totalFiles} file(s) attached to this project.</p>
+                            <button class="btn btn-outline" onclick="viewJobFiles('${jobId}')">
+                                <i class="fas fa-folder-open"></i> View All Files
+                            </button>
+                        </div>
+                    ` : `
+                        <p class="no-attachments">No files attached to this project.</p>
+                    `}
+                </div>
+                                
+                ${job.quotesCount ? `
+                    <div class="detail-section">
+                        <h4>Quotes Received</h4>
+                        <p>${job.quotesCount} quote(s) submitted for this project.</p>
+                    </div>
+                ` : ''}
+            </div>
+                        
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-danger" onclick="confirmDeleteJob('${jobId}')">
+                    <i class="fas fa-trash"></i> Delete Job
+                </button>
+            </div>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+function downloadAllJobFiles(jobId) {
+    const job = state.jobs.find(j => j._id === jobId);
+    if (!job) return showNotification('Job not found.', 'error');
+
+    const attachments = job.attachments || [];
+    const legacyAttachment = job.attachment;
+
+    let allFiles = [...attachments];
+    if (legacyAttachment) {
+        allFiles.push({
+            url: legacyAttachment,
+            name: 'project_attachment.pdf'
+        });
+    }
+
+    if (allFiles.length === 0) {
+        return showNotification('No files to download.', 'warning');
+    }
+
+    showNotification(`Downloading ${allFiles.length} files...`, 'info');
+
+    allFiles.forEach((file, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.download = file.originalname || file.filename || file.name || `job_file_${index + 1}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, index * 500);
+    });
+}
+
+function confirmDeleteJob(jobId) {
+    if (confirm('Are you sure you want to delete this job? This will also delete all associated quotes and files. This action cannot be undone.')) {
+        deleteGenericItem('jobs', jobId);
+        closeModal();
+    }
 }
 
 async function deleteGenericItem(type, id) {
@@ -852,8 +1228,7 @@ async function deleteGenericItem(type, id) {
 }
 
 // --- EXPORT FUNCTIONALITY ---
-// Note: The provided backend `admin.js` does not contain an /export route.
-// This function is kept for frontend completeness but will fail until the backend endpoint is added.
+// Note: The backend may need an /export route for this to work.
 async function exportData(dataType, format = 'csv') {
     try {
         showNotification('Preparing export...', 'info');
@@ -880,7 +1255,6 @@ async function exportData(dataType, format = 'csv') {
 
 // --- REAL-TIME UPDATES ---
 function initializeRealTimeUpdates() {
-    // This functionality is unchanged as it's not directly tied to the admin API routes.
     if (typeof WebSocket !== 'undefined') {
         try {
             const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
@@ -907,11 +1281,15 @@ function initializeRealTimeUpdates() {
 }
 
 // --- UTILITY FUNCTIONS ---
-function getFileIcon(mimeType) {
-    if (!mimeType) return 'fa-file';
-    if (mimeType.includes('pdf')) return 'fa-file-pdf';
-    if (mimeType.includes('image')) return 'fa-file-image';
-    if (mimeType.includes('word') || mimeType.includes('document')) return 'fa-file-word';
-    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fa-file-excel';
+// ** ENHANCED FUNCTION **
+function getFileIcon(mimeType, fileName) {
+    if (!mimeType && fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+        if (extension === 'pdf') return 'fa-file-pdf';
+    }
+    if (mimeType && mimeType.includes('pdf')) return 'fa-file-pdf';
+    if (mimeType && mimeType.includes('image')) return 'fa-file-image';
+    if (mimeType && (mimeType.includes('word') || mimeType.includes('document'))) return 'fa-file-word';
+    if (mimeType && (mimeType.includes('excel') || mimeType.includes('spreadsheet'))) return 'fa-file-excel';
     return 'fa-file';
 }
