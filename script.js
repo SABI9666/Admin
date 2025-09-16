@@ -1,6 +1,6 @@
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
-// This version incorporates enhanced file management for estimations and jobs.
+// This version incorporates enhanced file management for estimations, jobs, and quotes.
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -925,7 +925,7 @@ async function viewConversationMessages(conversationId) {
     }
 }
 
-// --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS) ---
+// --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS & QUOTES) ---
 async function loadGenericData(type) {
     const container = document.getElementById(`${type}-tab`);
     showLoader(container);
@@ -938,7 +938,7 @@ async function loadGenericData(type) {
     }
 }
 
-// ** ENHANCED FUNCTION **
+// ** UPDATED/ENHANCED FUNCTION **
 function renderGenericTab(type) {
     const container = document.getElementById(`${type}-tab`);
     const items = state[type];
@@ -992,19 +992,62 @@ function renderGenericTab(type) {
                 </tbody>
             </table>`;
     } else if (type === 'quotes') {
-        const headers = { quotes: ['Quote ID', 'User', 'Status'] };
+        // ** ENHANCED ** - Updated quotes rendering with file support
         container.innerHTML = `
-            <div class="section-header"><h3>All Quotes (${items.length})</h3>
-                <div class="header-actions"><button class="btn" onclick="loadGenericData('quotes')">Refresh</button><button class="btn btn-primary" onclick="exportData('quotes')">Export</button></div></div>
+            <div class="section-header">
+                <h3>All Quotes (${items.length})</h3>
+                <div class="header-actions">
+                    <button class="btn" onclick="loadGenericData('quotes')">Refresh</button>
+                    <button class="btn btn-primary" onclick="exportData('quotes')">Export</button>
+                </div>
+            </div>
             <table>
-                <thead><tr><th>${headers[type][0]}</th><th>${headers[type][1]}</th><th>${headers[type][2]}</th><th>Actions</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Quote Info</th>
+                        <th>Designer</th>
+                        <th>Job</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Files</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    ${items.map(item => `
+                    ${items.map(quote => `
                         <tr>
-                            <td>${item._id.slice(-6)}</td>
-                            <td>${item.userEmail || item.clientEmail || 'N/A'}</td>
-                            <td><span class="status">${item.status || 'N/A'}</span></td>
-                            <td><button class="btn btn-sm btn-danger" onclick="deleteGenericItem('quotes', '${item._id}')">Delete</button></td>
+                            <td>
+                                <div class="quote-info-cell">
+                                    <strong>Quote #${quote._id.slice(-6)}</strong>
+                                    ${quote.timeline ? `<br><small>Timeline: ${quote.timeline} days</small>` : ''}
+                                    ${quote.createdAt ? `<br><small>Submitted: ${new Date(quote.createdAt).toLocaleDateString()}</small>` : ''}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="designer-info">
+                                    ${quote.designerName || 'N/A'}<br>
+                                    <small>${quote.userEmail || 'N/A'}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="job-info">
+                                    <strong>${quote.jobTitle || 'Unknown Job'}</strong>
+                                    ${quote.job ? `<br><small>Client: ${quote.job.posterName || 'N/A'}</small>` : ''}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="quote-amount">$${quote.quoteAmount || 'N/A'}</span>
+                            </td>
+                            <td>
+                                <span class="status ${quote.status || 'unknown'}">${quote.status || 'Unknown'}</span>
+                            </td>
+                            <td>
+                                ${getQuoteFilesCell(quote)}
+                            </td>
+                            <td class="action-buttons">
+                                <button class="btn btn-sm" onclick="viewQuoteDetails('${quote._id}')">View Details</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteGenericItem('quotes', '${quote._id}')">Delete</button>
+                            </td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -1218,6 +1261,209 @@ function confirmDeleteJob(jobId) {
     }
 }
 
+// ** NEW HELPER FUNCTIONS FOR QUOTE FILES **
+function getQuoteFilesCell(quote) {
+    const attachments = quote.attachments || [];
+    if (attachments.length === 0) {
+        return '<span class="no-files">No files</span>';
+    }
+    return `
+        <div class="files-summary">
+            <i class="fas fa-file-pdf"></i>
+            <span class="file-count">${attachments.length} file${attachments.length > 1 ? 's' : ''}</span>
+            <button class="btn btn-xs" onclick="viewQuoteFiles('${quote._id}')">View</button>
+        </div>
+    `;
+}
+
+// ** NEW FUNCTION ** - View quote files modal
+function viewQuoteFiles(quoteId) {
+    const quote = state.quotes.find(q => q._id === quoteId);
+    if (!quote) return showNotification('Quote not found.', 'error');
+    const attachments = quote.attachments || [];
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-folder-open"></i> Quote Attachments</h3>
+            <div class="quote-info-summary">
+                <p><strong>Quote for:</strong> ${quote.jobTitle || 'Unknown Job'}</p>
+                <p><strong>Designer:</strong> ${quote.designerName || 'N/A'}</p>
+                <p><strong>Amount:</strong> $${quote.quoteAmount || 'N/A'}</p>
+                <p><strong>Status:</strong> <span class="status ${quote.status}">${quote.status}</span></p>
+            </div>
+            ${attachments.length > 0 ? `
+                <div class="files-grid">
+                    ${attachments.map((file, index) => {
+                        const fileName = file.name || file.originalname || `Attachment ${index + 1}`;
+                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+                        const fileIcon = getQuoteFileIcon(fileName);
+                        
+                        return `
+                            <div class="file-item-card">
+                                <div class="file-icon">
+                                    <i class="fas ${fileIcon}"></i>
+                                </div>
+                                <div class="file-details">
+                                    <h4 class="file-name" title="${fileName}">${fileName}</h4>
+                                    <div class="file-meta">
+                                        <span class="file-size">${fileSize}</span>
+                                        <span class="file-date">${uploadDate}</span>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="bulk-actions">
+                    <button class="btn btn-outline" onclick="downloadAllQuoteFiles('${quoteId}')">
+                        <i class="fas fa-download"></i> Download All Files
+                    </button>
+                </div>
+            ` : `
+                <div class="empty-state">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>No files attached to this quote.</p>
+                </div>
+            `}
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+// ** NEW FUNCTION ** - View quote details with all information
+function viewQuoteDetails(quoteId) {
+    const quote = state.quotes.find(q => q._id === quoteId);
+    if (!quote) return showNotification('Quote not found.', 'error');
+    const attachments = quote.attachments || [];
+    const modalContent = `
+        <div class="quote-details-modal">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Quote Details</h3>
+            <div class="quote-details-grid">
+                <div class="detail-section">
+                    <h4>Quote Information</h4>
+                    <div class="info-grid">
+                        <div><label>Quote ID:</label><span>${quote._id.slice(-6)}</span></div>
+                        <div><label>Amount:</label><span>$${quote.quoteAmount || 'N/A'}</span></div>
+                        <div><label>Timeline:</label><span>${quote.timeline || 'N/A'} days</span></div>
+                        <div><label>Status:</label><span class="status ${quote.status}">${quote.status}</span></div>
+                        <div><label>Submitted:</label><span>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</span></div>
+                        ${quote.approvedAt ? `<div><label>Approved:</label><span>${new Date(quote.approvedAt).toLocaleDateString()}</span></div>` : ''}
+                        ${quote.rejectedAt ? `<div><label>Rejected:</label><span>${new Date(quote.rejectedAt).toLocaleDateString()}</span></div>` : ''}
+                    </div>
+                </div>
+                                
+                <div class="detail-section">
+                    <h4>Designer Information</h4>
+                    <div class="info-grid">
+                        <div><label>Name:</label><span>${quote.designerName || 'N/A'}</span></div>
+                        <div><label>Email:</label><span>${quote.userEmail || 'N/A'}</span></div>
+                        ${quote.designer ? `
+                            ${quote.designer.phone ? `<div><label>Phone:</label><span>${quote.designer.phone}</span></div>` : ''}
+                            ${quote.designer.company ? `<div><label>Company:</label><span>${quote.designer.company}</span></div>` : ''}
+                        ` : ''}
+                    </div>
+                </div>
+                                
+                <div class="detail-section">
+                    <h4>Job Information</h4>
+                    <div class="info-grid">
+                        <div><label>Job Title:</label><span>${quote.jobTitle || 'N/A'}</span></div>
+                        ${quote.job ? `
+                            <div><label>Job Budget:</label><span>${quote.job.budget || 'N/A'}</span></div>
+                            <div><label>Client:</label><span>${quote.job.posterName || 'N/A'}</span></div>
+                            <div><label>Job Status:</label><span class="status ${quote.job.status}">${quote.job.status}</span></div>
+                        ` : ''}
+                    </div>
+                </div>
+                                
+                <div class="detail-section">
+                    <h4>Description</h4>
+                    <p class="quote-description">${quote.description || 'No description provided.'}</p>
+                </div>
+                                
+                <div class="detail-section">
+                    <h4>Attachments (${attachments.length})</h4>
+                    ${attachments.length > 0 ? `
+                        <div class="attachments-summary">
+                            <p>${attachments.length} file(s) attached to this quote.</p>
+                            <button class="btn btn-outline" onclick="viewQuoteFiles('${quoteId}')">
+                                <i class="fas fa-folder-open"></i> View All Files
+                            </button>
+                        </div>
+                    ` : `
+                        <p class="no-attachments">No files attached to this quote.</p>
+                    `}
+                </div>
+            </div>
+                        
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-danger" onclick="confirmDeleteQuote('${quoteId}')">
+                    <i class="fas fa-trash"></i> Delete Quote
+                </button>
+            </div>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+// ** NEW FUNCTION ** - Download all quote files
+function downloadAllQuoteFiles(quoteId) {
+    const quote = state.quotes.find(q => q._id === quoteId);
+    if (!quote) return showNotification('Quote not found.', 'error');
+    const attachments = quote.attachments || [];
+    if (attachments.length === 0) {
+        return showNotification('No files to download.', 'warning');
+    }
+    showNotification(`Downloading ${attachments.length} files...`, 'info');
+    attachments.forEach((file, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = file.url || file.downloadURL;
+            link.download = file.name || file.originalname || `quote_file_${index + 1}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, index * 500);
+    });
+}
+
+// ** NEW FUNCTION ** - Get appropriate icon for quote files
+function getQuoteFileIcon(fileName) {
+    if (!fileName) return 'fa-file';
+    const ext = fileName.toLowerCase().split('.').pop();
+    const iconMap = {
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'xls': 'fa-file-excel',
+        'xlsx': 'fa-file-excel',
+        'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image',
+        'dwg': 'fa-drafting-compass'
+    };
+    return iconMap[ext] || 'fa-file';
+}
+
+// ** NEW FUNCTION ** - Confirm quote deletion
+function confirmDeleteQuote(quoteId) {
+    if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
+        deleteGenericItem('quotes', quoteId);
+        closeModal();
+    }
+}
+
+
 async function deleteGenericItem(type, id) {
     if (!confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) return;
     try {
@@ -1293,3 +1539,9 @@ function getFileIcon(mimeType, fileName) {
     if (mimeType && (mimeType.includes('excel') || mimeType.includes('spreadsheet'))) return 'fa-file-excel';
     return 'fa-file';
 }
+
+
+
+
+
+
