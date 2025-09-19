@@ -1,6 +1,6 @@
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
-// This version incorporates enhanced file management for estimations, jobs, and quotes.
+// This version incorporates enhanced file management for estimations, jobs, quotes, and a new support ticket system.
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -14,6 +14,7 @@ const state = {
     quotes: [],
     messages: [],
     conversations: [], // New state for conversations
+    supportMessages: [], // NEW: Support messages state
 };
 
 // --- INITIALIZATION ---
@@ -198,17 +199,18 @@ function debounce(func, wait) {
 function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    
+
     document.getElementById(`${tabName}-tab`).classList.add('active');
     document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
 
-    // Manually trigger data load for non-core tabs if they are empty
+    // Update the manual load map to include support messages
     const manualLoadMap = {
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
         'quotes': { data: state.quotes, loader: () => loadGenericData('quotes') },
         'messages': { data: state.messages, loader: loadMessagesData },
-        'conversations': { data: state.conversations, loader: loadConversationsData }, // New
+        'conversations': { data: state.conversations, loader: loadConversationsData },
+        'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData }, // NEW
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -227,6 +229,7 @@ async function loadDashboardStats() {
             <div class="stat-card"><h3>${stats.totalJobs || 0}</h3><p>Total Jobs</p><button class="btn btn-sm" onclick="exportData('jobs')">Export</button></div>
             <div class="stat-card"><h3>${stats.totalQuotes || 0}</h3><p>Total Quotes</p><button class="btn btn-sm" onclick="exportData('quotes')">Export</button></div>
             <div class="stat-card"><h3>${stats.totalConversations || 0}</h3><p>User Conversations</p><button class="btn btn-sm" onclick="showTab('conversations')">View</button></div>
+            <div class="stat-card support-stat-card"><h3>${stats.totalSupportMessages || 0}</h3><p>Support Tickets</p><button class="btn btn-sm btn-support" onclick="showTab('support-messages')">Manage</button></div>
         `;
     } catch (error) {
         statsGrid.innerHTML = `<p class="error">Failed to load dashboard stats.</p>`;
@@ -925,6 +928,407 @@ async function viewConversationMessages(conversationId) {
     }
 }
 
+// --- SUPPORT SYSTEM MANAGEMENT ---
+async function loadSupportMessagesData() {
+    const container = document.getElementById('support-messages-tab');
+    showLoader(container);
+    try {
+        const { messages, stats } = await apiCall('/support-messages');
+        state.supportMessages = messages;
+        renderSupportMessagesTab(messages, stats);
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load support messages.</p><button class="btn" onclick="loadSupportMessagesData()">Retry</button>`;
+    }
+}
+
+function renderSupportMessagesTab(messages, stats) {
+    const container = document.getElementById('support-messages-tab');
+    container.innerHTML = `
+        <div class="section-header support-header">
+            <div class="header-content">
+                <h3><i class="fas fa-life-ring"></i> Support Messages (${messages.length})</h3>
+                <div class="support-stats-summary">
+                    <span class="stat-item open">Open: ${stats.open}</span>
+                    <span class="stat-item progress">In Progress: ${stats.in_progress}</span>
+                    <span class="stat-item resolved">Resolved: ${stats.resolved}</span>
+                    <span class="stat-item critical">Critical: ${stats.critical}</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="support-filters">
+                    <select id="support-status-filter" onchange="filterSupportMessages()">
+                        <option value="all">All Status</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <select id="support-priority-filter" onchange="filterSupportMessages()">
+                        <option value="all">All Priority</option>
+                        <option value="Critical">Critical</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="loadSupportMessagesData()">Refresh</button>
+            </div>
+        </div>
+        <div class="support-messages-container">
+            ${messages.length === 0 ?
+                `<div class="empty-state">
+                    <i class="fas fa-life-ring"></i>
+                    <h3>No Support Messages</h3>
+                    <p>Support requests from users will appear here.</p>
+                </div>` :
+                `<div class="support-messages-grid">
+                    ${messages.map(msg => renderSupportMessageCard(msg)).join('')}
+                </div>`
+            }
+        </div>
+    `;
+}
+
+function renderSupportMessageCard(message) {
+    const priorityClass = message.priority ? message.priority.toLowerCase() : 'medium';
+    const statusClass = message.ticketStatus || 'open';
+    const hasAttachments = message.attachments && message.attachments.length > 0;
+    const responseCount = message.responses ? message.responses.length : 0;
+    const timeAgo = getTimeAgo(message.createdAt);
+    const lastUpdate = message.updatedAt ? getTimeAgo(message.updatedAt) : timeAgo;
+    return `
+        <div class="support-message-card ${priorityClass}-priority ${statusClass}-status" data-ticket-id="${message.ticketId}">
+            <div class="support-card-header">
+                <div class="support-title-section">
+                    <h4 class="support-title">${message.subject || 'No Subject'}</h4>
+                    <div class="support-meta">
+                        <span class="ticket-id">Ticket: ${message.ticketId}</span>
+                        <span class="priority-badge priority-${priorityClass}">
+                            <i class="fas ${getPriorityIcon(message.priority)}"></i>
+                            ${message.priority}
+                        </span>
+                        <span class="status-badge status-${statusClass}">
+                            <i class="fas ${getStatusIcon(message.ticketStatus)}"></i>
+                            ${formatStatus(message.ticketStatus)}
+                        </span>
+                    </div>
+                </div>
+                <div class="support-actions-quick">
+                    <div class="time-info">
+                        <small>Created: ${timeAgo}</small>
+                        ${message.updatedAt && message.updatedAt !== message.createdAt ?
+                            `<small>Updated: ${lastUpdate}</small>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="support-card-body">
+                <div class="user-info">
+                    <div class="user-details">
+                        <strong>${message.senderName}</strong>
+                        <span class="user-type ${message.userType}">${message.userType}</span>
+                        <span class="user-email">${message.senderEmail}</span>
+                    </div>
+                    ${message.assignedToName ?
+                        `<div class="assigned-to">
+                            <i class="fas fa-user-check"></i> 
+                             Assigned to: <strong>${message.assignedToName}</strong>
+                        </div>` :
+                        `<div class="unassigned">
+                            <i class="fas fa-user-times"></i> Unassigned
+                        </div>`
+                    }
+                </div>
+                <div class="message-preview">
+                    <p>${truncateText(message.message, 150)}</p>
+                </div>
+                <div class="support-indicators">
+                    ${hasAttachments ?
+                        `<div class="indicator attachments">
+                            <i class="fas fa-paperclip"></i>
+                            ${message.attachments.length} file${message.attachments.length > 1 ? 's' : ''}
+                        </div>` : ''
+                    }
+                    ${responseCount > 0 ?
+                        `<div class="indicator responses">
+                            <i class="fas fa-comments"></i>
+                            ${responseCount} response${responseCount > 1 ? 's' : ''}
+                        </div>` :
+                        `<div class="indicator no-responses">
+                            <i class="fas fa-comment-slash"></i>
+                            No responses yet
+                        </div>`
+                    }
+                </div>
+            </div>
+            <div class="support-card-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewSupportTicketDetails('${message.ticketId}')">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                <button class="btn btn-sm btn-success" onclick="respondToSupportTicket('${message.ticketId}')">
+                    <i class="fas fa-reply"></i> Respond
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="updateSupportTicketStatus('${message.ticketId}')">
+                    <i class="fas fa-edit"></i> Update Status
+                </button>
+                <button class="btn btn-sm btn-warning" onclick="assignSupportTicket('${message.ticketId}')">
+                    <i class="fas fa-user-plus"></i> Assign
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function viewSupportTicketDetails(ticketId) {
+    try {
+        showModal('<div class="loader">Loading ticket details...</div>');
+        const { ticket } = await apiCall(`/support-messages/${ticketId}`);
+        const modalContent = `
+            <div class="support-ticket-modal">
+                <div class="modal-header support-modal-header">
+                    <h3><i class="fas fa-ticket-alt"></i> Support Ticket Details</h3>
+                    <div class="ticket-meta-header">
+                        <span class="ticket-id">ID: ${ticket.ticketId}</span>
+                        <span class="priority-badge priority-${ticket.priority.toLowerCase()}">
+                            <i class="fas ${getPriorityIcon(ticket.priority)}"></i>
+                            ${ticket.priority} Priority
+                        </span>
+                        <span class="status-badge status-${ticket.ticketStatus}">
+                            <i class="fas ${getStatusIcon(ticket.ticketStatus)}"></i>
+                            ${formatStatus(ticket.ticketStatus)}
+                        </span>
+                    </div>
+                </div>
+                <div class="ticket-details-content">
+                    <div class="ticket-info-grid">
+                        <div class="info-section">
+                            <h4><i class="fas fa-user"></i> User Information</h4>
+                            <div class="info-grid">
+                                <div><label>Name:</label><span>${ticket.senderName}</span></div>
+                                <div><label>Email:</label><span>${ticket.senderEmail}</span></div>
+                                <div><label>Type:</label><span class="user-type ${ticket.userType}">${ticket.userType}</span></div>
+                            </div>
+                        </div>
+                        <div class="info-section">
+                            <h4><i class="fas fa-info-circle"></i> Ticket Information</h4>
+                            <div class="info-grid">
+                                <div><label>Subject:</label><span>${ticket.subject}</span></div>
+                                <div><label>Created:</label><span>${new Date(ticket.createdAt.seconds ? ticket.createdAt.seconds * 1000 : ticket.createdAt).toLocaleString()}</span></div>
+                                <div><label>Updated:</label><span>${new Date(ticket.updatedAt.seconds ? ticket.updatedAt.seconds * 1000 : ticket.updatedAt).toLocaleString()}</span></div>
+                                ${ticket.assignedToName ? `<div><label>Assigned to:</label><span>${ticket.assignedToName}</span></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ticket-message-section">
+                        <h4><i class="fas fa-comment"></i> Original Message</h4>
+                        <div class="ticket-message-content">
+                            <p>${ticket.message}</p>
+                        </div>
+                    </div>
+                    ${ticket.attachments && ticket.attachments.length > 0 ? `
+                        <div class="ticket-attachments-section">
+                            <h4><i class="fas fa-paperclip"></i> Attachments (${ticket.attachments.length})</h4>
+                            <div class="attachments-list">
+                                ${ticket.attachments.map(attachment => `
+                                    <div class="attachment-item">
+                                        <i class="fas fa-file"></i>
+                                        <span>${attachment.originalName || attachment.filename}</span>
+                                        <a href="${attachment.url}" target="_blank" class="btn btn-xs btn-outline">View</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${ticket.responses && ticket.responses.length > 0 ? `
+                        <div class="ticket-responses-section">
+                            <h4><i class="fas fa-comments"></i> Responses (${ticket.responses.length})</h4>
+                            <div class="responses-list">
+                                ${ticket.responses.map(response => `
+                                    <div class="response-item ${response.responderType}">
+                                        <div class="response-header">
+                                            <strong>${response.responderName}</strong>
+                                            <span class="responder-type">${response.responderType}</span>
+                                            <span class="response-time">${new Date(response.createdAt.seconds ? response.createdAt.seconds * 1000 : response.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <div class="response-content">
+                                            <p>${response.message}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="ticket-actions-footer">
+                    <button class="btn btn-success" onclick="closeModal(); respondToSupportTicket('${ticketId}')">
+                        <i class="fas fa-reply"></i> Respond
+                    </button>
+                    <button class="btn btn-primary" onclick="closeModal(); updateSupportTicketStatus('${ticketId}')">
+                        <i class="fas fa-edit"></i> Update Status
+                    </button>
+                    <button class="btn btn-warning" onclick="closeModal(); assignSupportTicket('${ticketId}')">
+                        <i class="fas fa-user-plus"></i> Assign
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        showModal(modalContent);
+    } catch (error) {
+        closeModal();
+        showNotification('Failed to load ticket details.', 'error');
+    }
+}
+
+function respondToSupportTicket(ticketId) {
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-reply"></i> Respond to Support Ticket</h3>
+            <p>Ticket ID: <strong>${ticketId}</strong></p>
+            <form id="support-response-form">
+                <div class="form-group">
+                    <label for="admin-response">Response Message:</label>
+                    <textarea id="admin-response" rows="6" placeholder="Your response to the user..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="internal-note">Internal Note (Optional):</label>
+                    <textarea id="internal-note" rows="3" placeholder="Admin-only notes..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="new-status">Update Status:</label>
+                    <select id="new-status">
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="open">Keep Open</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitSupportResponse('${ticketId}')">
+                        <i class="fas fa-paper-plane"></i> Send Response
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+async function submitSupportResponse(ticketId) {
+    const adminResponse = document.getElementById('admin-response').value.trim();
+    const internalNote = document.getElementById('internal-note').value.trim();
+    const newStatus = document.getElementById('new-status').value;
+    if (!adminResponse) {
+        showNotification('Response message is required.', 'warning');
+        return;
+    }
+    try {
+        const submitBtn = document.querySelector('#support-response-form .btn-primary');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
+        await apiCall(`/support-messages/${ticketId}/status`, 'PATCH', {
+            status: newStatus,
+            adminResponse: adminResponse,
+            internalNote: internalNote
+        });
+        showNotification('Response sent successfully!', 'success');
+        closeModal();
+        loadSupportMessagesData(); // Refresh the list
+    } catch (error) {
+        showNotification('Failed to send response. Please try again.', 'error');
+    }
+}
+
+function updateSupportTicketStatus(ticketId) {
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-edit"></i> Update Ticket Status</h3>
+            <p>Ticket ID: <strong>${ticketId}</strong></p>
+            <form id="status-update-form">
+                <div class="form-group">
+                    <label for="ticket-status">New Status:</label>
+                    <select id="ticket-status" required>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status-note">Note (Optional):</label>
+                    <textarea id="status-note" rows="3" placeholder="Reason for status change..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitStatusUpdate('${ticketId}')">
+                        <i class="fas fa-save"></i> Update Status
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+async function submitStatusUpdate(ticketId) {
+    const newStatus = document.getElementById('ticket-status').value;
+    const note = document.getElementById('status-note').value.trim();
+    try {
+        const submitBtn = document.querySelector('#status-update-form .btn-primary');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+        await apiCall(`/support-messages/${ticketId}/status`, 'PATCH', {
+            status: newStatus,
+            internalNote: note
+        });
+        showNotification(`Ticket status updated to ${formatStatus(newStatus)}!`, 'success');
+        closeModal();
+        loadSupportMessagesData(); // Refresh the list
+    } catch (error) {
+        showNotification('Failed to update status. Please try again.', 'error');
+    }
+}
+
+function assignSupportTicket(ticketId) {
+    // For simplicity, we'll use a prompt. In a real system, you'd have a dropdown of available admins
+    const assigneeName = prompt('Enter admin name to assign this ticket to:');
+    if (!assigneeName) return;
+    const assigneeId = 'admin_' + assigneeName.toLowerCase().replace(/\s+/g, '_');
+    assignTicketToAdmin(ticketId, assigneeId, assigneeName);
+}
+
+async function assignTicketToAdmin(ticketId, assigneeId, assigneeName) {
+    try {
+        await apiCall(`/support-messages/${ticketId}/assign`, 'POST', {
+            assignToId: assigneeId,
+            assignToName: assigneeName
+        });
+        showNotification(`Ticket assigned to ${assigneeName} successfully!`, 'success');
+        loadSupportMessagesData(); // Refresh the list
+    } catch (error) {
+        showNotification('Failed to assign ticket. Please try again.', 'error');
+    }
+}
+
+async function filterSupportMessages() {
+    const statusFilter = document.getElementById('support-status-filter').value;
+    const priorityFilter = document.getElementById('support-priority-filter').value;
+    const container = document.getElementById('support-messages-tab');
+    showLoader(container);
+    try {
+        const queryParams = new URLSearchParams();
+        if (statusFilter !== 'all') queryParams.set('status', statusFilter);
+        if (priorityFilter !== 'all') queryParams.set('priority', priorityFilter);
+        const endpoint = `/support-messages?${queryParams.toString()}`;
+        const { messages, stats } = await apiCall(endpoint);
+        state.supportMessages = messages;
+        renderSupportMessagesTab(messages, stats);
+    } catch (error) {
+        showNotification('Failed to filter support messages.', 'error');
+        loadSupportMessagesData(); // Fallback to reload all
+    }
+}
+
+
 // --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS & QUOTES) ---
 async function loadGenericData(type) {
     const container = document.getElementById(`${type}-tab`);
@@ -1540,8 +1944,70 @@ function getFileIcon(mimeType, fileName) {
     return 'fa-file';
 }
 
+function getPriorityIcon(priority) {
+    const icons = {
+        'Critical': 'fa-exclamation-triangle',
+        'High': 'fa-arrow-up',
+        'Medium': 'fa-minus',
+        'Low': 'fa-arrow-down'
+    };
+    return icons[priority] || 'fa-minus';
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        'open': 'fa-envelope',
+        'in_progress': 'fa-cog fa-spin',
+        'resolved': 'fa-check-circle',
+        'closed': 'fa-times-circle'
+    };
+    return icons[status] || 'fa-envelope';
+}
+
+function formatStatus(status) {
+    const formatted = {
+        'open': 'Open',
+        'in_progress': 'In Progress',
+        'resolved': 'Resolved',
+        'closed': 'Closed'
+    };
+    return formatted[status] || 'Unknown';
+}
+
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text || '';
+    return text.substring(0, maxLength) + '...';
+}
+
+function getTimeAgo(dateString) {
+    if (!dateString) return 'some time ago';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return Math.floor(seconds) + " seconds ago";
+}
 
 
 
 
 
+
+
+
+
+
+
+
+
+Gemini can
