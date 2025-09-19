@@ -2010,4 +2010,3 @@ function getTimeAgo(dateString) {
 
 
 
-Gemini can
