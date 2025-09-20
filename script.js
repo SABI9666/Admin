@@ -27,6 +27,10 @@ async function initializeAdminPanel() {
     }
     document.getElementById('adminName').textContent = user.name || user.email;
 
+    // Inject additional CSS for better visual feedback
+    const additionalCSS = `<style>.critical-indicator { color: #ff4444; font-weight: bold; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; }.fa-spinner.fa-spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }.notification-actions { margin-top: 10px; }.notification-actions .btn { margin-right: 5px; }.invalid-date { color: #888; font-style: italic; }</style>`;
+    document.head.insertAdjacentHTML('beforeend', additionalCSS);
+
     // Auto-fetch core data on startup for a faster experience
     await loadDashboardStats();
     await loadUsersData();
@@ -219,22 +223,55 @@ function showTab(tabName) {
 }
 
 // --- DASHBOARD ---
+// CORRECTED DASHBOARD STATS LOADING
 async function loadDashboardStats() {
     const statsGrid = document.getElementById('statsGrid');
     try {
         const { stats } = await apiCall('/dashboard');
+        
+        // CORRECTED: Handle both totalSupportTickets and totalSupportMessages
+        const supportCount = stats.totalSupportTickets || stats.totalSupportMessages || 0;
+        const criticalCount = stats.criticalSupportTickets || 0;
+        
         statsGrid.innerHTML = `
-            <div class="stat-card"><h3>${stats.totalUsers || 0}</h3><p>Total Users</p><button class="btn btn-sm" onclick="exportData('users')">Export</button></div>
-            <div class="stat-card"><h3>${stats.pendingProfileReviews || 0}</h3><p>Pending Reviews</p><button class="btn btn-sm" onclick="showTab('profile-reviews')">Review</button></div>
-            <div class="stat-card"><h3>${stats.totalJobs || 0}</h3><p>Total Jobs</p><button class="btn btn-sm" onclick="exportData('jobs')">Export</button></div>
-            <div class="stat-card"><h3>${stats.totalQuotes || 0}</h3><p>Total Quotes</p><button class="btn btn-sm" onclick="exportData('quotes')">Export</button></div>
-            <div class="stat-card"><h3>${stats.totalConversations || 0}</h3><p>User Conversations</p><button class="btn btn-sm" onclick="showTab('conversations')">View</button></div>
-            <div class="stat-card support-stat-card"><h3>${stats.totalSupportMessages || 0}</h3><p>Support Tickets</p><button class="btn btn-sm btn-support" onclick="showTab('support-messages')">Manage</button></div>
+            <div class="stat-card">
+                <h3>${stats.totalUsers || 0}</h3>
+                <p>Total Users</p>
+                <button class="btn btn-sm" onclick="exportData('users')">Export</button>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.pendingProfileReviews || 0}</h3>
+                <p>Pending Reviews</p>
+                <button class="btn btn-sm" onclick="showTab('profile-reviews')">Review</button>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.totalJobs || 0}</h3>
+                <p>Total Jobs</p>
+                <button class="btn btn-sm" onclick="exportData('jobs')">Export</button>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.totalQuotes || 0}</h3>
+                <p>Total Quotes</p>
+                <button class="btn btn-sm" onclick="exportData('quotes')">Export</button>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.totalConversations || 0}</h3>
+                <p>User Conversations</p>
+                <button class="btn btn-sm" onclick="showTab('conversations')">View</button>
+            </div>
+            <div class="stat-card support-stat-card">
+                <h3>${supportCount}</h3>
+                <p>Support Tickets</p>
+                ${criticalCount > 0 ? `<small class="critical-indicator">${criticalCount} Critical</small>` : ''}
+                <button class="btn btn-sm btn-support" onclick="showTab('support-messages')">Manage</button>
+            </div>
         `;
     } catch (error) {
+        console.error('Error loading dashboard stats:', error);
         statsGrid.innerHTML = `<p class="error">Failed to load dashboard stats.</p>`;
     }
 }
+
 
 // --- USER MANAGEMENT (UPDATED) ---
 async function loadUsersData() {
@@ -941,6 +978,7 @@ async function loadSupportMessagesData() {
     }
 }
 
+// CORRECTED SUPPORT MESSAGES RENDERING
 function renderSupportMessagesTab(messages, stats) {
     const container = document.getElementById('support-messages-tab');
     container.innerHTML = `
@@ -988,6 +1026,7 @@ function renderSupportMessagesTab(messages, stats) {
         </div>
     `;
 }
+
 
 function renderSupportMessageCard(message) {
     const priorityClass = message.priority ? message.priority.toLowerCase() : 'medium';
@@ -1287,6 +1326,7 @@ function respondToSupportTicket(ticketId) {
     showModal(modalContent);
 }
 
+// CORRECTED SUPPORT RESPONSE SUBMISSION
 async function submitSupportResponse(ticketId) {
     const adminResponse = document.getElementById('admin-response').value.trim();
     const internalNote = document.getElementById('internal-note').value.trim();
@@ -1299,9 +1339,8 @@ async function submitSupportResponse(ticketId) {
     
     try {
         const submitBtn = document.querySelector('#support-response-form .btn-primary');
-        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
         
         await apiCall(`/support-messages/${ticketId}/respond`, 'POST', {
             adminResponse: adminResponse,
@@ -1309,11 +1348,15 @@ async function submitSupportResponse(ticketId) {
             status: newStatus
         });
         
-        showNotification('Response sent successfully!', 'success');
+        showNotification('Response sent successfully! User has been notified.', 'success');
         closeModal();
-        loadSupportMessagesData(); // Refresh the list
+        
+        // Refresh the support messages list and dashboard stats
+        await loadSupportMessagesData();
+        await loadDashboardStats();
         
     } catch (error) {
+        console.error('Error submitting support response:', error);
         showNotification('Failed to send response. Please try again.', 'error');
         const submitBtn = document.querySelector('#support-response-form .btn-primary');
         if (submitBtn) {
@@ -1322,6 +1365,7 @@ async function submitSupportResponse(ticketId) {
         }
     }
 }
+
 
 function updateSupportTicketStatus(ticketId) {
     const modalContent = `
@@ -1359,6 +1403,7 @@ function updateSupportTicketStatus(ticketId) {
     showModal(modalContent);
 }
 
+// CORRECTED STATUS UPDATE SUBMISSION
 async function submitStatusUpdate(ticketId) {
     const newStatus = document.getElementById('ticket-status').value;
     const note = document.getElementById('status-note').value.trim();
@@ -1366,9 +1411,8 @@ async function submitStatusUpdate(ticketId) {
     
     try {
         const submitBtn = document.querySelector('#status-update-form .btn-primary');
-        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
         
         await apiCall(`/support-messages/${ticketId}/status`, 'PATCH', {
             status: newStatus,
@@ -1378,9 +1422,12 @@ async function submitStatusUpdate(ticketId) {
         
         showNotification(`Ticket status updated to ${formatStatus(newStatus)}!`, 'success');
         closeModal();
-        loadSupportMessagesData();
+        
+        await loadSupportMessagesData();
+        await loadDashboardStats();
         
     } catch (error) {
+        console.error('Error updating status:', error);
         showNotification('Failed to update status. Please try again.', 'error');
         const submitBtn = document.querySelector('#status-update-form .btn-primary');
         if (submitBtn) {
@@ -1389,6 +1436,7 @@ async function submitStatusUpdate(ticketId) {
         }
     }
 }
+
 
 function assignSupportTicket(ticketId) {
     const modalContent = `
@@ -1428,7 +1476,6 @@ async function submitTicketAssignment(ticketId) {
     
     try {
         const submitBtn = document.querySelector('#assign-ticket-form .btn-primary');
-        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<div class="btn-spinner"></div> Assigning...';
         
@@ -1477,6 +1524,7 @@ function addInternalNote(ticketId) {
     showModal(modalContent);
 }
 
+// CORRECTED INTERNAL NOTE SUBMISSION
 async function submitInternalNote(ticketId) {
     const noteText = document.getElementById('internal-note-text').value.trim();
     
@@ -1487,9 +1535,8 @@ async function submitInternalNote(ticketId) {
     
     try {
         const submitBtn = document.querySelector('#internal-note-form .btn-primary');
-        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         
         await apiCall(`/support-messages/${ticketId}/internal-note`, 'POST', {
             note: noteText
@@ -1498,7 +1545,11 @@ async function submitInternalNote(ticketId) {
         showNotification('Internal note added successfully!', 'success');
         closeModal();
         
+        // Refresh the support messages list to show updated ticket info implicitly
+        await loadSupportMessagesData();
+        
     } catch (error) {
+        console.error('Error adding internal note:', error);
         showNotification('Failed to add internal note. Please try again.', 'error');
         const submitBtn = document.querySelector('#internal-note-form .btn-primary');
         if (submitBtn) {
@@ -1507,6 +1558,7 @@ async function submitInternalNote(ticketId) {
         }
     }
 }
+
 
 async function filterSupportMessages() {
     const statusFilter = document.getElementById('support-status-filter').value;
@@ -1556,36 +1608,55 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// CORRECTED TIMESTAMP FORMATTING FUNCTION
 function formatAdminTimestamp(date) {
     try {
         if (!date) return 'Unknown time';
         
         let dateObj;
         
-        // Handle Firestore timestamps
-        if (date && typeof date === 'object' && date.seconds) {
-            dateObj = new Date(date.seconds * 1000);
+        // Handle different date formats
+        if (typeof date === 'string') {
+            // Handle ISO string dates
+            dateObj = new Date(date);
         } else if (date instanceof Date) {
             dateObj = date;
-        } else if (typeof date === 'string') {
-            dateObj = new Date(date);
+        } else if (date && typeof date === 'object') {
+            // Handle Firestore timestamps
+            if (date.seconds) {
+                dateObj = new Date(date.seconds * 1000);
+            } else if (date._seconds) {
+                dateObj = new Date(date._seconds * 1000);
+            } else {
+                return 'Invalid date';
+            }
         } else {
             return 'Invalid date';
         }
         
+        // Validate the date
         if (isNaN(dateObj.getTime())) {
+            console.warn('Invalid date object:', date);
             return 'Invalid date';
         }
         
-        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
+        // Format the date
+        const options = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
+        
+        return dateObj.toLocaleDateString('en-US', options);
     } catch (error) {
-        console.error('Admin timestamp formatting error:', error);
+        console.error('Admin timestamp formatting error:', error, 'Input:', date);
         return 'Invalid date';
     }
 }
+
 
 // Enhanced utility functions (UPDATE EXISTING ONES)
 function getPriorityIcon(priority) {
@@ -1623,36 +1694,51 @@ function truncateText(text, maxLength) {
     return text.substring(0, maxLength) + '...';
 }
 
+// CORRECTED TIME AGO FUNCTION
 function getTimeAgo(dateString) {
     if (!dateString) return 'some time ago';
     
     let date;
-    // Handle Firestore timestamps
-    if (dateString && typeof dateString === 'object' && dateString.seconds) {
-        date = new Date(dateString.seconds * 1000);
-    } else {
-        date = new Date(dateString);
-    }
-    
-    if (isNaN(date.getTime())) {
+    try {
+        // Handle different date formats
+        if (typeof dateString === 'string') {
+            date = new Date(dateString);
+        } else if (dateString instanceof Date) {
+            date = dateString;
+        } else if (dateString && typeof dateString === 'object') {
+            // Handle Firestore timestamps
+            if (dateString.seconds) {
+                date = new Date(dateString.seconds * 1000);
+            } else if (dateString._seconds) {
+                date = new Date(dateString._seconds * 1000);
+            } else {
+                return 'some time ago';
+            }
+        } else {
+            return 'some time ago';
+        }
+        
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date in getTimeAgo:', dateString);
+            return 'some time ago';
+        }
+        
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) return 'just now';
+        if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+        if (seconds < 2592000) return Math.floor(seconds / 86400) + ' days ago';
+        if (seconds < 31536000) return Math.floor(seconds / 2592000) + ' months ago';
+        
+        return Math.floor(seconds / 31536000) + ' years ago';
+    } catch (error) {
+        console.error('Error in getTimeAgo:', error, 'Input:', dateString);
         return 'some time ago';
     }
-    
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return Math.floor(seconds) + " seconds ago";
 }
+
 
 // --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS & QUOTES) ---
 async function loadGenericData(type) {
@@ -2229,31 +2315,101 @@ async function exportData(dataType, format = 'csv') {
 }
 
 // --- REAL-TIME UPDATES ---
+// ENHANCED NOTIFICATION HANDLING FOR REAL-TIME UPDATES
 function initializeRealTimeUpdates() {
+    // Check for new notifications periodically
+    setInterval(async () => {
+        try {
+            const currentActiveTab = document.querySelector('.tab-content.active').id;
+            
+            // Refresh active tab data periodically
+            if (currentActiveTab === 'support-messages-tab') {
+                // Refresh support messages every 30 seconds if on that tab
+                loadSupportMessagesData();
+            } else if (currentActiveTab === 'dashboard-tab') {
+                // Refresh dashboard stats every minute
+                loadDashboardStats();
+            }
+        } catch (error) {
+            console.log('Error in real-time updates:', error);
+        }
+    }, 30000); // Check every 30 seconds
+    
+    // WebSocket connection (if available)
     if (typeof WebSocket !== 'undefined') {
         try {
             const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
+            
             ws.onmessage = (event) => {
-                const update = JSON.parse(event.data);
-                switch (update.type) {
-                    case 'new_message':
-                        showAdvancedNotification('New message received', 'info', 0, [{ text: 'View', callback: () => showTab('messages') }]);
-                        break;
-                    case 'profile_review':
-                        showAdvancedNotification('New profile review pending', 'warning', 0, [{ text: 'Review', callback: () => showTab('profile-reviews') }]);
-                        break;
-                    case 'estimation_request':
-                        showAdvancedNotification('New estimation request', 'info', 0, [{ text: 'View', callback: () => showTab('estimations') }]);
-                        break;
+                try {
+                    const update = JSON.parse(event.data);
+                    switch (update.type) {
+                        case 'new_support_ticket':
+                            showAdvancedNotification(
+                                'New support ticket received',
+                                 'info',
+                                 5000,
+                                 [{ text: 'View', callback: () => showTab('support-messages') }]
+                            );
+                            // Refresh support data if on support tab
+                            if (document.getElementById('support-messages-tab').classList.contains('active')) {
+                                loadSupportMessagesData();
+                            }
+                            // Always refresh dashboard
+                            loadDashboardStats();
+                            break;
+                        case 'support_response':
+                            showAdvancedNotification(
+                                'Support ticket updated',
+                                 'success',
+                                 3000
+                            );
+                            break;
+                        case 'new_message':
+                            showAdvancedNotification(
+                                'New message received',
+                                 'info',
+                                 0,
+                                 [{ text: 'View', callback: () => showTab('messages') }]
+                            );
+                            break;
+                        case 'profile_review':
+                            showAdvancedNotification(
+                                'New profile review pending',
+                                 'warning',
+                                 0,
+                                 [{ text: 'Review', callback: () => showTab('profile-reviews') }]
+                            );
+                            break;
+                        case 'estimation_request':
+                            showAdvancedNotification(
+                                'New estimation request',
+                                 'info',
+                                 0,
+                                 [{ text: 'View', callback: () => showTab('estimations') }]
+                            );
+                            break;
+                    }
+                } catch (parseError) {
+                    console.log('Error parsing WebSocket message:', parseError);
                 }
             };
-            ws.onclose = () => setTimeout(initializeRealTimeUpdates, 5000);
-            ws.onerror = () => console.log('WebSocket connection failed.');
+            
+            ws.onclose = () => {
+                console.log('WebSocket connection closed, attempting to reconnect...');
+                setTimeout(initializeRealTimeUpdates, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.log('WebSocket connection failed:', error);
+            };
+            
         } catch (error) {
-            console.log('WebSocket not available.');
+            console.log('WebSocket not available:', error);
         }
     }
 }
+
 
 // --- SHARED UTILITY FUNCTIONS ---
 function getFileIcon(mimeType, fileName) {
