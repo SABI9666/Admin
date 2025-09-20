@@ -928,7 +928,7 @@ async function viewConversationMessages(conversationId) {
     }
 }
 
-// --- SUPPORT SYSTEM MANAGEMENT ---
+// --- ENHANCED SUPPORT SYSTEM MANAGEMENT ---
 async function loadSupportMessagesData() {
     const container = document.getElementById('support-messages-tab');
     showLoader(container);
@@ -948,10 +948,10 @@ function renderSupportMessagesTab(messages, stats) {
             <div class="header-content">
                 <h3><i class="fas fa-life-ring"></i> Support Messages (${messages.length})</h3>
                 <div class="support-stats-summary">
-                    <span class="stat-item open">Open: ${stats.open}</span>
-                    <span class="stat-item progress">In Progress: ${stats.in_progress}</span>
-                    <span class="stat-item resolved">Resolved: ${stats.resolved}</span>
-                    <span class="stat-item critical">Critical: ${stats.critical}</span>
+                    <span class="stat-item open">Open: ${stats.open || 0}</span>
+                    <span class="stat-item progress">In Progress: ${stats.in_progress || 0}</span>
+                    <span class="stat-item resolved">Resolved: ${stats.resolved || 0}</span>
+                    <span class="stat-item critical">Critical: ${stats.critical || 0}</span>
                 </div>
             </div>
             <div class="header-actions">
@@ -996,6 +996,7 @@ function renderSupportMessageCard(message) {
     const responseCount = message.responses ? message.responses.length : 0;
     const timeAgo = getTimeAgo(message.createdAt);
     const lastUpdate = message.updatedAt ? getTimeAgo(message.updatedAt) : timeAgo;
+    
     return `
         <div class="support-message-card ${priorityClass}-priority ${statusClass}-status" data-ticket-id="${message.ticketId}">
             <div class="support-card-header">
@@ -1112,8 +1113,8 @@ async function viewSupportTicketDetails(ticketId) {
                             <h4><i class="fas fa-info-circle"></i> Ticket Information</h4>
                             <div class="info-grid">
                                 <div><label>Subject:</label><span>${ticket.subject}</span></div>
-                                <div><label>Created:</label><span>${new Date(ticket.createdAt.seconds ? ticket.createdAt.seconds * 1000 : ticket.createdAt).toLocaleString()}</span></div>
-                                <div><label>Updated:</label><span>${new Date(ticket.updatedAt.seconds ? ticket.updatedAt.seconds * 1000 : ticket.updatedAt).toLocaleString()}</span></div>
+                                <div><label>Created:</label><span>${formatAdminTimestamp(ticket.createdAt)}</span></div>
+                                <div><label>Updated:</label><span>${formatAdminTimestamp(ticket.updatedAt)}</span></div>
                                 ${ticket.assignedToName ? `<div><label>Assigned to:</label><span>${ticket.assignedToName}</span></div>` : ''}
                             </div>
                         </div>
@@ -1126,28 +1127,50 @@ async function viewSupportTicketDetails(ticketId) {
                     </div>
                     ${ticket.attachments && ticket.attachments.length > 0 ? `
                         <div class="ticket-attachments-section">
-                            <h4><i class="fas fa-paperclip"></i> Attachments (${ticket.attachments.length})</h4>
+                            <h4><i class="fas fa-paperclip"></i> User Attachments (${ticket.attachments.length})</h4>
                             <div class="attachments-list">
-                                ${ticket.attachments.map(attachment => `
+                                ${ticket.attachments.map((attachment, index) => `
                                     <div class="attachment-item">
-                                        <i class="fas fa-file"></i>
-                                        <span>${attachment.originalName || attachment.filename}</span>
-                                        <a href="${attachment.url}" target="_blank" class="btn btn-xs btn-outline">View</a>
+                                        <div class="attachment-info">
+                                            <i class="fas ${getAttachmentIcon(attachment)}"></i>
+                                            <div class="attachment-details">
+                                                <span class="attachment-name">${attachment.originalName || attachment.filename || `Attachment ${index + 1}`}</span>
+                                                <span class="attachment-meta">${attachment.size ? formatFileSize(attachment.size) : 'Unknown size'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="attachment-actions">
+                                            <a href="${attachment.url}" target="_blank" class="btn btn-xs btn-outline">
+                                                <i class="fas fa-external-link-alt"></i> View
+                                            </a>
+                                            <a href="${attachment.url}" download="${attachment.originalName || attachment.filename}" class="btn btn-xs btn-primary">
+                                                <i class="fas fa-download"></i> Download
+                                            </a>
+                                        </div>
                                     </div>
                                 `).join('')}
+                            </div>
+                            <div class="bulk-actions">
+                                <button class="btn btn-outline btn-sm" onclick="downloadAllSupportAttachments('${ticketId}')">
+                                    <i class="fas fa-download"></i> Download All Attachments
+                                </button>
                             </div>
                         </div>
                     ` : ''}
                     ${ticket.responses && ticket.responses.length > 0 ? `
                         <div class="ticket-responses-section">
-                            <h4><i class="fas fa-comments"></i> Responses (${ticket.responses.length})</h4>
+                            <h4><i class="fas fa-comments"></i> Conversation History (${ticket.responses.length})</h4>
                             <div class="responses-list">
                                 ${ticket.responses.map(response => `
                                     <div class="response-item ${response.responderType}">
                                         <div class="response-header">
-                                            <strong>${response.responderName}</strong>
-                                            <span class="responder-type">${response.responderType}</span>
-                                            <span class="response-time">${new Date(response.createdAt.seconds ? response.createdAt.seconds * 1000 : response.createdAt).toLocaleString()}</span>
+                                            <div class="responder-info">
+                                                <strong>${response.responderName}</strong>
+                                                <span class="responder-type ${response.responderType}">
+                                                    <i class="fas ${response.responderType === 'admin' ? 'fa-user-shield' : 'fa-user'}"></i>
+                                                    ${response.responderType === 'admin' ? 'Support Team' : 'User'}
+                                                </span>
+                                            </div>
+                                            <span class="response-time">${formatAdminTimestamp(response.createdAt)}</span>
                                         </div>
                                         <div class="response-content">
                                             <p>${response.message}</p>
@@ -1157,16 +1180,37 @@ async function viewSupportTicketDetails(ticketId) {
                             </div>
                         </div>
                     ` : ''}
+                    ${ticket.internalNotes && ticket.internalNotes.length > 0 ? `
+                        <div class="internal-notes-section">
+                            <h4><i class="fas fa-sticky-note"></i> Internal Notes (Admin Only)</h4>
+                            <div class="internal-notes-list">
+                                ${ticket.internalNotes.map(note => `
+                                    <div class="internal-note">
+                                        <div class="note-header">
+                                            <strong>${note.adminName}</strong>
+                                            <span class="note-time">${formatAdminTimestamp(note.createdAt)}</span>
+                                        </div>
+                                        <div class="note-content">
+                                            <p>${note.note}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="ticket-actions-footer">
                     <button class="btn btn-success" onclick="closeModal(); respondToSupportTicket('${ticketId}')">
-                        <i class="fas fa-reply"></i> Respond
+                        <i class="fas fa-reply"></i> Respond to User
                     </button>
                     <button class="btn btn-primary" onclick="closeModal(); updateSupportTicketStatus('${ticketId}')">
                         <i class="fas fa-edit"></i> Update Status
                     </button>
                     <button class="btn btn-warning" onclick="closeModal(); assignSupportTicket('${ticketId}')">
                         <i class="fas fa-user-plus"></i> Assign
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal(); addInternalNote('${ticketId}')">
+                        <i class="fas fa-sticky-note"></i> Add Internal Note
                     </button>
                     <button class="btn btn-secondary" onclick="closeModal()">Close</button>
                 </div>
@@ -1179,6 +1223,33 @@ async function viewSupportTicketDetails(ticketId) {
     }
 }
 
+async function downloadAllSupportAttachments(ticketId) {
+    try {
+        const { ticket } = await apiCall(`/support-messages/${ticketId}`);
+        const attachments = ticket.attachments || [];
+        
+        if (attachments.length === 0) {
+            showNotification('No attachments to download.', 'warning');
+            return;
+        }
+        
+        showNotification(`Downloading ${attachments.length} files...`, 'info');
+        
+        attachments.forEach((attachment, index) => {
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = attachment.url;
+                link.download = attachment.originalName || attachment.filename || `support_file_${index + 1}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, index * 500);
+        });
+    } catch (error) {
+        showNotification('Failed to download attachments.', 'error');
+    }
+}
+
 function respondToSupportTicket(ticketId) {
     const modalContent = `
         <div class="modal-body">
@@ -1188,10 +1259,12 @@ function respondToSupportTicket(ticketId) {
                 <div class="form-group">
                     <label for="admin-response">Response Message:</label>
                     <textarea id="admin-response" rows="6" placeholder="Your response to the user..." required></textarea>
+                    <small>This message will be sent to the user and added to their ticket history.</small>
                 </div>
                 <div class="form-group">
                     <label for="internal-note">Internal Note (Optional):</label>
                     <textarea id="internal-note" rows="3" placeholder="Admin-only notes..."></textarea>
+                    <small>Internal notes are only visible to admin staff.</small>
                 </div>
                 <div class="form-group">
                     <label for="new-status">Update Status:</label>
@@ -1199,6 +1272,7 @@ function respondToSupportTicket(ticketId) {
                         <option value="in_progress">In Progress</option>
                         <option value="resolved">Resolved</option>
                         <option value="open">Keep Open</option>
+                        <option value="closed">Close Ticket</option>
                     </select>
                 </div>
                 <div class="modal-actions">
@@ -1217,24 +1291,35 @@ async function submitSupportResponse(ticketId) {
     const adminResponse = document.getElementById('admin-response').value.trim();
     const internalNote = document.getElementById('internal-note').value.trim();
     const newStatus = document.getElementById('new-status').value;
+    
     if (!adminResponse) {
         showNotification('Response message is required.', 'warning');
         return;
     }
+    
     try {
         const submitBtn = document.querySelector('#support-response-form .btn-primary');
+        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<div class="btn-spinner"></div> Sending...';
-        await apiCall(`/support-messages/${ticketId}/status`, 'PATCH', {
-            status: newStatus,
+        
+        await apiCall(`/support-messages/${ticketId}/respond`, 'POST', {
             adminResponse: adminResponse,
-            internalNote: internalNote
+            internalNote: internalNote,
+            status: newStatus
         });
+        
         showNotification('Response sent successfully!', 'success');
         closeModal();
         loadSupportMessagesData(); // Refresh the list
+        
     } catch (error) {
         showNotification('Failed to send response. Please try again.', 'error');
+        const submitBtn = document.querySelector('#support-response-form .btn-primary');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Response';
+        }
     }
 }
 
@@ -1257,6 +1342,11 @@ function updateSupportTicketStatus(ticketId) {
                     <label for="status-note">Note (Optional):</label>
                     <textarea id="status-note" rows="3" placeholder="Reason for status change..."></textarea>
                 </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="notify-user"> Notify user of status change
+                    </label>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-primary" onclick="submitStatusUpdate('${ticketId}')">
                         <i class="fas fa-save"></i> Update Status
@@ -1272,40 +1362,149 @@ function updateSupportTicketStatus(ticketId) {
 async function submitStatusUpdate(ticketId) {
     const newStatus = document.getElementById('ticket-status').value;
     const note = document.getElementById('status-note').value.trim();
+    const notifyUser = document.getElementById('notify-user').checked;
+    
     try {
         const submitBtn = document.querySelector('#status-update-form .btn-primary');
+        const originalText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<div class="btn-spinner"></div> Updating...';
+        
         await apiCall(`/support-messages/${ticketId}/status`, 'PATCH', {
             status: newStatus,
-            internalNote: note
+            internalNote: note,
+            notifyUser: notifyUser
         });
+        
         showNotification(`Ticket status updated to ${formatStatus(newStatus)}!`, 'success');
         closeModal();
-        loadSupportMessagesData(); // Refresh the list
+        loadSupportMessagesData();
+        
     } catch (error) {
         showNotification('Failed to update status. Please try again.', 'error');
+        const submitBtn = document.querySelector('#status-update-form .btn-primary');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Status';
+        }
     }
 }
 
 function assignSupportTicket(ticketId) {
-    // For simplicity, we'll use a prompt. In a real system, you'd have a dropdown of available admins
-    const assigneeName = prompt('Enter admin name to assign this ticket to:');
-    if (!assigneeName) return;
-    const assigneeId = 'admin_' + assigneeName.toLowerCase().replace(/\s+/g, '_');
-    assignTicketToAdmin(ticketId, assigneeId, assigneeName);
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-user-plus"></i> Assign Ticket</h3>
+            <p>Ticket ID: <strong>${ticketId}</strong></p>
+            <form id="assign-ticket-form">
+                <div class="form-group">
+                    <label for="assignee-name">Assign to Admin:</label>
+                    <input type="text" id="assignee-name" placeholder="Enter admin name" required>
+                    <small>Enter the name of the admin to assign this ticket to.</small>
+                </div>
+                <div class="form-group">
+                    <label for="assign-note">Assignment Note (Optional):</label>
+                    <textarea id="assign-note" rows="3" placeholder="Why are you assigning this ticket?"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitTicketAssignment('${ticketId}')">
+                        <i class="fas fa-user-check"></i> Assign Ticket
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+    showModal(modalContent);
 }
 
-async function assignTicketToAdmin(ticketId, assigneeId, assigneeName) {
+async function submitTicketAssignment(ticketId) {
+    const assigneeName = document.getElementById('assignee-name').value.trim();
+    const assignNote = document.getElementById('assign-note').value.trim();
+    
+    if (!assigneeName) {
+        showNotification('Assignee name is required.', 'warning');
+        return;
+    }
+    
     try {
+        const submitBtn = document.querySelector('#assign-ticket-form .btn-primary');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Assigning...';
+        
+        const assigneeId = 'admin_' + assigneeName.toLowerCase().replace(/\s+/g, '_');
+        
         await apiCall(`/support-messages/${ticketId}/assign`, 'POST', {
             assignToId: assigneeId,
-            assignToName: assigneeName
+            assignToName: assigneeName,
+            note: assignNote
         });
+        
         showNotification(`Ticket assigned to ${assigneeName} successfully!`, 'success');
-        loadSupportMessagesData(); // Refresh the list
+        closeModal();
+        loadSupportMessagesData();
+        
     } catch (error) {
         showNotification('Failed to assign ticket. Please try again.', 'error');
+        const submitBtn = document.querySelector('#assign-ticket-form .btn-primary');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-user-check"></i> Assign Ticket';
+        }
+    }
+}
+
+function addInternalNote(ticketId) {
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-sticky-note"></i> Add Internal Note</h3>
+            <p>Ticket ID: <strong>${ticketId}</strong></p>
+            <form id="internal-note-form">
+                <div class="form-group">
+                    <label for="internal-note-text">Internal Note:</label>
+                    <textarea id="internal-note-text" rows="4" placeholder="Add admin-only note..." required></textarea>
+                    <small>This note will only be visible to admin staff.</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitInternalNote('${ticketId}')">
+                        <i class="fas fa-save"></i> Save Note
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+async function submitInternalNote(ticketId) {
+    const noteText = document.getElementById('internal-note-text').value.trim();
+    
+    if (!noteText) {
+        showNotification('Note text is required.', 'warning');
+        return;
+    }
+    
+    try {
+        const submitBtn = document.querySelector('#internal-note-form .btn-primary');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="btn-spinner"></div> Saving...';
+        
+        await apiCall(`/support-messages/${ticketId}/internal-note`, 'POST', {
+            note: noteText
+        });
+        
+        showNotification('Internal note added successfully!', 'success');
+        closeModal();
+        
+    } catch (error) {
+        showNotification('Failed to add internal note. Please try again.', 'error');
+        const submitBtn = document.querySelector('#internal-note-form .btn-primary');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Note';
+        }
     }
 }
 
@@ -1314,10 +1513,12 @@ async function filterSupportMessages() {
     const priorityFilter = document.getElementById('support-priority-filter').value;
     const container = document.getElementById('support-messages-tab');
     showLoader(container);
+    
     try {
         const queryParams = new URLSearchParams();
         if (statusFilter !== 'all') queryParams.set('status', statusFilter);
         if (priorityFilter !== 'all') queryParams.set('priority', priorityFilter);
+        
         const endpoint = `/support-messages?${queryParams.toString()}`;
         const { messages, stats } = await apiCall(endpoint);
         state.supportMessages = messages;
@@ -1328,6 +1529,130 @@ async function filterSupportMessages() {
     }
 }
 
+// Utility functions for support system
+function getAttachmentIcon(attachment) {
+    const fileName = attachment.originalName || attachment.filename || '';
+    const ext = fileName.toLowerCase().split('.').pop();
+    
+    const iconMap = {
+        'pdf': 'fa-file-pdf',
+        'doc': 'fa-file-word',
+        'docx': 'fa-file-word',
+        'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image',
+        'jpeg': 'fa-file-image',
+        'png': 'fa-file-image',
+        'gif': 'fa-file-image'
+    };
+    
+    return iconMap[ext] || 'fa-file';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatAdminTimestamp(date) {
+    try {
+        if (!date) return 'Unknown time';
+        
+        let dateObj;
+        
+        // Handle Firestore timestamps
+        if (date && typeof date === 'object' && date.seconds) {
+            dateObj = new Date(date.seconds * 1000);
+        } else if (date instanceof Date) {
+            dateObj = date;
+        } else if (typeof date === 'string') {
+            dateObj = new Date(date);
+        } else {
+            return 'Invalid date';
+        }
+        
+        if (isNaN(dateObj.getTime())) {
+            return 'Invalid date';
+        }
+        
+        return dateObj.toLocaleDateString() + ' at ' + dateObj.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } catch (error) {
+        console.error('Admin timestamp formatting error:', error);
+        return 'Invalid date';
+    }
+}
+
+// Enhanced utility functions (UPDATE EXISTING ONES)
+function getPriorityIcon(priority) {
+    const icons = {
+        'Critical': 'fa-exclamation-triangle',
+        'High': 'fa-arrow-up',
+        'Medium': 'fa-minus',
+        'Low': 'fa-arrow-down'
+    };
+    return icons[priority] || 'fa-minus';
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        'open': 'fa-envelope-open',
+        'in_progress': 'fa-cog fa-spin',
+        'resolved': 'fa-check-circle',
+        'closed': 'fa-times-circle'
+    };
+    return icons[status] || 'fa-envelope';
+}
+
+function formatStatus(status) {
+    const formatted = {
+        'open': 'Open',
+        'in_progress': 'In Progress',
+        'resolved': 'Resolved',
+        'closed': 'Closed'
+    };
+    return formatted[status] || 'Unknown';
+}
+
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text || '';
+    return text.substring(0, maxLength) + '...';
+}
+
+function getTimeAgo(dateString) {
+    if (!dateString) return 'some time ago';
+    
+    let date;
+    // Handle Firestore timestamps
+    if (dateString && typeof dateString === 'object' && dateString.seconds) {
+        date = new Date(dateString.seconds * 1000);
+    } else {
+        date = new Date(dateString);
+    }
+    
+    if (isNaN(date.getTime())) {
+        return 'some time ago';
+    }
+    
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return Math.floor(seconds) + " seconds ago";
+}
 
 // --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS & QUOTES) ---
 async function loadGenericData(type) {
@@ -1930,8 +2255,7 @@ function initializeRealTimeUpdates() {
     }
 }
 
-// --- UTILITY FUNCTIONS ---
-// ** ENHANCED FUNCTION **
+// --- SHARED UTILITY FUNCTIONS ---
 function getFileIcon(mimeType, fileName) {
     if (!mimeType && fileName) {
         const extension = fileName.split('.').pop().toLowerCase();
@@ -1943,70 +2267,3 @@ function getFileIcon(mimeType, fileName) {
     if (mimeType && (mimeType.includes('excel') || mimeType.includes('spreadsheet'))) return 'fa-file-excel';
     return 'fa-file';
 }
-
-function getPriorityIcon(priority) {
-    const icons = {
-        'Critical': 'fa-exclamation-triangle',
-        'High': 'fa-arrow-up',
-        'Medium': 'fa-minus',
-        'Low': 'fa-arrow-down'
-    };
-    return icons[priority] || 'fa-minus';
-}
-
-function getStatusIcon(status) {
-    const icons = {
-        'open': 'fa-envelope',
-        'in_progress': 'fa-cog fa-spin',
-        'resolved': 'fa-check-circle',
-        'closed': 'fa-times-circle'
-    };
-    return icons[status] || 'fa-envelope';
-}
-
-function formatStatus(status) {
-    const formatted = {
-        'open': 'Open',
-        'in_progress': 'In Progress',
-        'resolved': 'Resolved',
-        'closed': 'Closed'
-    };
-    return formatted[status] || 'Unknown';
-}
-
-function truncateText(text, maxLength) {
-    if (!text || text.length <= maxLength) return text || '';
-    return text.substring(0, maxLength) + '...';
-}
-
-function getTimeAgo(dateString) {
-    if (!dateString) return 'some time ago';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return Math.floor(seconds) + " seconds ago";
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
