@@ -2170,3 +2170,92 @@ table tr:hover {
         color: #bee3f8;
     }
 }
+
+/* Admin Analysis Management Styles */
+.analysis-management-section {
+    padding: 2rem;
+}
+
+.analysis-list {
+    margin-top: 2rem;
+}
+
+.analysis-table {
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.analysis-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.analysis-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.contractor-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.contractor-info small {
+    color: #6b7280;
+}
+
+.sheet-link {
+    color: #3b82f6;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sheet-link:hover {
+    text-decoration: underline;
+}
+
+.status-active {
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.status-inactive {
+    color: #6b7280;
+}
+
+.upload-report-form {
+    padding: 1.5rem;
+}
+
+.upload-report-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    background: #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+
+
+
+
+
+
+
+
+
+
+
