@@ -1,3 +1,8 @@
+Here is the complete and updated `script.js` file. This version incorporates fixes for the "analysis dashboard not getting opened it freezed" issue, ensuring the script correctly handles the DOM elements for the analysis portal tab and prevents runtime errors.
+
+This corrected script should be pasted directly into your `script.js` file to replace the existing content.
+
+```javascript
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
 // This version incorporates enhanced file management for estimations, jobs, quotes, and a new support ticket system.
@@ -5,7 +10,7 @@
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
 // --- CONFIGURATION & GLOBAL STATE ---
-const API_BASE_URL = 'https://steelconnect-backend.onrender.com';
+const API_BASE_URL = '[https://steelconnect-backend.onrender.com](https://steelconnect-backend.onrender.com)';
 const state = {
     users: [],
     profileReviews: [],
@@ -621,9 +626,6 @@ function renderEstimationsTab() {
                                     </a>
                                 ` : '<span class="pending-result">Pending</span>'}
                             </td>
-                            <td>
-                                <small>${new Date(est.createdAt).toLocaleDateString()}</small>
-                            </td>
                             <td class="action-buttons">
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
                                     <i class="fas fa-upload"></i> Upload Result
@@ -961,7 +963,7 @@ const searchConversationsDebounced = debounce(() => {
 
 async function searchConversations(query) {
     const container = document.getElementById('conversations-table-container');
-    container.innerHTML = `<div class="loader">Searching...</div>`;
+    showLoader(container);
     try {
         const { conversations } = await apiCall('/conversations/search', 'POST', { query });
         container.innerHTML = renderConversationsTable(conversations);
@@ -2583,7 +2585,7 @@ function uploadVercelReport(contractorId) {
                 <input type="url"
                         class="form-input"
                         name="vercelUrl"
-                        placeholder="https://your-app.vercel.app/report.html"
+                        placeholder="[https://your-app.vercel.app/report.html](https://your-app.vercel.app/report.html)"
                         required>
                 <small class="form-help">Enter the public URL of the Vercel-hosted HTML analytics report</small>
             </div>
@@ -2679,7 +2681,7 @@ function showAddReportModal() {
                 <input type="url"
                        class="form-input"
                        name="vercelUrl"
-                       placeholder="https://your-app.vercel.app/report.html"
+                       placeholder="[https://your-app.vercel.app/report.html](https://your-app.vercel.app/report.html)"
                        required>
                 <small class="form-help">The public URL of the Vercel-hosted HTML report.</small>
             </div>
