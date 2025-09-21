@@ -1,8 +1,3 @@
-Here is the complete and updated `script.js` file. This version incorporates fixes for the "analysis dashboard not getting opened it freezed" issue, ensuring the script correctly handles the DOM elements for the analysis portal tab and prevents runtime errors.
-
-This corrected script should be pasted directly into your `script.js` file to replace the existing content.
-
-```javascript
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
 // This version incorporates enhanced file management for estimations, jobs, quotes, and a new support ticket system.
@@ -10,7 +5,7 @@ This corrected script should be pasted directly into your `script.js` file to re
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
 // --- CONFIGURATION & GLOBAL STATE ---
-const API_BASE_URL = '[https://steelconnect-backend.onrender.com](https://steelconnect-backend.onrender.com)';
+const API_BASE_URL = 'https://steelconnect-backend.onrender.com';
 const state = {
     users: [],
     profileReviews: [],
@@ -18,8 +13,8 @@ const state = {
     jobs: [],
     quotes: [],
     messages: [],
-    conversations: [],
-    supportMessages: [],
+    conversations: [], // New state for conversations
+    supportMessages: [], // NEW: Support messages state
 };
 
 // --- INITIALIZATION ---
@@ -33,7 +28,7 @@ async function initializeAdminPanel() {
     document.getElementById('adminName').textContent = user.name || user.email;
 
     // Inject additional CSS for better visual feedback
-    const additionalCSS = `<style>.critical-indicator { color: #ff4444; font-weight: bold; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; }.fa-spinner.fa-spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }.notification-actions { margin-top: 10px; }.notification-actions .btn { margin-right: 5px; }.invalid-date { color: #888; font-style: italic; }.tab.active { background-color: #007bff; color: white; }.tab-content { display: none; }.tab-content.active { display: block; }.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 20px; }.stat-card { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; transition: transform 0.2s; }.stat-card:hover { transform: translateY(-5px); }.stat-card h3 { font-size: 2.5em; margin: 0; color: #333; }.stat-card p { color: #777; margin: 5px 0 15px; }.stat-card .btn { padding: 5px 15px; font-size: 0.9em; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; } table { width: 100%; border-collapse: collapse; margin-top: 20px; }.review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }.review-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; }.review-card h4 { margin-top: 0; }</style>`;
+    const additionalCSS = `<style>.critical-indicator { color: #ff4444; font-weight: bold; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; }.fa-spinner.fa-spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }.notification-actions { margin-top: 10px; }.notification-actions .btn { margin-right: 5px; }.invalid-date { color: #888; font-style: italic; }</style>`;
     document.head.insertAdjacentHTML('beforeend', additionalCSS);
 
     // Auto-fetch core data on startup for a faster experience
@@ -42,7 +37,7 @@ async function initializeAdminPanel() {
     await loadProfileReviewsData();
 
     // Set the default tab view
-    showTab('users'); // Set default to 'users' to avoid initial error
+    showTab('dashboard'); // Default to dashboard
 
     // Initialize real-time updates if available
     initializeRealTimeUpdates();
@@ -209,57 +204,33 @@ function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
 
-    const tabContent = document.getElementById(`${tabName}-tab`);
-    if (tabContent) {
-        tabContent.classList.add('active');
-    }
-    const tabButton = document.querySelector(`.tab[onclick="showTab('${tabName}')"]`);
-    if (tabButton) {
-        tabButton.classList.add('active');
-    }
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
 
-    // Manual load map for tabs
+    // Update the manual load map to include support messages
     const manualLoadMap = {
-        'users': { data: state.users, loader: loadUsersData },
-        'profile-reviews': { data: state.profileReviews, loader: loadProfileReviewsData },
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
         'quotes': { data: state.quotes, loader: () => loadGenericData('quotes') },
         'messages': { data: state.messages, loader: loadMessagesData },
         'conversations': { data: state.conversations, loader: loadConversationsData },
-        'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData },
-        'analytics-management': { data: [], loader: loadContractorAnalysisData }
+        'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData }, // NEW
+        'analytics-management': { data: [], loader: loadContractorAnalysisData } // NEW
     };
 
-    if (manualLoadMap[tabName]) {
-        if (manualLoadMap[tabName].data.length === 0) {
-            manualLoadMap[tabName].loader();
-        }
-    } else if (tabName === 'dashboard') {
-        renderDashboardTab();
+    if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
+        manualLoadMap[tabName].loader();
     }
 }
 
 // --- DASHBOARD ---
-function renderDashboardTab() {
-    const container = document.getElementById('dashboard-tab');
-    if (!container) return; // Exit if dashboard tab isn't in HTML
-    container.innerHTML = `
-        <div class="section-header">
-            <h3>Dashboard Overview</h3>
-            <button class="btn" onclick="loadDashboardStats()">Refresh Stats</button>
-        </div>
-        <div id="statsGrid" class="stats-grid"></div>
-    `;
-    loadDashboardStats();
-}
-
+// CORRECTED DASHBOARD STATS LOADING
 async function loadDashboardStats() {
     const statsGrid = document.getElementById('statsGrid');
-    if (!statsGrid) return;
     try {
         const { stats } = await apiCall('/dashboard');
         
+        // CORRECTED: Handle both totalSupportTickets and totalSupportMessages
         const supportCount = stats.totalSupportTickets || stats.totalSupportMessages || 0;
         const criticalCount = stats.criticalSupportTickets || 0;
         
@@ -318,7 +289,6 @@ async function loadUsersData() {
 
 function renderUsersTab() {
     const container = document.getElementById('users-tab');
-    if (!container) return;
     container.innerHTML = `
         <div class="section-header">
             <h3>All Users (${state.users.length})</h3>
@@ -394,7 +364,7 @@ async function confirmBlockUser(email, block) {
         closeModal();
         await loadUsersData(); // Refresh user list to show new status
         // Also refresh messages if that tab is active, as sender status might change
-        if (document.getElementById('messages-tab')?.classList.contains('active')) {
+        if (document.getElementById('messages-tab').classList.contains('active')) {
             await loadMessagesData();
         }
     } catch (error) {}
@@ -415,7 +385,6 @@ async function loadProfileReviewsData() {
 
 function renderProfileReviewsTab() {
     const container = document.getElementById('profile-reviews-tab');
-    if (!container) return;
     const pendingReviews = state.profileReviews.filter(r => r.status === 'pending');
     container.innerHTML = `
         <div class="section-header"><h3>Pending Reviews (${pendingReviews.length})</h3><button class="btn" onclick="loadProfileReviewsData()">Refresh</button></div>
@@ -566,7 +535,6 @@ async function loadEstimationsData() {
 // ** ENHANCED FUNCTION **
 function renderEstimationsTab() {
     const container = document.getElementById('estimations-tab');
-    if (!container) return;
     container.innerHTML = `
         <div class="section-header">
             <h3>All Estimations (${state.estimations.length})</h3>
@@ -625,6 +593,9 @@ function renderEstimationsTab() {
                                         <i class="fas fa-file-alt"></i> View Result
                                     </a>
                                 ` : '<span class="pending-result">Pending</span>'}
+                            </td>
+                            <td>
+                                <small>${new Date(est.createdAt).toLocaleDateString()}</small>
                             </td>
                             <td class="action-buttons">
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
@@ -781,7 +752,6 @@ async function loadMessagesData() {
 
 function renderMessagesTab() {
     const container = document.getElementById('messages-tab');
-    if (!container) return;
     const messages = state.messages;
     container.innerHTML = `
         <div class="section-header">
@@ -917,7 +887,6 @@ async function loadConversationsData() {
 
 function renderConversationsTab() {
     const container = document.getElementById('conversations-tab');
-    if (!container) return;
     container.innerHTML = `
         <div class="section-header">
             <h3>User Conversations (${state.conversations.length})</h3>
@@ -963,7 +932,7 @@ const searchConversationsDebounced = debounce(() => {
 
 async function searchConversations(query) {
     const container = document.getElementById('conversations-table-container');
-    showLoader(container);
+    container.innerHTML = `<div class="loader">Searching...</div>`;
     try {
         const { conversations } = await apiCall('/conversations/search', 'POST', { query });
         container.innerHTML = renderConversationsTable(conversations);
@@ -1013,7 +982,6 @@ async function loadSupportMessagesData() {
 // CORRECTED SUPPORT MESSAGES RENDERING
 function renderSupportMessagesTab(messages, stats) {
     const container = document.getElementById('support-messages-tab');
-    if (!container) return;
     container.innerHTML = `
         <div class="section-header support-header">
             <div class="header-content">
@@ -1789,7 +1757,6 @@ async function loadGenericData(type) {
 // ** UPDATED/ENHANCED FUNCTION **
 function renderGenericTab(type) {
     const container = document.getElementById(`${type}-tab`);
-    if (!container) return;
     const items = state[type];
 
     if (type === 'jobs') {
@@ -2354,7 +2321,7 @@ function initializeRealTimeUpdates() {
     // Check for new notifications periodically
     setInterval(async () => {
         try {
-            const currentActiveTab = document.querySelector('.tab-content.active')?.id;
+            const currentActiveTab = document.querySelector('.tab-content.active').id;
             
             // Refresh active tab data periodically
             if (currentActiveTab === 'support-messages-tab') {
@@ -2386,7 +2353,7 @@ function initializeRealTimeUpdates() {
                                  [{ text: 'View', callback: () => showTab('support-messages') }]
                             );
                             // Refresh support data if on support tab
-                            if (document.getElementById('support-messages-tab')?.classList.contains('active')) {
+                            if (document.getElementById('support-messages-tab').classList.contains('active')) {
                                 loadSupportMessagesData();
                             }
                             // Always refresh dashboard
@@ -2484,11 +2451,9 @@ function renderAnalysisManagement() {
 
 // Load contractor analysis configurations
 async function loadContractorAnalysisData() {
-    const container = document.getElementById('contractor-analysis-list');
-    if (!container) return;
-    
     try {
         const response = await apiCall('/analysis/contractors', 'GET');
+        const container = document.getElementById('contractor-analysis-list');
         
         if (response.success && response.contractors) {
             const contractors = response.contractors;
@@ -2559,7 +2524,7 @@ async function loadContractorAnalysisData() {
         }
     } catch (error) {
         console.error('Error loading contractor analysis data:', error);
-        container.innerHTML = `
+        document.getElementById('contractor-analysis-list').innerHTML = `
             <div class="error-state">
                 <i class="fas fa-exclamation-triangle"></i>
                 <h3>Error Loading Data</h3>
@@ -2585,7 +2550,7 @@ function uploadVercelReport(contractorId) {
                 <input type="url"
                         class="form-input"
                         name="vercelUrl"
-                        placeholder="[https://your-app.vercel.app/report.html](https://your-app.vercel.app/report.html)"
+                        placeholder="https://your-app.vercel.app/report.html"
                         required>
                 <small class="form-help">Enter the public URL of the Vercel-hosted HTML analytics report</small>
             </div>
@@ -2681,7 +2646,7 @@ function showAddReportModal() {
                 <input type="url"
                        class="form-input"
                        name="vercelUrl"
-                       placeholder="[https://your-app.vercel.app/report.html](https://your-app.vercel.app/report.html)"
+                       placeholder="https://your-app.vercel.app/report.html"
                        required>
                 <small class="form-help">The public URL of the Vercel-hosted HTML report.</small>
             </div>
