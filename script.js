@@ -1,6 +1,6 @@
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
-// This version incorporates enhanced file management for estimations, jobs, quotes, and a new support ticket system.
+// This version incorporates enhanced file management for estimations, jobs, quotes, a new support ticket system, and an analysis portal.
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -15,6 +15,8 @@ const state = {
     messages: [],
     conversations: [], // New state for conversations
     supportMessages: [], // NEW: Support messages state
+    contractorRequests: [], // NEW: For Analysis Portal
+    analysisFilterStatus: 'all', // NEW: For Analysis Portal filter
 };
 
 // --- INITIALIZATION ---
@@ -30,6 +32,11 @@ async function initializeAdminPanel() {
     // Inject additional CSS for better visual feedback
     const additionalCSS = `<style>.critical-indicator { color: #ff4444; font-weight: bold; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; }.fa-spinner.fa-spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }.notification-actions { margin-top: 10px; }.notification-actions .btn { margin-right: 5px; }.invalid-date { color: #888; font-style: italic; }</style>`;
     document.head.insertAdjacentHTML('beforeend', additionalCSS);
+
+    // Inject Analysis Portal CSS
+    const analysisPortalStyles = `<style>.analysis-requests-container { margin-top: 20px; }.user-info-cell { min-width: 150px; }.description-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.sheet-link { color: #007bff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }.sheet-link:hover { text-decoration: underline; }.frequency-badge { background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px; font-size: 12px; }.request-details { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }.request-details p { margin: 8px 0; }.filter-select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: white; }</style>`;
+    document.head.insertAdjacentHTML('beforeend', analysisPortalStyles);
+
 
     // Auto-fetch core data on startup for a faster experience
     await loadDashboardStats();
@@ -215,6 +222,7 @@ function showTab(tabName) {
         'messages': { data: state.messages, loader: loadMessagesData },
         'conversations': { data: state.conversations, loader: loadConversationsData },
         'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData }, // NEW
+        'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData }, // NEW Analysis Portal
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -223,13 +231,12 @@ function showTab(tabName) {
 }
 
 // --- DASHBOARD ---
-// CORRECTED DASHBOARD STATS LOADING
 async function loadDashboardStats() {
     const statsGrid = document.getElementById('statsGrid');
     try {
         const { stats } = await apiCall('/dashboard');
+        const analysisStats = await loadAnalysisStats(); // Fetch analysis stats
         
-        // CORRECTED: Handle both totalSupportTickets and totalSupportMessages
         const supportCount = stats.totalSupportTickets || stats.totalSupportMessages || 0;
         const criticalCount = stats.criticalSupportTickets || 0;
         
@@ -264,6 +271,11 @@ async function loadDashboardStats() {
                 <p>Support Tickets</p>
                 ${criticalCount > 0 ? `<small class="critical-indicator">${criticalCount} Critical</small>` : ''}
                 <button class="btn btn-sm btn-support" onclick="showTab('support-messages')">Manage</button>
+            </div>
+            <div class="stat-card">
+                <h3>${analysisStats.pending || 0} / ${analysisStats.total || 0}</h3>
+                <p>Pending Analysis</p>
+                <button class="btn btn-sm" onclick="showTab('analysis-portal')">View Portal</button>
             </div>
         `;
     } catch (error) {
@@ -531,7 +543,6 @@ async function loadEstimationsData() {
     }
 }
 
-// ** ENHANCED FUNCTION **
 function renderEstimationsTab() {
     const container = document.getElementById('estimations-tab');
     container.innerHTML = `
@@ -611,7 +622,6 @@ function renderEstimationsTab() {
         </table>`;
 }
 
-// ** ENHANCED FUNCTION **
 function showEstimationFiles(estimationId) {
     const estimation = state.estimations.find(e => e._id === estimationId);
     if (!estimation) return showNotification('Estimation not found.', 'error');
@@ -675,7 +685,6 @@ function showEstimationFiles(estimationId) {
     showModal(modalContent);
 }
 
-// ** NEW FUNCTION **
 function downloadAllEstimationFiles(estimationId) {
     const estimation = state.estimations.find(e => e._id === estimationId);
     if (!estimation || !estimation.uploadedFiles) {
@@ -978,7 +987,6 @@ async function loadSupportMessagesData() {
     }
 }
 
-// CORRECTED SUPPORT MESSAGES RENDERING
 function renderSupportMessagesTab(messages, stats) {
     const container = document.getElementById('support-messages-tab');
     container.innerHTML = `
@@ -1326,7 +1334,6 @@ function respondToSupportTicket(ticketId) {
     showModal(modalContent);
 }
 
-// CORRECTED SUPPORT RESPONSE SUBMISSION
 async function submitSupportResponse(ticketId) {
     const adminResponse = document.getElementById('admin-response').value.trim();
     const internalNote = document.getElementById('internal-note').value.trim();
@@ -1351,7 +1358,6 @@ async function submitSupportResponse(ticketId) {
         showNotification('Response sent successfully! User has been notified.', 'success');
         closeModal();
         
-        // Refresh the support messages list and dashboard stats
         await loadSupportMessagesData();
         await loadDashboardStats();
         
@@ -1403,7 +1409,6 @@ function updateSupportTicketStatus(ticketId) {
     showModal(modalContent);
 }
 
-// CORRECTED STATUS UPDATE SUBMISSION
 async function submitStatusUpdate(ticketId) {
     const newStatus = document.getElementById('ticket-status').value;
     const note = document.getElementById('status-note').value.trim();
@@ -1524,7 +1529,6 @@ function addInternalNote(ticketId) {
     showModal(modalContent);
 }
 
-// CORRECTED INTERNAL NOTE SUBMISSION
 async function submitInternalNote(ticketId) {
     const noteText = document.getElementById('internal-note-text').value.trim();
     
@@ -1545,7 +1549,6 @@ async function submitInternalNote(ticketId) {
         showNotification('Internal note added successfully!', 'success');
         closeModal();
         
-        // Refresh the support messages list to show updated ticket info implicitly
         await loadSupportMessagesData();
         
     } catch (error) {
@@ -1581,7 +1584,6 @@ async function filterSupportMessages() {
     }
 }
 
-// Utility functions for support system
 function getAttachmentIcon(attachment) {
     const fileName = attachment.originalName || attachment.filename || '';
     const ext = fileName.toLowerCase().split('.').pop();
@@ -1608,21 +1610,17 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// CORRECTED TIMESTAMP FORMATTING FUNCTION
 function formatAdminTimestamp(date) {
     try {
         if (!date) return 'Unknown time';
         
         let dateObj;
         
-        // Handle different date formats
         if (typeof date === 'string') {
-            // Handle ISO string dates
             dateObj = new Date(date);
         } else if (date instanceof Date) {
             dateObj = date;
         } else if (date && typeof date === 'object') {
-            // Handle Firestore timestamps
             if (date.seconds) {
                 dateObj = new Date(date.seconds * 1000);
             } else if (date._seconds) {
@@ -1634,13 +1632,11 @@ function formatAdminTimestamp(date) {
             return 'Invalid date';
         }
         
-        // Validate the date
         if (isNaN(dateObj.getTime())) {
             console.warn('Invalid date object:', date);
             return 'Invalid date';
         }
         
-        // Format the date
         const options = {
             year: 'numeric',
             month: 'short',
@@ -1657,8 +1653,6 @@ function formatAdminTimestamp(date) {
     }
 }
 
-
-// Enhanced utility functions (UPDATE EXISTING ONES)
 function getPriorityIcon(priority) {
     const icons = {
         'Critical': 'fa-exclamation-triangle',
@@ -1694,19 +1688,16 @@ function truncateText(text, maxLength) {
     return text.substring(0, maxLength) + '...';
 }
 
-// CORRECTED TIME AGO FUNCTION
 function getTimeAgo(dateString) {
     if (!dateString) return 'some time ago';
     
     let date;
     try {
-        // Handle different date formats
         if (typeof dateString === 'string') {
             date = new Date(dateString);
         } else if (dateString instanceof Date) {
             date = dateString;
         } else if (dateString && typeof dateString === 'object') {
-            // Handle Firestore timestamps
             if (dateString.seconds) {
                 date = new Date(dateString.seconds * 1000);
             } else if (dateString._seconds) {
@@ -1753,7 +1744,6 @@ async function loadGenericData(type) {
     }
 }
 
-// ** UPDATED/ENHANCED FUNCTION **
 function renderGenericTab(type) {
     const container = document.getElementById(`${type}-tab`);
     const items = state[type];
@@ -1807,7 +1797,6 @@ function renderGenericTab(type) {
                 </tbody>
             </table>`;
     } else if (type === 'quotes') {
-        // ** ENHANCED ** - Updated quotes rendering with file support
         container.innerHTML = `
             <div class="section-header">
                 <h3>All Quotes (${items.length})</h3>
@@ -1870,7 +1859,6 @@ function renderGenericTab(type) {
     }
 }
 
-// ** NEW HELPER FUNCTIONS FOR JOBS **
 function getJobFilesCell(job) {
     const attachments = job.attachments || [];
     const attachment = job.attachment; // Legacy single attachment
@@ -2076,7 +2064,6 @@ function confirmDeleteJob(jobId) {
     }
 }
 
-// ** NEW HELPER FUNCTIONS FOR QUOTE FILES **
 function getQuoteFilesCell(quote) {
     const attachments = quote.attachments || [];
     if (attachments.length === 0) {
@@ -2091,7 +2078,6 @@ function getQuoteFilesCell(quote) {
     `;
 }
 
-// ** NEW FUNCTION ** - View quote files modal
 function viewQuoteFiles(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
@@ -2153,7 +2139,6 @@ function viewQuoteFiles(quoteId) {
     showModal(modalContent);
 }
 
-// ** NEW FUNCTION ** - View quote details with all information
 function viewQuoteDetails(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
@@ -2230,7 +2215,6 @@ function viewQuoteDetails(quoteId) {
     showModal(modalContent);
 }
 
-// ** NEW FUNCTION ** - Download all quote files
 function downloadAllQuoteFiles(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
@@ -2251,7 +2235,6 @@ function downloadAllQuoteFiles(quoteId) {
     });
 }
 
-// ** NEW FUNCTION ** - Get appropriate icon for quote files
 function getQuoteFileIcon(fileName) {
     if (!fileName) return 'fa-file';
     const ext = fileName.toLowerCase().split('.').pop();
@@ -2270,7 +2253,6 @@ function getQuoteFileIcon(fileName) {
     return iconMap[ext] || 'fa-file';
 }
 
-// ** NEW FUNCTION ** - Confirm quote deletion
 function confirmDeleteQuote(quoteId) {
     if (confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
         deleteGenericItem('quotes', quoteId);
@@ -2289,7 +2271,6 @@ async function deleteGenericItem(type, id) {
 }
 
 // --- EXPORT FUNCTIONALITY ---
-// Note: The backend may need an /export route for this to work.
 async function exportData(dataType, format = 'csv') {
     try {
         showNotification('Preparing export...', 'info');
@@ -2315,27 +2296,21 @@ async function exportData(dataType, format = 'csv') {
 }
 
 // --- REAL-TIME UPDATES ---
-// ENHANCED NOTIFICATION HANDLING FOR REAL-TIME UPDATES
 function initializeRealTimeUpdates() {
-    // Check for new notifications periodically
     setInterval(async () => {
         try {
             const currentActiveTab = document.querySelector('.tab-content.active').id;
             
-            // Refresh active tab data periodically
             if (currentActiveTab === 'support-messages-tab') {
-                // Refresh support messages every 30 seconds if on that tab
                 loadSupportMessagesData();
             } else if (currentActiveTab === 'dashboard-tab') {
-                // Refresh dashboard stats every minute
                 loadDashboardStats();
             }
         } catch (error) {
             console.log('Error in real-time updates:', error);
         }
-    }, 30000); // Check every 30 seconds
+    }, 30000); 
     
-    // WebSocket connection (if available)
     if (typeof WebSocket !== 'undefined') {
         try {
             const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
@@ -2351,11 +2326,9 @@ function initializeRealTimeUpdates() {
                                  5000,
                                  [{ text: 'View', callback: () => showTab('support-messages') }]
                             );
-                            // Refresh support data if on support tab
                             if (document.getElementById('support-messages-tab').classList.contains('active')) {
                                 loadSupportMessagesData();
                             }
-                            // Always refresh dashboard
                             loadDashboardStats();
                             break;
                         case 'support_response':
@@ -2422,4 +2395,234 @@ function getFileIcon(mimeType, fileName) {
     if (mimeType && (mimeType.includes('word') || mimeType.includes('document'))) return 'fa-file-word';
     if (mimeType && (mimeType.includes('excel') || mimeType.includes('spreadsheet'))) return 'fa-file-excel';
     return 'fa-file';
+}
+
+
+// === ANALYSIS PORTAL FUNCTIONS ===
+async function loadAnalysisPortalData() {
+    const container = document.getElementById('analysis-portal-tab');
+    showLoader(container);
+
+    try {
+        const response = await apiCall('/analysis/requests', 'GET');
+        state.contractorRequests = response.requests || [];
+        renderAnalysisPortalTab();
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load analysis requests.</p><button class="btn" onclick="loadAnalysisPortalData()">Retry</button>`;
+    }
+}
+
+function renderAnalysisPortalTab() {
+    const container = document.getElementById('analysis-portal-tab');
+    const requests = state.contractorRequests;
+
+    const filteredRequests = state.analysisFilterStatus === 'all'
+        ? requests
+        : requests.filter(r => r.status === state.analysisFilterStatus);
+
+    container.innerHTML = `
+        <div class="section-header">
+            <h3>Analysis Portal Management</h3>
+            <div class="header-actions">
+                <select class="filter-select" onchange="filterAnalysisRequests(this.value)">
+                    <option value="all" ${state.analysisFilterStatus === 'all' ? 'selected' : ''}>All Requests</option>
+                    <option value="pending" ${state.analysisFilterStatus === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="completed" ${state.analysisFilterStatus === 'completed' ? 'selected' : ''}>Completed</option>
+                </select>
+                <button class="btn" onclick="loadAnalysisPortalData()">Refresh</button>
+            </div>
+        </div>
+        
+        <div class="analysis-requests-container">
+            ${filteredRequests.length === 0 ?
+                '<p class="no-data">No analysis requests found.</p>' :
+                `<table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Contractor</th>
+                            <th>Data Type</th>
+                            <th>Frequency</th>
+                            <th>Description</th>
+                            <th>Google Sheet</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredRequests.map(request => `
+                            <tr>
+                                <td>
+                                    <div class="user-info-cell">
+                                        <strong>${request.contractorName}</strong><br>
+                                        <small>${request.contractorEmail}</small>
+                                    </div>
+                                </td>
+                                <td><span class="badge">${request.dataType}</span></td>
+                                <td><span class="frequency-badge">${request.frequency}</span></td>
+                                <td>
+                                    <div class="description-cell" title="${request.description}">
+                                        ${request.description.length > 50 ?
+                                             request.description.substring(0, 50) + '...' :
+                                             request.description}
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="${request.googleSheetUrl}" target="_blank" class="sheet-link">
+                                        <i class="fas fa-external-link-alt"></i> View Sheet
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${request.status}">
+                                        ${request.status === 'completed' ?
+                                             '<i class="fas fa-check-circle"></i> Completed' :
+                                             '<i class="fas fa-clock"></i> Pending'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>${new Date(request.createdAt).toLocaleDateString()}</small>
+                                </td>
+                                <td class="action-buttons">
+                                    ${request.status === 'pending' ?
+                                         `<button class="btn btn-primary btn-sm" onclick="showUploadVercelModal('${request._id}')">
+                                            <i class="fas fa-upload"></i> Upload Report
+                                        </button>` :
+                                        `<button class="btn btn-outline btn-sm" onclick="updateVercelReport('${request._id}')">
+                                            <i class="fas fa-edit"></i> Update Report
+                                        </button>`
+                                    }
+                                    <button class="btn btn-danger btn-sm" onclick="deleteAnalysisRequest('${request._id}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`
+            }
+        </div>
+    `;
+}
+
+function filterAnalysisRequests(status) {
+    state.analysisFilterStatus = status;
+    renderAnalysisPortalTab();
+}
+
+function showUploadVercelModal(requestId) {
+    const request = state.contractorRequests.find(r => r._id === requestId);
+    if (!request) return;
+
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-chart-line"></i> Upload Analysis Report</h3>
+            <div class="request-details">
+                <p><strong>Contractor:</strong> ${request.contractorName} (${request.contractorEmail})</p>
+                <p><strong>Data Type:</strong> ${request.dataType}</p>
+                <p><strong>Frequency:</strong> ${request.frequency}</p>
+                <p><strong>Description:</strong> ${request.description}</p>
+                <p><strong>Google Sheet:</strong> <a href="${request.googleSheetUrl}" target="_blank">View Sheet</a></p>
+            </div>
+            
+            <div class="form-group">
+                <label for="vercel-url">Vercel App URL (HTML Report)</label>
+                <input type="url"
+                        id="vercel-url"
+                        class="form-input"
+                        placeholder="https://your-analysis-app.vercel.app"
+                       value="${request.vercelUrl || ''}"
+                       required>
+                <small>Enter the Vercel app URL containing the analysis dashboard/report</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-notes">Admin Notes (Optional)</label>
+                <textarea id="admin-notes"
+                           rows="3"
+                           class="form-textarea"
+                          placeholder="Any notes about this analysis...">${request.adminNotes || ''}</textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="submitVercelUrl('${requestId}')">
+                    <i class="fas fa-check"></i> Submit Report URL
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    showModal(modalContent);
+}
+
+async function submitVercelUrl(requestId) {
+    const vercelUrl = document.getElementById('vercel-url').value.trim();
+    const adminNotes = document.getElementById('admin-notes').value.trim();
+
+    if (!vercelUrl) {
+        showNotification('Please enter a Vercel URL', 'error');
+        return;
+    }
+
+    try {
+        new URL(vercelUrl);
+    } catch (e) {
+        showNotification('Please enter a valid URL', 'error');
+        return;
+    }
+
+    try {
+        await apiCall('/analysis/upload-report', 'POST', {
+            requestId: requestId,
+            vercelUrl: vercelUrl,
+            adminNotes: adminNotes
+        });
+
+        showNotification('Analysis report uploaded successfully!', 'success');
+        closeModal();
+        await loadAnalysisPortalData(); // Refresh the list
+        await loadDashboardStats(); // Refresh dashboard stats
+
+        const request = state.contractorRequests.find(r => r._id === requestId);
+        if (request) {
+            sendAnalysisNotification(request.contractorEmail, request.contractorName);
+        }
+
+    } catch (error) {
+        showNotification('Failed to upload report URL', 'error');
+    }
+}
+
+function updateVercelReport(requestId) {
+    showUploadVercelModal(requestId);
+}
+
+async function deleteAnalysisRequest(requestId) {
+    if (!confirm('Are you sure you want to delete this analysis request?')) return;
+
+    try {
+        await apiCall(`/analysis/request/${requestId}`, 'DELETE');
+        showNotification('Analysis request deleted successfully', 'success');
+        await loadAnalysisPortalData();
+        await loadDashboardStats();
+    } catch (error) {
+        showNotification('Failed to delete analysis request', 'error');
+    }
+}
+
+async function sendAnalysisNotification(email, name) {
+    // Placeholder for a real email notification system
+    console.log(`Notification would be sent to ${name} (${email}) that their analysis report is ready.`);
+    showNotification(`A notification would be sent to ${name}.`, 'info');
+}
+
+// === ANALYSIS STATS FOR DASHBOARD ===
+async function loadAnalysisStats() {
+    try {
+        const response = await apiCall('/analysis/stats', 'GET');
+        return response.stats;
+    } catch (error) {
+        console.error('Failed to load analysis stats:', error);
+        return { total: 0, pending: 0, completed: 0 };
+    }
 }
