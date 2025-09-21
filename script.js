@@ -215,6 +215,7 @@ function showTab(tabName) {
         'messages': { data: state.messages, loader: loadMessagesData },
         'conversations': { data: state.conversations, loader: loadConversationsData },
         'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData }, // NEW
+        'analytics-management': { data: [], loader: loadContractorAnalysisData } // NEW
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -2422,4 +2423,284 @@ function getFileIcon(mimeType, fileName) {
     if (mimeType && (mimeType.includes('word') || mimeType.includes('document'))) return 'fa-file-word';
     if (mimeType && (mimeType.includes('excel') || mimeType.includes('spreadsheet'))) return 'fa-file-excel';
     return 'fa-file';
+}
+
+// Add to admin.js - Admin Panel Updates for Analysis Management
+// Add Analysis Management to Admin Dashboard
+function renderAnalysisManagement() {
+    const container = document.getElementById('analytics-management-tab');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="analysis-management-section">
+            <div class="section-header">
+                <h3><i class="fas fa-chart-line"></i> Analysis Portal Management</h3>
+                <button class="btn btn-primary" onclick="showAddReportModal()">
+                    <i class="fas fa-plus"></i> Add Report URL
+                </button>
+            </div>
+            
+            <div id="contractor-analysis-list" class="analysis-list">
+                <div class="loading-spinner">Loading contractor analysis configurations...</div>
+            </div>
+        </div>
+    `;
+    
+    loadContractorAnalysisData();
+}
+
+// Load contractor analysis configurations
+async function loadContractorAnalysisData() {
+    try {
+        const response = await apiCall('/analysis/contractors', 'GET');
+        const container = document.getElementById('contractor-analysis-list');
+        
+        if (response.success && response.contractors) {
+            const contractors = response.contractors;
+            
+            if (contractors.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-chart-area"></i>
+                        <h3>No Analysis Configurations</h3>
+                        <p>Contractors haven't set up analysis portals yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="analysis-table">
+                    <thead>
+                        <tr>
+                            <th>Contractor</th>
+                            <th>Data Type</th>
+                            <th>Frequency</th>
+                            <th>Google Sheet</th>
+                            <th>Vercel Report</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contractors.map(contractor => `
+                            <tr>
+                                <td>
+                                    <div class="contractor-info">
+                                        <strong>${contractor.name}</strong>
+                                        <small>${contractor.email}</small>
+                                    </div>
+                                </td>
+                                <td><span class="badge">${contractor.dataType || 'Not Set'}</span></td>
+                                <td><span class="badge">${contractor.frequency || 'Not Set'}</span></td>
+                                <td>
+                                    ${contractor.sheetUrl ?
+                                         `<a href="${contractor.sheetUrl}" target="_blank" class="sheet-link">
+                                            <i class="fas fa-table"></i> View Sheet
+                                        </a>` :
+                                         '<span class="text-muted">Not Connected</span>'
+                                    }
+                                </td>
+                                <td>
+                                    ${contractor.vercelUrl ?
+                                         `<span class="status-active"><i class="fas fa-check"></i> Active</span>` :
+                                         '<span class="status-inactive">Not Set</span>'
+                                    }
+                                </td>
+                                <td class="action-buttons">
+                                    <button class="btn btn-sm btn-primary" onclick="uploadVercelReport('${contractor.id}')">
+                                        <i class="fas fa-upload"></i> Upload Report
+                                    </button>
+                                    ${contractor.vercelUrl ?
+                                         `<button class="btn btn-sm btn-outline" onclick="viewReport('${contractor.vercelUrl}')">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>` : ''
+                                    }
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading contractor analysis data:', error);
+        document.getElementById('contractor-analysis-list').innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Data</h3>
+                <button class="btn btn-primary" onclick="loadContractorAnalysisData()">Try Again</button>
+            </div>
+        `;
+    }
+}
+
+// Upload Vercel Report Modal
+function uploadVercelReport(contractorId) {
+    const modalContent = `
+        <div class="modal-header">
+            <h3><i class="fas fa-upload"></i> Upload Vercel Analytics Report</h3>
+        </div>
+        <form id="upload-report-form" class="upload-report-form">
+            <input type="hidden" name="contractorId" value="${contractorId}">
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-link"></i> Vercel HTML Report URL
+                </label>
+                <input type="url"
+                        class="form-input"
+                        name="vercelUrl"
+                        placeholder="https://your-app.vercel.app/report.html"
+                        required>
+                <small class="form-help">Enter the public URL of the Vercel-hosted HTML analytics report</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-sticky-note"></i> Notes (Optional)
+                </label>
+                <textarea class="form-textarea"
+                           name="notes"
+                           rows="3"
+                           placeholder="Any additional notes about this report..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Report URL
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    `;
+    
+    showModal(modalContent);
+    
+    document.getElementById('upload-report-form').addEventListener('submit', handleReportUpload);
+}
+
+// Handle report upload
+async function handleReportUpload(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    try {
+        const formData = {
+            contractorId: form.contractorId.value,
+            vercelUrl: form.vercelUrl.value,
+            notes: form.notes.value
+        };
+        
+        const response = await apiCall('/analysis/upload-report', 'POST', formData);
+        
+        if (response.success) {
+            showNotification('Vercel report URL saved successfully!', 'success');
+            closeModal();
+            loadContractorAnalysisData();
+        }
+    } catch (error) {
+        showNotification('Failed to save report URL', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// View report in new window
+function viewReport(url) {
+    window.open(url, '_blank');
+}
+
+// --- NEW/UPDATED FUNCTIONS & STYLES ---
+
+// Add a new function to show the "Add Report URL" modal
+function showAddReportModal() {
+    // This is the same as the uploadVercelReport modal but without a specific contractorId
+    const modalContent = `
+        <div class="modal-header">
+            <h3><i class="fas fa-plus"></i> Add New Vercel Analytics Report</h3>
+        </div>
+        <form id="add-report-form" class="upload-report-form">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-user"></i> Contractor ID or Email
+                </label>
+                <input type="text"
+                       class="form-input"
+                       name="contractorIdentifier"
+                       placeholder="Enter contractor ID or email"
+                       required>
+                <small class="form-help">The ID or email of the contractor to associate this report with.</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-link"></i> Vercel HTML Report URL
+                </label>
+                <input type="url"
+                       class="form-input"
+                       name="vercelUrl"
+                       placeholder="https://your-app.vercel.app/report.html"
+                       required>
+                <small class="form-help">The public URL of the Vercel-hosted HTML report.</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-sticky-note"></i> Notes (Optional)
+                </label>
+                <textarea class="form-textarea"
+                          name="notes"
+                          rows="3"
+                          placeholder="Any additional notes about this report..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Report
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    `;
+    showModal(modalContent);
+
+    document.getElementById('add-report-form').addEventListener('submit', handleAddReport);
+}
+
+async function handleAddReport(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = {
+            contractorIdentifier: form.contractorIdentifier.value,
+            vercelUrl: form.vercelUrl.value,
+            notes: form.notes.value
+        };
+
+        const response = await apiCall('/analysis/add-report', 'POST', formData);
+
+        if (response.success) {
+            showNotification('New report added successfully!', 'success');
+            closeModal();
+            loadContractorAnalysisData();
+        }
+    } catch (error) {
+        showNotification('Failed to add report. Make sure the contractor ID/email is correct.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
 }
