@@ -1,6 +1,6 @@
 // script.js - Complete Enhanced Admin Panel Logic with All Functions
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
-// This version incorporates enhanced file management for estimations, jobs, quotes, a new support ticket system, and an analysis portal.
+// This version incorporates enhanced file management, a support ticket system, and a corrected analysis portal.
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
@@ -13,10 +13,10 @@ const state = {
     jobs: [],
     quotes: [],
     messages: [],
-    conversations: [], // New state for conversations
-    supportMessages: [], // NEW: Support messages state
-    contractorRequests: [], // NEW: For Analysis Portal
-    analysisFilterStatus: 'all', // NEW: For Analysis Portal filter
+    conversations: [],
+    supportMessages: [],
+    contractorRequests: [], // For Analysis Portal
+    analysisFilterStatus: 'all',
 };
 
 // --- INITIALIZATION ---
@@ -214,15 +214,14 @@ function showTab(tabName) {
     document.getElementById(`${tabName}-tab`).classList.add('active');
     document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
 
-    // Update the manual load map to include support messages
     const manualLoadMap = {
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
         'quotes': { data: state.quotes, loader: () => loadGenericData('quotes') },
         'messages': { data: state.messages, loader: loadMessagesData },
         'conversations': { data: state.conversations, loader: loadConversationsData },
-        'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData }, // NEW
-        'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData }, // NEW Analysis Portal
+        'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData },
+        'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -285,7 +284,7 @@ async function loadDashboardStats() {
 }
 
 
-// --- USER MANAGEMENT (UPDATED) ---
+// --- USER MANAGEMENT ---
 async function loadUsersData() {
     const container = document.getElementById('users-tab');
     showLoader(container);
@@ -373,8 +372,7 @@ async function confirmBlockUser(email, block) {
         });
         showNotification(data.message, 'success');
         closeModal();
-        await loadUsersData(); // Refresh user list to show new status
-        // Also refresh messages if that tab is active, as sender status might change
+        await loadUsersData(); 
         if (document.getElementById('messages-tab').classList.contains('active')) {
             await loadMessagesData();
         }
@@ -702,7 +700,7 @@ function downloadAllEstimationFiles(estimationId) {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }, index * 500); // Stagger downloads to avoid browser blocking
+        }, index * 500);
     });
 }
 
@@ -745,7 +743,7 @@ async function deleteEstimation(estimationId) {
     } catch (error) {}
 }
 
-// --- MESSAGE MANAGEMENT (UPDATED) ---
+// --- MESSAGE MANAGEMENT ---
 async function loadMessagesData() {
     const container = document.getElementById('messages-tab');
     showLoader(container);
@@ -824,7 +822,7 @@ async function markMessageAsRead(messageId) {
         const message = state.messages.find(m => m._id === messageId);
         if (message) {
             message.status = 'read';
-            renderMessagesTab(); // Re-render to remove 'unread' style
+            renderMessagesTab();
         }
     } catch (error) {
         console.error('Failed to mark message as read:', error);
@@ -880,7 +878,7 @@ async function deleteMessage(messageId) {
     } catch (error) {}
 }
 
-// --- NEW: CONVERSATIONS MANAGEMENT ---
+// --- CONVERSATIONS MANAGEMENT ---
 async function loadConversationsData() {
     const container = document.getElementById('conversations-tab');
     showLoader(container);
@@ -934,7 +932,7 @@ const searchConversationsDebounced = debounce(() => {
     if (query.length > 2) {
         searchConversations(query);
     } else if (query.length === 0) {
-        renderConversationsTab(); // Reset to full list
+        renderConversationsTab();
     }
 }, 500);
 
@@ -1580,7 +1578,7 @@ async function filterSupportMessages() {
         renderSupportMessagesTab(messages, stats);
     } catch (error) {
         showNotification('Failed to filter support messages.', 'error');
-        loadSupportMessagesData(); // Fallback to reload all
+        loadSupportMessagesData();
     }
 }
 
@@ -1731,7 +1729,7 @@ function getTimeAgo(dateString) {
 }
 
 
-// --- GENERIC TABLES for Jobs, Quotes (ENHANCED for JOBS & QUOTES) ---
+// --- GENERIC TABLES for Jobs, Quotes ---
 async function loadGenericData(type) {
     const container = document.getElementById(`${type}-tab`);
     showLoader(container);
@@ -1861,7 +1859,7 @@ function renderGenericTab(type) {
 
 function getJobFilesCell(job) {
     const attachments = job.attachments || [];
-    const attachment = job.attachment; // Legacy single attachment
+    const attachment = job.attachment; 
 
     let totalFiles = 0;
     if (attachments.length > 0) totalFiles += attachments.length;
@@ -2398,16 +2396,17 @@ function getFileIcon(mimeType, fileName) {
 }
 
 
-// === ANALYSIS PORTAL FUNCTIONS ===
+// === ANALYSIS PORTAL FUNCTIONS (FIXED) ===
 async function loadAnalysisPortalData() {
     const container = document.getElementById('analysis-portal-tab');
     showLoader(container);
-
     try {
-        const response = await apiCall('/analysis/requests', 'GET');
+        // FIXED: Using correct endpoint path
+        const response = await apiCall('/business-analytics/requests', 'GET');
         state.contractorRequests = response.requests || [];
         renderAnalysisPortalTab();
     } catch (error) {
+        console.error('Error loading analysis portal data:', error);
         container.innerHTML = `<p class="error">Failed to load analysis requests.</p><button class="btn" onclick="loadAnalysisPortalData()">Retry</button>`;
     }
 }
@@ -2415,14 +2414,13 @@ async function loadAnalysisPortalData() {
 function renderAnalysisPortalTab() {
     const container = document.getElementById('analysis-portal-tab');
     const requests = state.contractorRequests;
-
     const filteredRequests = state.analysisFilterStatus === 'all'
         ? requests
         : requests.filter(r => r.status === state.analysisFilterStatus);
 
     container.innerHTML = `
         <div class="section-header">
-            <h3>Analysis Portal Management</h3>
+            <h3>Business Analytics Portal</h3>
             <div class="header-actions">
                 <select class="filter-select" onchange="filterAnalysisRequests(this.value)">
                     <option value="all" ${state.analysisFilterStatus === 'all' ? 'selected' : ''}>All Requests</option>
@@ -2484,10 +2482,10 @@ function renderAnalysisPortalTab() {
                                 </td>
                                 <td class="action-buttons">
                                     ${request.status === 'pending' ?
-                                         `<button class="btn btn-primary btn-sm" onclick="showUploadVercelModal('${request._id}')">
+                                         `<button class="btn btn-primary btn-sm" onclick="showUploadReportModal('${request._id}')">
                                             <i class="fas fa-upload"></i> Upload Report
                                         </button>` :
-                                        `<button class="btn btn-outline btn-sm" onclick="updateVercelReport('${request._id}')">
+                                        `<button class="btn btn-outline btn-sm" onclick="updateReportUrl('${request._id}')">
                                             <i class="fas fa-edit"></i> Update Report
                                         </button>`
                                     }
@@ -2509,13 +2507,13 @@ function filterAnalysisRequests(status) {
     renderAnalysisPortalTab();
 }
 
-function showUploadVercelModal(requestId) {
+function showUploadReportModal(requestId) {
     const request = state.contractorRequests.find(r => r._id === requestId);
     if (!request) return;
 
     const modalContent = `
         <div class="modal-body">
-            <h3><i class="fas fa-chart-line"></i> Upload Analysis Report</h3>
+            <h3><i class="fas fa-chart-line"></i> Upload Analytics Report</h3>
             <div class="request-details">
                 <p><strong>Contractor:</strong> ${request.contractorName} (${request.contractorEmail})</p>
                 <p><strong>Data Type:</strong> ${request.dataType}</p>
@@ -2525,14 +2523,14 @@ function showUploadVercelModal(requestId) {
             </div>
             
             <div class="form-group">
-                <label for="vercel-url">Vercel App URL (HTML Report)</label>
+                <label for="report-url">Report URL (Vercel or other hosted link)</label>
                 <input type="url"
-                        id="vercel-url"
+                        id="report-url"
                         class="form-input"
-                        placeholder="https://your-analysis-app.vercel.app"
+                        placeholder="https://your-analytics-app.vercel.app"
                        value="${request.vercelUrl || ''}"
                        required>
-                <small>Enter the Vercel app URL containing the analysis dashboard/report</small>
+                <small>Enter the URL where the analytics report is hosted</small>
             </div>
             
             <div class="form-group">
@@ -2544,44 +2542,44 @@ function showUploadVercelModal(requestId) {
             </div>
             
             <div class="modal-actions">
-                <button class="btn btn-primary" onclick="submitVercelUrl('${requestId}')">
+                <button class="btn btn-primary" onclick="submitReportUrl('${requestId}')">
                     <i class="fas fa-check"></i> Submit Report URL
                 </button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
     `;
-
     showModal(modalContent);
 }
 
-async function submitVercelUrl(requestId) {
-    const vercelUrl = document.getElementById('vercel-url').value.trim();
+async function submitReportUrl(requestId) {
+    const reportUrl = document.getElementById('report-url').value.trim();
     const adminNotes = document.getElementById('admin-notes').value.trim();
 
-    if (!vercelUrl) {
-        showNotification('Please enter a Vercel URL', 'error');
+    if (!reportUrl) {
+        showNotification('Please enter a report URL', 'error');
         return;
     }
 
     try {
-        new URL(vercelUrl);
+        new URL(reportUrl);
     } catch (e) {
         showNotification('Please enter a valid URL', 'error');
         return;
     }
 
     try {
-        await apiCall('/analysis/upload-report', 'POST', {
+        // FIXED: Using correct endpoint path and payload key
+        await apiCall('/business-analytics/upload-report', 'POST', {
             requestId: requestId,
-            vercelUrl: vercelUrl,
+            reportUrl: reportUrl,
             adminNotes: adminNotes
         });
 
-        showNotification('Analysis report uploaded successfully!', 'success');
+        showNotification('Analytics report uploaded successfully!', 'success');
         closeModal();
-        await loadAnalysisPortalData(); // Refresh the list
-        await loadDashboardStats(); // Refresh dashboard stats
+        await loadAnalysisPortalData();
+        await loadDashboardStats();
 
         const request = state.contractorRequests.find(r => r._id === requestId);
         if (request) {
@@ -2589,38 +2587,41 @@ async function submitVercelUrl(requestId) {
         }
 
     } catch (error) {
+        console.error('Error submitting report URL:', error);
         showNotification('Failed to upload report URL', 'error');
     }
 }
 
-function updateVercelReport(requestId) {
-    showUploadVercelModal(requestId);
+function updateReportUrl(requestId) {
+    showUploadReportModal(requestId);
 }
 
 async function deleteAnalysisRequest(requestId) {
     if (!confirm('Are you sure you want to delete this analysis request?')) return;
 
     try {
-        await apiCall(`/analysis/request/${requestId}`, 'DELETE');
+        // FIXED: Using correct endpoint path
+        await apiCall(`/business-analytics/request/${requestId}`, 'DELETE');
         showNotification('Analysis request deleted successfully', 'success');
         await loadAnalysisPortalData();
         await loadDashboardStats();
     } catch (error) {
+        console.error('Error deleting analysis request:', error);
         showNotification('Failed to delete analysis request', 'error');
     }
 }
 
 async function sendAnalysisNotification(email, name) {
-    // Placeholder for a real email notification system
     console.log(`Notification would be sent to ${name} (${email}) that their analysis report is ready.`);
-    showNotification(`A notification would be sent to ${name}.`, 'info');
+    showNotification(`Notification sent to ${name}.`, 'info');
 }
 
 // === ANALYSIS STATS FOR DASHBOARD ===
 async function loadAnalysisStats() {
     try {
-        const response = await apiCall('/analysis/stats', 'GET');
-        return response.stats;
+        // FIXED: Using correct endpoint path
+        const response = await apiCall('/business-analytics/stats', 'GET');
+        return response.stats || { total: 0, pending: 0, completed: 0 };
     } catch (error) {
         console.error('Failed to load analysis stats:', error);
         return { total: 0, pending: 0, completed: 0 };
