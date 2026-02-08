@@ -2352,8 +2352,10 @@ function connectWebSocket() {
 
     try {
         const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
+        const wsTimeout = setTimeout(() => { try { ws.close(); } catch(e) {} }, 10000); // 10s connection timeout
 
         ws.onopen = () => {
+            clearTimeout(wsTimeout);
             console.log('WebSocket connected.');
             _wsRetryCount = 0;
         };
@@ -2436,6 +2438,11 @@ function connectWebSocket() {
 function sanitizeDownloadUrl(url) {
     try {
         const parsed = new URL(url);
+        // Firebase Storage URLs encode the full object path after /o/ — do NOT re-encode
+        if (parsed.hostname.includes('firebasestorage.googleapis.com') ||
+            parsed.hostname.includes('storage.googleapis.com')) {
+            return url; // Already properly encoded by Firebase SDK
+        }
         parsed.pathname = parsed.pathname.split('/').map(segment => encodeURIComponent(decodeURIComponent(segment))).join('/');
         return parsed.toString();
     } catch {
@@ -2447,6 +2454,7 @@ async function downloadFile(url, filename) {
     const safeUrl = sanitizeDownloadUrl(url);
     try {
         showNotification(`Downloading ${filename}...`, 'info');
+        // Try fetch with CORS first
         const response = await fetch(safeUrl, { mode: 'cors' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
@@ -2459,8 +2467,24 @@ async function downloadFile(url, filename) {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-        console.warn(`Blob download failed for ${filename}, falling back to window.open:`, error);
-        window.open(safeUrl, '_blank');
+        console.warn(`Blob download failed for ${filename}, trying no-cors then window.open:`, error);
+        // Try with the original URL (un-sanitized) in case sanitization broke it
+        try {
+            const response2 = await fetch(url, { mode: 'cors' });
+            if (!response2.ok) throw new Error(`HTTP ${response2.status}`);
+            const blob = await response2.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error2) {
+            console.warn(`Retried original URL failed for ${filename}, opening in new tab:`, error2);
+            window.open(url, '_blank');
+        }
     }
 }
 
@@ -2479,8 +2503,23 @@ async function downloadFileSilent(url, filename) {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-        console.warn(`Blob download failed for ${filename}, falling back:`, error);
-        window.open(safeUrl, '_blank');
+        console.warn(`Blob download failed for ${filename}, retrying with original URL:`, error);
+        try {
+            const response2 = await fetch(url, { mode: 'cors' });
+            if (!response2.ok) throw new Error(`HTTP ${response2.status}`);
+            const blob = await response2.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error2) {
+            console.warn(`Retried original URL failed for ${filename}, opening in new tab:`, error2);
+            window.open(url, '_blank');
+        }
     }
 }
 
