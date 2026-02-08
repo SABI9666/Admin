@@ -2321,99 +2321,133 @@ async function exportData(dataType, format = 'csv') {
 }
 
 // --- REAL-TIME UPDATES ---
+let _pollingInitialized = false;
+let _wsRetryCount = 0;
+const WS_MAX_RETRIES = 5;
+const WS_BASE_DELAY = 5000;
+
 function initializeRealTimeUpdates() {
-    setInterval(async () => {
-        try {
-            const currentActiveTab = document.querySelector('.tab-content.active').id;
-            
-            if (currentActiveTab === 'support-messages-tab') {
-                loadSupportMessagesData();
-            } else if (currentActiveTab === 'dashboard-tab') {
-                loadDashboardStats();
-            }
-        } catch (error) {
-            console.log('Error in real-time updates:', error);
-        }
-    }, 30000); 
-    
-    if (typeof WebSocket !== 'undefined') {
-        try {
-            const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
-            
-            ws.onmessage = (event) => {
-                try {
-                    const update = JSON.parse(event.data);
-                    switch (update.type) {
-                        case 'new_support_ticket':
-                            showAdvancedNotification(
-                                'New support ticket received',
-                                 'info',
-                                 5000,
-                                 [{ text: 'View', callback: () => showTab('support-messages') }]
-                            );
-                            if (document.getElementById('support-messages-tab').classList.contains('active')) {
-                                loadSupportMessagesData();
-                            }
-                            loadDashboardStats();
-                            break;
-                        case 'support_response':
-                            showAdvancedNotification(
-                                'Support ticket updated',
-                                 'success',
-                                 3000
-                            );
-                            break;
-                        case 'new_message':
-                            showAdvancedNotification(
-                                'New message received',
-                                 'info',
-                                 0,
-                                 [{ text: 'View', callback: () => showTab('messages') }]
-                            );
-                            break;
-                        case 'profile_review':
-                            showAdvancedNotification(
-                                'New profile review pending',
-                                 'warning',
-                                 0,
-                                 [{ text: 'Review', callback: () => showTab('profile-reviews') }]
-                            );
-                            break;
-                        case 'estimation_request':
-                            showAdvancedNotification(
-                                'New estimation request',
-                                 'info',
-                                 0,
-                                 [{ text: 'View', callback: () => showTab('estimations') }]
-                            );
-                            break;
-                    }
-                } catch (parseError) {
-                    console.log('Error parsing WebSocket message:', parseError);
+    if (!_pollingInitialized) {
+        _pollingInitialized = true;
+        setInterval(async () => {
+            try {
+                const currentActiveTab = document.querySelector('.tab-content.active').id;
+
+                if (currentActiveTab === 'support-messages-tab') {
+                    loadSupportMessagesData();
+                } else if (currentActiveTab === 'dashboard-tab') {
+                    loadDashboardStats();
                 }
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket connection closed, attempting to reconnect...');
-                setTimeout(initializeRealTimeUpdates, 5000);
-            };
-            
-            ws.onerror = (error) => {
-                console.log('WebSocket connection failed:', error);
-            };
-            
-        } catch (error) {
-            console.log('WebSocket not available:', error);
-        }
+            } catch (error) {
+                console.log('Error in real-time updates:', error);
+            }
+        }, 30000);
+    }
+
+    connectWebSocket();
+}
+
+function connectWebSocket() {
+    if (typeof WebSocket === 'undefined') return;
+
+    try {
+        const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
+
+        ws.onopen = () => {
+            console.log('WebSocket connected.');
+            _wsRetryCount = 0;
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const update = JSON.parse(event.data);
+                switch (update.type) {
+                    case 'new_support_ticket':
+                        showAdvancedNotification(
+                            'New support ticket received',
+                             'info',
+                             5000,
+                             [{ text: 'View', callback: () => showTab('support-messages') }]
+                        );
+                        if (document.getElementById('support-messages-tab').classList.contains('active')) {
+                            loadSupportMessagesData();
+                        }
+                        loadDashboardStats();
+                        break;
+                    case 'support_response':
+                        showAdvancedNotification(
+                            'Support ticket updated',
+                             'success',
+                             3000
+                        );
+                        break;
+                    case 'new_message':
+                        showAdvancedNotification(
+                            'New message received',
+                             'info',
+                             0,
+                             [{ text: 'View', callback: () => showTab('messages') }]
+                        );
+                        break;
+                    case 'profile_review':
+                        showAdvancedNotification(
+                            'New profile review pending',
+                             'warning',
+                             0,
+                             [{ text: 'Review', callback: () => showTab('profile-reviews') }]
+                        );
+                        break;
+                    case 'estimation_request':
+                        showAdvancedNotification(
+                            'New estimation request',
+                             'info',
+                             0,
+                             [{ text: 'View', callback: () => showTab('estimations') }]
+                        );
+                        break;
+                }
+            } catch (parseError) {
+                console.log('Error parsing WebSocket message:', parseError);
+            }
+        };
+
+        ws.onclose = () => {
+            if (_wsRetryCount < WS_MAX_RETRIES) {
+                const delay = WS_BASE_DELAY * Math.pow(2, _wsRetryCount);
+                _wsRetryCount++;
+                console.log(`WebSocket closed. Reconnecting in ${delay / 1000}s (attempt ${_wsRetryCount}/${WS_MAX_RETRIES})...`);
+                setTimeout(connectWebSocket, delay);
+            } else {
+                console.log('WebSocket reconnection limit reached. Using polling only.');
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.log('WebSocket connection failed:', error);
+        };
+
+    } catch (error) {
+        console.log('WebSocket not available:', error);
     }
 }
 
 
 // --- CROSS-ORIGIN FILE DOWNLOAD HELPER ---
+function sanitizeDownloadUrl(url) {
+    try {
+        const parsed = new URL(url);
+        parsed.pathname = parsed.pathname.split('/').map(segment => encodeURIComponent(decodeURIComponent(segment))).join('/');
+        return parsed.toString();
+    } catch {
+        return encodeURI(url);
+    }
+}
+
 async function downloadFile(url, filename) {
+    const safeUrl = sanitizeDownloadUrl(url);
     try {
         showNotification(`Downloading ${filename}...`, 'info');
-        const response = await fetch(url, { mode: 'cors' });
+        const response = await fetch(safeUrl, { mode: 'cors' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
@@ -2426,13 +2460,14 @@ async function downloadFile(url, filename) {
         window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
         console.warn(`Blob download failed for ${filename}, falling back to window.open:`, error);
-        window.open(url, '_blank');
+        window.open(safeUrl, '_blank');
     }
 }
 
 async function downloadFileSilent(url, filename) {
+    const safeUrl = sanitizeDownloadUrl(url);
     try {
-        const response = await fetch(url, { mode: 'cors' });
+        const response = await fetch(safeUrl, { mode: 'cors' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
@@ -2445,7 +2480,7 @@ async function downloadFileSilent(url, filename) {
         window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
         console.warn(`Blob download failed for ${filename}, falling back:`, error);
-        window.open(url, '_blank');
+        window.open(safeUrl, '_blank');
     }
 }
 
