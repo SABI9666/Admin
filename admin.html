@@ -4,51 +4,178 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SteelConnect - Admin Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x1f6e1;</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="notification-container"></div>
     <div id="modal-container"></div>
-    <div class="container">
-        <header class="header">
-            <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
-            <div class="header-actions">
-                <div class="admin-badge" id="adminBadge">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="adminName">Loading...</span>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+            <div class="brand-text">
+                <h2>SteelConnect</h2>
+                <span>Admin Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main</div>
+            <button class="sidebar-link active" onclick="showTab('dashboard')" data-tab="dashboard">
+                <i class="fas fa-grid-2"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('users')" data-tab="users">
+                <i class="fas fa-users"></i>
+                <span>Users</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('profile-reviews')" data-tab="profile-reviews">
+                <i class="fas fa-user-check"></i>
+                <span>Profile Reviews</span>
+                <span class="nav-badge" id="reviewsBadge"></span>
+            </button>
+
+            <div class="nav-section-label">Business</div>
+            <button class="sidebar-link" onclick="showTab('conversations')" data-tab="conversations">
+                <i class="fas fa-comments"></i>
+                <span>Conversations</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('estimations')" data-tab="estimations">
+                <i class="fas fa-calculator"></i>
+                <span>Estimations</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('jobs')" data-tab="jobs">
+                <i class="fas fa-briefcase"></i>
+                <span>Jobs</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('quotes')" data-tab="quotes">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Quotes</span>
+            </button>
+
+            <div class="nav-section-label">Communication</div>
+            <button class="sidebar-link" onclick="showTab('messages')" data-tab="messages">
+                <i class="fas fa-envelope"></i>
+                <span>Messages</span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('support-messages')" data-tab="support-messages">
+                <i class="fas fa-headset"></i>
+                <span>Support Tickets</span>
+            </button>
+
+            <div class="nav-section-label">Analytics</div>
+            <button class="sidebar-link" onclick="showTab('analysis-portal')" data-tab="analysis-portal">
+                <i class="fas fa-chart-line"></i>
+                <span>Analysis Portal</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="admin-profile" id="adminBadge">
+                <div class="admin-avatar">
+                    <i class="fas fa-user-shield"></i>
                 </div>
-                <button class="btn btn-danger" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                <div class="admin-info">
+                    <span class="admin-name" id="adminName">Loading...</span>
+                    <span class="admin-role">Administrator</span>
+                </div>
+            </div>
+            <button class="sidebar-logout" onclick="logout()">
+                <i class="fas fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="mobile-header" id="mobileHeader">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="mobile-brand">
+            <i class="fas fa-shield-halved"></i>
+            <span>SteelConnect Admin</span>
+        </div>
+        <button class="mobile-logout" onclick="logout()">
+            <i class="fas fa-right-from-bracket"></i>
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+                    <i class="fas fa-bars"></i>
                 </button>
+                <div class="page-title">
+                    <h1 id="pageTitle">Dashboard</h1>
+                    <p class="page-subtitle" id="pageSubtitle">Overview of your admin portal</p>
+                </div>
             </div>
-        </header>
-
-        <div id="statsGrid" class="stats-grid">
+            <div class="topbar-right">
+                <div class="topbar-date">
+                    <i class="fas fa-calendar-day"></i>
+                    <span id="currentDate"></span>
+                </div>
             </div>
+        </div>
 
-        <main class="section">
-            <nav class="tabs">
-                <button class="tab active" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
-                <button class="tab" onclick="showTab('profile-reviews')"><i class="fas fa-user-check"></i> Profile Reviews</button>
-                <button class="tab" onclick="showTab('conversations')"><i class="fas fa-comments-dollar"></i> Conversations</button> <button class="tab" onclick="showTab('estimations')"><i class="fas fa-calculator"></i> Estimations</button>
-                <button class="tab" onclick="showTab('jobs')"><i class="fas fa-briefcase"></i> Jobs</button>
-                <button class="tab" onclick="showTab('quotes')"><i class="fas fa-file-invoice-dollar"></i> Quotes</button>
-                <button class="tab" onclick="showTab('messages')"><i class="fas fa-comments"></i> Messages</button>
-                <button class="tab" onclick="showTab('analysis-portal')">    <i class="fas fa-chart-line"></i> Analysis Portal</button>
-            </nav>
-            
-            <div id="users-tab" class="tab-content active"></div>
+        <!-- Tab Contents -->
+        <div class="content-area">
+            <div id="dashboard-tab" class="tab-content active">
+                <div id="statsGrid" class="stats-grid"></div>
+            </div>
+            <div id="users-tab" class="tab-content"></div>
             <div id="profile-reviews-tab" class="tab-content"></div>
-            <div id="conversations-tab" class="tab-content"> </div>
+            <div id="conversations-tab" class="tab-content"></div>
             <div id="estimations-tab" class="tab-content"></div>
             <div id="jobs-tab" class="tab-content"></div>
             <div id="quotes-tab" class="tab-content"></div>
             <div id="messages-tab" class="tab-content"></div>
+            <div id="support-messages-tab" class="tab-content"></div>
             <div id="analysis-portal-tab" class="tab-content"></div>
-        </main>
-    </div>
+        </div>
+    </main>
+
+    <!-- Sidebar Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
     <script src="script.js"></script>
+    <script>
+        // Sidebar toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('mainContent').classList.toggle('expanded');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+
+        // Set current date
+        const dateEl = document.getElementById('currentDate');
+        if (dateEl) {
+            dateEl.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+        }
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 1024) {
+                    document.getElementById('sidebar').classList.remove('collapsed');
+                    document.getElementById('sidebarOverlay').classList.remove('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -29,14 +29,6 @@ async function initializeAdminPanel() {
     }
     document.getElementById('adminName').textContent = user.name || user.email;
 
-    // Inject additional CSS for better visual feedback
-    const additionalCSS = `<style>.critical-indicator { color: #ff4444; font-weight: bold; }.support-stat-card { border-left: 4px solid #007bff; }.support-stat-card:has(.critical-indicator) { border-left-color: #ff4444; }.fa-spinner.fa-spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }.notification-actions { margin-top: 10px; }.notification-actions .btn { margin-right: 5px; }.invalid-date { color: #888; font-style: italic; }</style>`;
-    document.head.insertAdjacentHTML('beforeend', additionalCSS);
-
-    // Inject Analysis Portal CSS
-    const analysisPortalStyles = `<style>.analysis-requests-container { margin-top: 20px; }.user-info-cell { min-width: 150px; }.description-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.sheet-link { color: #007bff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }.sheet-link:hover { text-decoration: underline; }.frequency-badge { background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px; font-size: 12px; }.request-details { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }.request-details p { margin: 8px 0; }.filter-select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background: white; }</style>`;
-    document.head.insertAdjacentHTML('beforeend', analysisPortalStyles);
-
 
     // Auto-fetch core data on startup for a faster experience
     await loadDashboardStats();
@@ -208,12 +200,38 @@ function debounce(func, wait) {
 
 // --- TAB NAVIGATION ---
 function showTab(tabName) {
+    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
 
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-    document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+    // Update sidebar active state
+    document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+    const activeLink = document.querySelector(`.sidebar-link[data-tab="${tabName}"]`);
+    if (activeLink) activeLink.classList.add('active');
 
+    // Show target tab
+    const tabEl = document.getElementById(`${tabName}-tab`);
+    if (tabEl) tabEl.classList.add('active');
+
+    // Update page title
+    const titleMap = {
+        'dashboard': { title: 'Dashboard', subtitle: 'Overview of your admin portal' },
+        'users': { title: 'Users', subtitle: 'Manage all registered users' },
+        'profile-reviews': { title: 'Profile Reviews', subtitle: 'Review pending profile submissions' },
+        'conversations': { title: 'Conversations', subtitle: 'Monitor user conversations' },
+        'estimations': { title: 'Estimations', subtitle: 'Manage estimation requests' },
+        'jobs': { title: 'Jobs', subtitle: 'View and manage all jobs' },
+        'quotes': { title: 'Quotes', subtitle: 'View designer quotes' },
+        'messages': { title: 'Messages', subtitle: 'Manage contact messages' },
+        'support-messages': { title: 'Support Tickets', subtitle: 'Handle support requests' },
+        'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
+    };
+    const info = titleMap[tabName] || { title: tabName, subtitle: '' };
+    const pageTitleEl = document.getElementById('pageTitle');
+    const pageSubEl = document.getElementById('pageSubtitle');
+    if (pageTitleEl) pageTitleEl.textContent = info.title;
+    if (pageSubEl) pageSubEl.textContent = info.subtitle;
+
+    // Lazy load data
     const manualLoadMap = {
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
@@ -239,42 +257,69 @@ async function loadDashboardStats() {
         const supportCount = stats.totalSupportTickets || stats.totalSupportMessages || 0;
         const criticalCount = stats.criticalSupportTickets || 0;
         
+        // Update review badge in sidebar
+        const reviewsBadge = document.getElementById('reviewsBadge');
+        if (reviewsBadge && stats.pendingProfileReviews > 0) {
+            reviewsBadge.textContent = stats.pendingProfileReviews;
+        }
+
         statsGrid.innerHTML = `
             <div class="stat-card">
-                <h3>${stats.totalUsers || 0}</h3>
-                <p>Total Users</p>
-                <button class="btn btn-sm" onclick="exportData('users')">Export</button>
+                <div class="stat-icon users"><i class="fas fa-users"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.totalUsers || 0}</div>
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('users')">View All</button></div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>${stats.pendingProfileReviews || 0}</h3>
-                <p>Pending Reviews</p>
-                <button class="btn btn-sm" onclick="showTab('profile-reviews')">Review</button>
+                <div class="stat-icon reviews"><i class="fas fa-user-check"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.pendingProfileReviews || 0}</div>
+                    <div class="stat-label">Pending Reviews</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('profile-reviews')">Review</button></div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>${stats.totalJobs || 0}</h3>
-                <p>Total Jobs</p>
-                <button class="btn btn-sm" onclick="exportData('jobs')">Export</button>
+                <div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.totalJobs || 0}</div>
+                    <div class="stat-label">Total Jobs</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('jobs')">View</button></div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>${stats.totalQuotes || 0}</h3>
-                <p>Total Quotes</p>
-                <button class="btn btn-sm" onclick="exportData('quotes')">Export</button>
+                <div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.totalQuotes || 0}</div>
+                    <div class="stat-label">Total Quotes</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('quotes')">View</button></div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>${stats.totalConversations || 0}</h3>
-                <p>User Conversations</p>
-                <button class="btn btn-sm" onclick="showTab('conversations')">View</button>
-            </div>
-            <div class="stat-card support-stat-card">
-                <h3>${supportCount}</h3>
-                <p>Support Tickets</p>
-                ${criticalCount > 0 ? `<small class="critical-indicator">${criticalCount} Critical</small>` : ''}
-                <button class="btn btn-sm btn-support" onclick="showTab('support-messages')">Manage</button>
+                <div class="stat-icon conversations"><i class="fas fa-comments"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.totalConversations || 0}</div>
+                    <div class="stat-label">Conversations</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('conversations')">View</button></div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>${analysisStats.pending || 0} / ${analysisStats.total || 0}</h3>
-                <p>Pending Analysis</p>
-                <button class="btn btn-sm" onclick="showTab('analysis-portal')">View Portal</button>
+                <div class="stat-icon support"><i class="fas fa-headset"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${supportCount}</div>
+                    <div class="stat-label">Support Tickets</div>
+                    ${criticalCount > 0 ? `<small class="critical-indicator"><i class="fas fa-exclamation-triangle"></i> ${criticalCount} Critical</small>` : ''}
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('support-messages')">Manage</button></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon analysis"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${analysisStats.pending || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${analysisStats.total || 0}</small></div>
+                    <div class="stat-label">Pending Analysis</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('analysis-portal')">View Portal</button></div>
+                </div>
             </div>
         `;
     } catch (error) {
@@ -436,7 +481,7 @@ function viewProfileDetails(reviewId) {
                         <li>
                             <i class="fas ${getFileIcon(doc.type, doc.filename)}"></i> ${doc.filename}
                             <a href="${doc.url}" target="_blank" class="btn btn-sm">View</a>
-                            <a href="${doc.url}" download="${doc.filename}" class="btn btn-sm btn-primary">Download</a>
+                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${doc.url}', '${(doc.filename || 'resume.pdf').replace(/'/g, "\\'")}')"><i class="fas fa-download"></i> Download</button>
                         </li>
                     `).join('')}
                 </ul>
@@ -512,20 +557,19 @@ async function confirmRejectProfile(reviewId) {
     } catch (error) {}
 }
 
-function downloadAllProfileFiles(reviewId) {
+async function downloadAllProfileFiles(reviewId) {
     const review = state.profileReviews.find(r => r._id === reviewId);
-    if (!review || !review.user.documents) return showNotification('No files to download.', 'warning');
-    review.user.documents.forEach((doc, index) => {
-        setTimeout(() => {
-            const link = document.createElement('a');
-            link.href = doc.url;
-            link.download = doc.filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }, index * 300);
-    });
-    showNotification(`Downloading ${review.user.documents.length} files...`, 'info');
+    if (!review || !review.user.documents || review.user.documents.length === 0) {
+        return showNotification('No files to download.', 'warning');
+    }
+    const docs = review.user.documents;
+    showNotification(`Downloading ${docs.length} file(s)...`, 'info');
+    for (let i = 0; i < docs.length; i++) {
+        const doc = docs[i];
+        await downloadFileSilent(doc.url, doc.filename || `resume_${i + 1}.pdf`);
+        if (i < docs.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    showNotification(`${docs.length} file(s) downloaded successfully.`, 'success');
 }
 
 // --- ESTIMATIONS ---
@@ -659,9 +703,9 @@ function showEstimationFiles(estimationId) {
                                     <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
                                         <i class="fas fa-external-link-alt"></i> View
                                     </a>
-                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                    <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${fileName.replace(/'/g, "\\'")}')">
                                         <i class="fas fa-download"></i> Download
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -683,25 +727,20 @@ function showEstimationFiles(estimationId) {
     showModal(modalContent);
 }
 
-function downloadAllEstimationFiles(estimationId) {
+async function downloadAllEstimationFiles(estimationId) {
     const estimation = state.estimations.find(e => e._id === estimationId);
-    if (!estimation || !estimation.uploadedFiles) {
+    if (!estimation || !estimation.uploadedFiles || estimation.uploadedFiles.length === 0) {
         return showNotification('No files to download.', 'warning');
     }
-
     const files = estimation.uploadedFiles;
-    showNotification(`Downloading ${files.length} files...`, 'info');
-
-    files.forEach((file, index) => {
-        setTimeout(() => {
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.download = file.originalname || file.filename || `estimation_file_${index + 1}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }, index * 500);
-    });
+    showNotification(`Downloading ${files.length} file(s)...`, 'info');
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const name = file.originalname || file.filename || `estimation_file_${i + 1}.pdf`;
+        await downloadFileSilent(file.url, name);
+        if (i < files.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    showNotification(`${files.length} file(s) downloaded successfully.`, 'success');
 }
 
 function showUploadResultModal(estimationId) {
@@ -1926,9 +1965,9 @@ function viewJobFiles(jobId) {
                                     <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
                                         <i class="fas fa-external-link-alt"></i> View
                                     </a>
-                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                    <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${fileName.replace(/'/g, "\\'")}')">
                                         <i class="fas fa-download"></i> Download
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -2022,37 +2061,27 @@ function viewJobDetails(jobId) {
     showModal(modalContent);
 }
 
-function downloadAllJobFiles(jobId) {
+async function downloadAllJobFiles(jobId) {
     const job = state.jobs.find(j => j._id === jobId);
     if (!job) return showNotification('Job not found.', 'error');
 
     const attachments = job.attachments || [];
     const legacyAttachment = job.attachment;
-
     let allFiles = [...attachments];
     if (legacyAttachment) {
-        allFiles.push({
-            url: legacyAttachment,
-            name: 'project_attachment.pdf'
-        });
+        allFiles.push({ url: legacyAttachment, name: 'project_attachment.pdf' });
     }
-
     if (allFiles.length === 0) {
         return showNotification('No files to download.', 'warning');
     }
-
-    showNotification(`Downloading ${allFiles.length} files...`, 'info');
-
-    allFiles.forEach((file, index) => {
-        setTimeout(() => {
-            const link = document.createElement('a');
-            link.href = file.url;
-            link.download = file.originalname || file.filename || file.name || `job_file_${index + 1}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }, index * 500);
-    });
+    showNotification(`Downloading ${allFiles.length} file(s)...`, 'info');
+    for (let i = 0; i < allFiles.length; i++) {
+        const file = allFiles[i];
+        const name = file.originalname || file.filename || file.name || `job_file_${i + 1}.pdf`;
+        await downloadFileSilent(file.url, name);
+        if (i < allFiles.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    showNotification(`${allFiles.length} file(s) downloaded successfully.`, 'success');
 }
 
 function confirmDeleteJob(jobId) {
@@ -2113,9 +2142,9 @@ function viewQuoteFiles(quoteId) {
                                     <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
                                         <i class="fas fa-external-link-alt"></i> View
                                     </a>
-                                    <a href="${file.url}" download="${fileName}" class="btn btn-sm btn-primary">
+                                    <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${fileName.replace(/'/g, "\\'")}')">
                                         <i class="fas fa-download"></i> Download
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -2213,24 +2242,22 @@ function viewQuoteDetails(quoteId) {
     showModal(modalContent);
 }
 
-function downloadAllQuoteFiles(quoteId) {
+async function downloadAllQuoteFiles(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
     const attachments = quote.attachments || [];
     if (attachments.length === 0) {
         return showNotification('No files to download.', 'warning');
     }
-    showNotification(`Downloading ${attachments.length} files...`, 'info');
-    attachments.forEach((file, index) => {
-        setTimeout(() => {
-            const link = document.createElement('a');
-            link.href = file.url || file.downloadURL;
-            link.download = file.name || file.originalname || `quote_file_${index + 1}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }, index * 500);
-    });
+    showNotification(`Downloading ${attachments.length} file(s)...`, 'info');
+    for (let i = 0; i < attachments.length; i++) {
+        const file = attachments[i];
+        const name = file.name || file.originalname || `quote_file_${i + 1}`;
+        const url = file.url || file.downloadURL;
+        await downloadFileSilent(url, name);
+        if (i < attachments.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    showNotification(`${attachments.length} file(s) downloaded successfully.`, 'success');
 }
 
 function getQuoteFileIcon(fileName) {
@@ -2381,6 +2408,46 @@ function initializeRealTimeUpdates() {
     }
 }
 
+
+// --- CROSS-ORIGIN FILE DOWNLOAD HELPER ---
+async function downloadFile(url, filename) {
+    try {
+        showNotification(`Downloading ${filename}...`, 'info');
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        console.warn(`Blob download failed for ${filename}, falling back to window.open:`, error);
+        window.open(url, '_blank');
+    }
+}
+
+async function downloadFileSilent(url, filename) {
+    try {
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        console.warn(`Blob download failed for ${filename}, falling back:`, error);
+        window.open(url, '_blank');
+    }
+}
 
 // --- SHARED UTILITY FUNCTIONS ---
 function getFileIcon(mimeType, fileName) {
