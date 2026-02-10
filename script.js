@@ -17,6 +17,11 @@ const state = {
     supportMessages: [],
     contractorRequests: [], // For Analysis Portal
     analysisFilterStatus: 'all',
+    systemAdminData: [],
+    systemAdminTrash: [],
+    systemAdminActiveCollection: null,
+    systemAdminView: 'live', // 'live' or 'trash'
+    systemAdminSelectedIds: [],
 };
 
 // --- INITIALIZATION ---
@@ -224,6 +229,7 @@ function showTab(tabName) {
         'messages': { title: 'Messages', subtitle: 'Manage contact messages' },
         'support-messages': { title: 'Support Tickets', subtitle: 'Handle support requests' },
         'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
+        'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -240,6 +246,7 @@ function showTab(tabName) {
         'conversations': { data: state.conversations, loader: loadConversationsData },
         'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData },
         'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
+        'system-admin': { data: [], loader: loadSystemAdminOverview },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -2760,11 +2767,463 @@ async function sendAnalysisNotification(email, name) {
 // === ANALYSIS STATS FOR DASHBOARD ===
 async function loadAnalysisStats() {
     try {
-        // FIXED: Using correct endpoint path
         const response = await apiCall('/business-analytics/stats', 'GET');
         return response.stats || { total: 0, pending: 0, completed: 0 };
     } catch (error) {
         console.error('Failed to load analysis stats:', error);
         return { total: 0, pending: 0, completed: 0 };
     }
+}
+
+// ==========================================
+// SYSTEM ADMIN - MASTER DATA CONTROL
+// ==========================================
+const SA_COLLECTION_ICONS = {
+    users: 'fa-users', jobs: 'fa-briefcase', quotes: 'fa-file-invoice-dollar',
+    estimations: 'fa-calculator', messages: 'fa-envelope', conversations: 'fa-comments',
+    support_tickets: 'fa-headset', analysis_requests: 'fa-chart-line', notifications: 'fa-bell'
+};
+const SA_COLLECTION_COLORS = {
+    users: '#3b82f6', jobs: '#10b981', quotes: '#f59e0b',
+    estimations: '#8b5cf6', messages: '#ec4899', conversations: '#06b6d4',
+    support_tickets: '#ef4444', analysis_requests: '#14b8a6', notifications: '#6366f1'
+};
+
+async function loadSystemAdminOverview() {
+    const container = document.getElementById('system-admin-tab');
+    showLoader(container);
+    try {
+        const response = await apiCall('/system-admin/overview');
+        renderSystemAdminTab(response.data);
+    } catch (error) {
+        container.innerHTML = `<div class="sa-error"><p>Failed to load System Admin data.</p><button class="btn" onclick="loadSystemAdminOverview()">Retry</button></div>`;
+    }
+}
+
+function renderSystemAdminTab(overview) {
+    const container = document.getElementById('system-admin-tab');
+    const cards = Object.entries(overview).map(([key, info]) => {
+        const icon = SA_COLLECTION_ICONS[key] || 'fa-database';
+        const color = SA_COLLECTION_COLORS[key] || '#64748b';
+        return `<div class="sa-collection-card" onclick="loadSystemAdminCollection('${key}')" style="--sa-color:${color}">
+            <div class="sa-card-icon"><i class="fas ${icon}"></i></div>
+            <div class="sa-card-info">
+                <h4>${info.label}</h4>
+                <div class="sa-card-counts">
+                    <span class="sa-count-live"><i class="fas fa-circle"></i> ${info.total} active</span>
+                    ${info.held > 0 ? `<span class="sa-count-held"><i class="fas fa-snowflake"></i> ${info.held} on hold</span>` : ''}
+                    <span class="sa-count-trash"><i class="fas fa-trash"></i> ${info.deleted} in trash</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right sa-card-arrow"></i>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="sa-header">
+            <div class="sa-header-left">
+                <div class="sa-shield"><i class="fas fa-skull-crossbones"></i></div>
+                <div>
+                    <h2>System Admin Control Center</h2>
+                    <p>Full access to delete, restore, and manage all portal data. Deleted items are moved to trash and can be retrieved.</p>
+                </div>
+            </div>
+            <div class="sa-header-actions">
+                <button class="btn" onclick="loadSystemAdminOverview()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn btn-danger-outline" onclick="viewSystemTrash()"><i class="fas fa-trash-restore"></i> View Trash</button>
+            </div>
+        </div>
+        <div class="sa-overview-grid">${cards}</div>
+        <div id="sa-detail-section"></div>`;
+}
+
+async function loadSystemAdminCollection(collectionKey) {
+    state.systemAdminActiveCollection = collectionKey;
+    state.systemAdminView = 'live';
+    state.systemAdminSelectedIds = [];
+    const detail = document.getElementById('sa-detail-section');
+    if (!detail) return;
+    detail.innerHTML = `<div class="sa-loading"><div class="spinner"></div> Loading data...</div>`;
+    detail.scrollIntoView({ behavior: 'smooth' });
+    try {
+        const response = await apiCall(`/system-admin/data/${collectionKey}?limit=200`);
+        state.systemAdminData = response.data || [];
+        renderSystemAdminDetail(collectionKey, response.collection, response.total);
+    } catch (error) {
+        detail.innerHTML = `<div class="sa-error"><p>Failed to load data.</p></div>`;
+    }
+}
+
+function renderSystemAdminDetail(key, label, total) {
+    const detail = document.getElementById('sa-detail-section');
+    const items = state.systemAdminData;
+    const color = SA_COLLECTION_COLORS[key] || '#64748b';
+    const icon = SA_COLLECTION_ICONS[key] || 'fa-database';
+
+    const rows = items.map(item => {
+        const displayFields = getItemDisplayFields(key, item);
+        return `<tr id="sa-row-${item._id}" class="${item._held ? 'sa-row-held' : ''}">
+            <td><input type="checkbox" class="sa-check" data-id="${item._id}" onchange="toggleSASelect('${item._id}')"></td>
+            <td><code class="sa-id">${(item._id || '').substring(0, 10)}...</code></td>
+            ${displayFields.map(f => `<td>${f}</td>`).join('')}
+            <td class="sa-actions">
+                <button class="btn btn-sm" onclick="viewSAItemDetail('${key}', '${item._id}')" title="View Details"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-sm ${item._held ? 'btn-held-active' : 'btn-hold'}" onclick="${item._held ? `unholdSAItem('${key}','${item._id}')` : `holdSAItem('${key}','${item._id}')`}" title="${item._held ? 'Release Hold' : 'Hold/Freeze'}"><i class="fas fa-snowflake"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSAItem('${key}', '${item._id}')" title="Move to Trash"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-sm btn-perma-delete" onclick="permanentDeleteLiveSAItem('${key}', '${item._id}')" title="Permanent Delete"><i class="fas fa-skull-crossbones"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const headers = getItemHeaders(key);
+
+    detail.innerHTML = `
+        <div class="sa-detail-header" style="border-left:4px solid ${color}">
+            <div class="sa-detail-title">
+                <i class="fas ${icon}" style="color:${color}"></i>
+                <h3>${label} <span class="sa-total-badge">${total} total</span></h3>
+            </div>
+            <div class="sa-detail-actions">
+                <input type="text" class="sa-search-input" placeholder="Search..." oninput="searchSACollection('${key}', this.value)">
+                <button class="btn btn-danger btn-sm" id="sa-bulk-delete-btn" style="display:none" onclick="bulkDeleteSA('${key}')"><i class="fas fa-trash"></i> Delete Selected (<span id="sa-bulk-count">0</span>)</button>
+                <button class="btn btn-sm" onclick="loadSystemAdminCollection('${key}')"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        </div>
+        <div class="sa-table-wrapper">
+            <table class="sa-table">
+                <thead><tr><th><input type="checkbox" onchange="toggleSASelectAll(this)"></th><th>ID</th>${headers.map(h => `<th>${h}</th>`).join('')}<th>Actions</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="99" class="sa-empty">No items found</td></tr>'}</tbody>
+            </table>
+        </div>`;
+}
+
+function getItemHeaders(key) {
+    const map = {
+        users: ['Name', 'Email', 'Type', 'Status'],
+        jobs: ['Title', 'Client', 'Budget', 'Status'],
+        quotes: ['Designer', 'Job', 'Amount', 'Status'],
+        estimations: ['Title', 'Contractor', 'Status', 'Files'],
+        messages: ['From', 'Subject', 'Date', 'Status'],
+        conversations: ['Participants', 'Job', 'Messages', 'Updated'],
+        support_tickets: ['Subject', 'User', 'Priority', 'Status'],
+        analysis_requests: ['Contractor', 'Type', 'Status', 'Date'],
+        notifications: ['User', 'Type', 'Message', 'Read']
+    };
+    return map[key] || ['Field 1', 'Field 2', 'Field 3', 'Field 4'];
+}
+
+function getItemDisplayFields(key, item) {
+    const safeStr = (v, max = 30) => v ? String(v).substring(0, max) : '<span class="sa-na">N/A</span>';
+    const statusBadge = (s) => `<span class="status ${s || 'unknown'}">${s || 'N/A'}</span>`;
+    const dateStr = (d) => { try { if (d?._seconds) return new Date(d._seconds * 1000).toLocaleDateString(); if (d?.seconds) return new Date(d.seconds * 1000).toLocaleDateString(); return d ? new Date(d).toLocaleDateString() : 'N/A'; } catch { return 'N/A'; } };
+    const heldBadge = item._held ? ' <span class="sa-held-badge"><i class="fas fa-snowflake"></i> HELD</span>' : '';
+
+    const map = {
+        users: [safeStr(item.name) + heldBadge, safeStr(item.email, 25), statusBadge(item.type), statusBadge(item.profileStatus || (item.canAccess === false ? 'blocked' : 'active'))],
+        jobs: [safeStr(item.title, 35) + heldBadge, safeStr(item.posterName), safeStr(item.budget), statusBadge(item.status)],
+        quotes: [safeStr(item.designerName) + heldBadge, safeStr(item.jobTitle, 25), `$${item.quoteAmount || 0}`, statusBadge(item.status)],
+        estimations: [safeStr(item.projectTitle, 30) + heldBadge, safeStr(item.contractorName), statusBadge(item.status), `${(item.uploadedFiles || []).length} files`],
+        messages: [safeStr(item.name || item.email) + heldBadge, safeStr(item.subject, 30), dateStr(item.createdAt), statusBadge(item.status || (item.read ? 'read' : 'unread'))],
+        conversations: [safeStr((item.participants || []).join(', '), 30) + heldBadge, safeStr(item.jobTitle, 20), `${item.messageCount || '?'}`, dateStr(item.updatedAt || item.lastMessageAt)],
+        support_tickets: [safeStr(item.subject, 30) + heldBadge, safeStr(item.userName || item.userEmail), statusBadge(item.priority), statusBadge(item.status)],
+        analysis_requests: [safeStr(item.contractorName) + heldBadge, safeStr(item.dataType), statusBadge(item.status), dateStr(item.createdAt)],
+        notifications: [safeStr(item.userId, 15) + heldBadge, safeStr(item.type), safeStr(item.message, 30), item.read ? 'Yes' : 'No']
+    };
+    return map[key] || [safeStr(item._id) + heldBadge, '', '', ''];
+}
+
+function toggleSASelect(docId) {
+    const idx = state.systemAdminSelectedIds.indexOf(docId);
+    if (idx > -1) state.systemAdminSelectedIds.splice(idx, 1);
+    else state.systemAdminSelectedIds.push(docId);
+    const bulkBtn = document.getElementById('sa-bulk-delete-btn');
+    const bulkCount = document.getElementById('sa-bulk-count');
+    if (bulkBtn) bulkBtn.style.display = state.systemAdminSelectedIds.length > 0 ? 'inline-flex' : 'none';
+    if (bulkCount) bulkCount.textContent = state.systemAdminSelectedIds.length;
+}
+
+function toggleSASelectAll(checkbox) {
+    const checks = document.querySelectorAll('.sa-check');
+    state.systemAdminSelectedIds = [];
+    checks.forEach(c => {
+        c.checked = checkbox.checked;
+        if (checkbox.checked) state.systemAdminSelectedIds.push(c.dataset.id);
+    });
+    const bulkBtn = document.getElementById('sa-bulk-delete-btn');
+    const bulkCount = document.getElementById('sa-bulk-count');
+    if (bulkBtn) bulkBtn.style.display = state.systemAdminSelectedIds.length > 0 ? 'inline-flex' : 'none';
+    if (bulkCount) bulkCount.textContent = state.systemAdminSelectedIds.length;
+}
+
+async function searchSACollection(key, query) {
+    if (!query || query.length < 2) {
+        if (!query) loadSystemAdminCollection(key);
+        return;
+    }
+    try {
+        const response = await apiCall(`/system-admin/data/${key}?search=${encodeURIComponent(query)}&limit=100`);
+        state.systemAdminData = response.data || [];
+        renderSystemAdminDetail(key, response.collection, response.total);
+    } catch (e) { /* ignore search errors */ }
+}
+
+function viewSAItemDetail(key, docId) {
+    const item = state.systemAdminData.find(i => i._id === docId) || state.systemAdminTrash.find(i => i._id === docId);
+    if (!item) return;
+    const entries = Object.entries(item).filter(([k]) => !k.startsWith('_')).map(([k, v]) => {
+        let displayVal = v;
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+            if (v._seconds) displayVal = new Date(v._seconds * 1000).toLocaleString();
+            else if (v.seconds) displayVal = new Date(v.seconds * 1000).toLocaleString();
+            else if (v.url) displayVal = `<a href="${v.url}" target="_blank">View File</a> (${v.filename || 'file'})`;
+            else displayVal = `<pre>${JSON.stringify(v, null, 2).substring(0, 300)}</pre>`;
+        } else if (Array.isArray(v)) {
+            displayVal = v.length > 0 ? `<span class="sa-array-badge">${v.length} item(s)</span> <details><summary>View</summary><pre>${JSON.stringify(v, null, 2).substring(0, 500)}</pre></details>` : '<em>Empty</em>';
+        } else if (typeof v === 'string' && v.length > 100) {
+            displayVal = `<details><summary>${v.substring(0, 80)}...</summary><p>${v}</p></details>`;
+        }
+        return `<tr><td class="sa-detail-key">${k}</td><td class="sa-detail-val">${displayVal ?? '<em>null</em>'}</td></tr>`;
+    }).join('');
+
+    const isTrash = !!item._deletedAt;
+    const isHeld = !!item._held;
+    let actionBtns;
+    if (isTrash) {
+        actionBtns = `<button class="btn btn-primary" onclick="restoreSAItem('${docId}');closeModal()"><i class="fas fa-undo"></i> Restore</button><button class="btn btn-danger" onclick="permanentDeleteSAItem('${docId}');closeModal()"><i class="fas fa-fire"></i> Permanent Delete</button>`;
+    } else {
+        actionBtns = `<button class="btn ${isHeld ? 'btn-held-active' : 'btn-hold'}" onclick="${isHeld ? `unholdSAItem('${key}','${docId}');closeModal()` : `holdSAItem('${key}','${docId}');closeModal()`}"><i class="fas fa-snowflake"></i> ${isHeld ? 'Release Hold' : 'Hold/Freeze'}</button>` +
+            `<button class="btn btn-danger" onclick="deleteSAItem('${key}', '${docId}');closeModal()"><i class="fas fa-trash"></i> Move to Trash</button>` +
+            `<button class="btn btn-perma-delete" onclick="closeModal();permanentDeleteLiveSAItem('${key}', '${docId}')"><i class="fas fa-skull-crossbones"></i> Permanent Delete</button>`;
+    }
+
+    showModal(`
+        <div class="sa-modal-detail">
+            <h3><i class="fas ${SA_COLLECTION_ICONS[key] || 'fa-database'}"></i> ${isTrash ? 'Trash Item' : 'Item'} Details</h3>
+            <p class="sa-modal-id">ID: <code>${docId}</code></p>
+            ${isTrash ? `<p class="sa-trash-info"><i class="fas fa-trash"></i> Deleted on ${item._deletedAt} by ${item._deletedBy || 'Unknown'}</p>` : ''}
+            ${isHeld ? `<p class="sa-held-info"><i class="fas fa-snowflake"></i> ON HOLD — Frozen on ${item._heldAt || 'N/A'} by ${item._heldBy || 'Unknown'}</p>` : ''}
+            <div class="sa-detail-table-wrap"><table class="sa-detail-table">${entries}</table></div>
+            <div class="sa-modal-actions">${actionBtns}<button class="btn" onclick="closeModal()">Close</button></div>
+        </div>`);
+}
+
+async function deleteSAItem(key, docId) {
+    if (!confirm('Are you sure you want to delete this item? It will be moved to trash and can be restored later.')) return;
+    try {
+        await apiCall(`/system-admin/data/${key}/${docId}`, 'DELETE');
+        showNotification('Item deleted and moved to trash.', 'success');
+        const row = document.getElementById(`sa-row-${docId}`);
+        if (row) row.remove();
+        state.systemAdminData = state.systemAdminData.filter(i => i._id !== docId);
+    } catch (error) {
+        showNotification('Failed to delete item.', 'error');
+    }
+}
+
+async function bulkDeleteSA(key) {
+    const count = state.systemAdminSelectedIds.length;
+    if (!confirm(`Are you sure you want to delete ${count} item(s)? They will be moved to trash.`)) return;
+    try {
+        await apiCall(`/system-admin/bulk-delete/${key}`, 'POST', { docIds: state.systemAdminSelectedIds });
+        showNotification(`${count} item(s) deleted.`, 'success');
+        state.systemAdminSelectedIds = [];
+        loadSystemAdminCollection(key);
+    } catch (error) {
+        showNotification('Bulk delete failed.', 'error');
+    }
+}
+
+async function viewSystemTrash(collectionKey) {
+    state.systemAdminView = 'trash';
+    const detail = document.getElementById('sa-detail-section');
+    if (!detail) return;
+    detail.innerHTML = `<div class="sa-loading"><div class="spinner"></div> Loading trash...</div>`;
+    detail.scrollIntoView({ behavior: 'smooth' });
+    try {
+        const url = collectionKey ? `/system-admin/trash?collectionKey=${collectionKey}` : '/system-admin/trash';
+        const response = await apiCall(url);
+        state.systemAdminTrash = response.data || [];
+        renderTrashView(collectionKey);
+    } catch (error) {
+        detail.innerHTML = `<div class="sa-error"><p>Failed to load trash.</p></div>`;
+    }
+}
+
+function renderTrashView(filterKey) {
+    const detail = document.getElementById('sa-detail-section');
+    const items = state.systemAdminTrash;
+
+    const rows = items.map(item => {
+        const key = item._collectionKey || 'unknown';
+        const icon = SA_COLLECTION_ICONS[key] || 'fa-file';
+        const color = SA_COLLECTION_COLORS[key] || '#64748b';
+        const label = item._collection || key;
+        const title = item.title || item.name || item.subject || item.projectTitle || item.designerName || item.contractorName || item._originalId || item._id;
+        return `<tr>
+            <td><span class="sa-trash-type" style="color:${color}"><i class="fas ${icon}"></i> ${label}</span></td>
+            <td><strong>${String(title).substring(0, 40)}</strong><br><code class="sa-id">${(item._originalId || item._id || '').substring(0, 12)}</code></td>
+            <td>${item._deletedAt ? new Date(item._deletedAt).toLocaleString() : 'N/A'}</td>
+            <td>${item._deletedBy || 'N/A'}</td>
+            <td class="sa-actions">
+                <button class="btn btn-sm btn-primary" onclick="restoreSAItem('${item._id}')"><i class="fas fa-undo"></i> Restore</button>
+                <button class="btn btn-sm" onclick="viewSAItemDetail('${key}', '${item._id}')"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="permanentDeleteSAItem('${item._id}')"><i class="fas fa-fire"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    detail.innerHTML = `
+        <div class="sa-detail-header sa-trash-header">
+            <div class="sa-detail-title">
+                <i class="fas fa-trash-restore" style="color:#ef4444"></i>
+                <h3>Trash <span class="sa-total-badge">${items.length} item(s)</span></h3>
+            </div>
+            <div class="sa-detail-actions">
+                <select class="sa-filter-select" onchange="viewSystemTrash(this.value || undefined)">
+                    <option value="">All Collections</option>
+                    <option value="users" ${filterKey === 'users' ? 'selected' : ''}>Users</option>
+                    <option value="jobs" ${filterKey === 'jobs' ? 'selected' : ''}>Projects</option>
+                    <option value="quotes" ${filterKey === 'quotes' ? 'selected' : ''}>Quotes</option>
+                    <option value="estimations" ${filterKey === 'estimations' ? 'selected' : ''}>Estimations</option>
+                    <option value="messages" ${filterKey === 'messages' ? 'selected' : ''}>Messages</option>
+                    <option value="conversations" ${filterKey === 'conversations' ? 'selected' : ''}>Conversations</option>
+                    <option value="support_tickets" ${filterKey === 'support_tickets' ? 'selected' : ''}>Support Tickets</option>
+                    <option value="analysis_requests" ${filterKey === 'analysis_requests' ? 'selected' : ''}>Analysis Requests</option>
+                </select>
+                ${items.length > 0 ? `<button class="btn btn-danger btn-sm" onclick="emptyTrash('${filterKey || ''}')"><i class="fas fa-fire"></i> Empty Trash</button>` : ''}
+                <button class="btn btn-sm" onclick="loadSystemAdminOverview()"><i class="fas fa-arrow-left"></i> Back</button>
+            </div>
+        </div>
+        <div class="sa-table-wrapper">
+            <table class="sa-table">
+                <thead><tr><th>Collection</th><th>Item</th><th>Deleted At</th><th>Deleted By</th><th>Actions</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="5" class="sa-empty">Trash is empty</td></tr>'}</tbody>
+            </table>
+        </div>`;
+}
+
+async function restoreSAItem(docId) {
+    if (!confirm('Restore this item back to its original collection?')) return;
+    try {
+        await apiCall(`/system-admin/restore/${docId}`, 'POST');
+        showNotification('Item restored successfully!', 'success');
+        state.systemAdminTrash = state.systemAdminTrash.filter(i => i._id !== docId);
+        if (state.systemAdminView === 'trash') renderTrashView();
+        else loadSystemAdminOverview();
+    } catch (error) {
+        showNotification('Failed to restore item.', 'error');
+    }
+}
+
+async function permanentDeleteSAItem(docId) {
+    if (!confirm('PERMANENTLY delete this item? This action CANNOT be undone. All associated files will also be deleted.')) return;
+    try {
+        await apiCall(`/system-admin/trash/${docId}`, 'DELETE');
+        showNotification('Item permanently deleted.', 'success');
+        state.systemAdminTrash = state.systemAdminTrash.filter(i => i._id !== docId);
+        if (state.systemAdminView === 'trash') renderTrashView();
+    } catch (error) {
+        showNotification('Failed to permanently delete.', 'error');
+    }
+}
+
+// Hold/Freeze an item
+async function holdSAItem(key, docId) {
+    if (!confirm('Hold/Freeze this item? It will be frozen and marked as on hold.')) return;
+    try {
+        await apiCall(`/system-admin/hold/${key}/${docId}`, 'POST');
+        showNotification('Item frozen successfully!', 'success');
+        // Update local state
+        const item = state.systemAdminData.find(i => i._id === docId);
+        if (item) {
+            item._held = true;
+            item._heldAt = new Date().toISOString();
+        }
+        // Re-render current view
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification('Failed to hold/freeze item.', 'error');
+    }
+}
+
+// Unhold/Unfreeze an item
+async function unholdSAItem(key, docId) {
+    if (!confirm('Release hold on this item? It will be unfrozen and back to normal.')) return;
+    try {
+        await apiCall(`/system-admin/unhold/${key}/${docId}`, 'POST');
+        showNotification('Item released from hold!', 'success');
+        // Update local state
+        const item = state.systemAdminData.find(i => i._id === docId);
+        if (item) {
+            delete item._held;
+            delete item._heldAt;
+            delete item._heldBy;
+        }
+        // Re-render current view
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification('Failed to release hold.', 'error');
+    }
+}
+
+// Permanent Delete from live data - requires password 9666
+async function permanentDeleteLiveSAItem(key, docId) {
+    showModal(`
+        <div class="sa-modal-detail">
+            <h3 style="color: #ef4444;"><i class="fas fa-skull-crossbones"></i> Permanent Delete</h3>
+            <p style="color: #f87171; margin: 12px 0;">This will <strong>permanently destroy</strong> this item and all associated files. This action <strong>CANNOT</strong> be undone.</p>
+            <div style="margin: 16px 0;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">Enter System Admin Password to confirm:</label>
+                <input type="password" id="perma-delete-password" placeholder="Enter password..."
+                    style="width: 100%; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem;"
+                    onkeydown="if(event.key==='Enter')confirmPermanentDelete('${key}','${docId}')" autofocus />
+            </div>
+            <div class="sa-modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-perma-delete" onclick="confirmPermanentDelete('${key}','${docId}')">
+                    <i class="fas fa-skull-crossbones"></i> Permanently Destroy
+                </button>
+            </div>
+        </div>
+    `);
+    setTimeout(() => { const inp = document.getElementById('perma-delete-password'); if (inp) inp.focus(); }, 100);
+}
+
+async function confirmPermanentDelete(key, docId) {
+    const passwordInput = document.getElementById('perma-delete-password');
+    const password = passwordInput ? passwordInput.value : '';
+    if (!password) {
+        showNotification('Password is required for permanent delete.', 'error');
+        return;
+    }
+    try {
+        await apiCall(`/system-admin/permanent-delete/${key}/${docId}`, 'POST', { password });
+        closeModal();
+        showNotification('Item permanently destroyed!', 'success');
+        state.systemAdminData = state.systemAdminData.filter(i => i._id !== docId);
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification(error.message || 'Failed to permanently delete. Check password.', 'error');
+    }
+}
+
+async function emptyTrash(collectionKey) {
+    const msg = collectionKey ? `Empty ALL trash items for this collection?` : 'Empty ALL trash items across ALL collections?';
+    if (!confirm(msg + ' This CANNOT be undone.')) return;
+    try {
+        const url = collectionKey ? `/system-admin/trash-empty?collectionKey=${collectionKey}` : '/system-admin/trash-empty';
+        const response = await apiCall(url, 'DELETE');
+        showNotification(response.message, 'success');
+        viewSystemTrash(collectionKey || undefined);
+    } catch (error) {
+        showNotification('Failed to empty trash.', 'error');
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('modal-container');
+    if (modal) modal.innerHTML = '';
 }
