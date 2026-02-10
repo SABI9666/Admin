@@ -2369,3 +2369,79 @@ table tbody tr:last-child td {
     .action-buttons { flex-direction: column; }
     .action-buttons .btn { width: 100%; }
 }
+
+/* ==========================================
+   SYSTEM ADMIN STYLES
+   ========================================== */
+.nav-badge-red { background: #dc2626 !important; display: inline-block !important; }
+.sa-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.sa-header-left { display: flex; align-items: flex-start; gap: 16px; }
+.sa-shield { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.sa-header-left h2 { font-size: 1.3rem; color: #f1f5f9; margin: 0; }
+.sa-header-left p { font-size: 0.85rem; color: #94a3b8; margin: 4px 0 0; max-width: 500px; }
+.sa-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-danger-outline { background: transparent; border: 1px solid #ef4444; color: #ef4444; }
+.btn-danger-outline:hover { background: #ef4444; color: white; }
+
+/* Collection Grid */
+.sa-overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.sa-collection-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+.sa-collection-card:hover { border-color: var(--sa-color); box-shadow: 0 4px 16px rgba(0,0,0,0.2); transform: translateY(-2px); }
+.sa-card-icon { width: 44px; height: 44px; border-radius: 10px; background: color-mix(in srgb, var(--sa-color) 15%, transparent); color: var(--sa-color); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.sa-card-info h4 { font-size: 0.95rem; color: #f1f5f9; margin: 0 0 4px; }
+.sa-card-counts { display: flex; gap: 12px; }
+.sa-count-live { font-size: 0.78rem; color: #10b981; display: flex; align-items: center; gap: 4px; }
+.sa-count-live i { font-size: 0.5rem; }
+.sa-count-trash { font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+.sa-card-arrow { color: #475569; font-size: 0.8rem; margin-left: auto; }
+
+/* Detail Section */
+.sa-detail-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.sa-trash-header { border-left: 4px solid #ef4444; }
+.sa-detail-title { display: flex; align-items: center; gap: 10px; }
+.sa-detail-title h3 { font-size: 1.05rem; color: #f1f5f9; margin: 0; }
+.sa-total-badge { font-size: 0.72rem; background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 20px; color: #94a3b8; font-weight: 500; }
+.sa-detail-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sa-search-input { background: var(--bg); border: 1px solid var(--border); color: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; width: 200px; }
+.sa-search-input:focus { border-color: #3b82f6; outline: none; }
+.sa-filter-select { background: var(--bg); border: 1px solid var(--border); color: #f1f5f9; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; }
+
+/* Table */
+.sa-table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+.sa-table { width: 100%; border-collapse: collapse; }
+.sa-table thead { background: var(--surface); }
+.sa-table th { padding: 10px 14px; text-align: left; font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+.sa-table td { padding: 10px 14px; font-size: 0.85rem; color: #cbd5e1; border-bottom: 1px solid var(--border); }
+.sa-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.sa-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6; }
+.sa-id { font-size: 0.72rem; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: #64748b; }
+.sa-na { color: #475569; font-style: italic; }
+.sa-actions { display: flex; gap: 6px; }
+.sa-empty { text-align: center; padding: 40px !important; color: #64748b; }
+.sa-loading { text-align: center; padding: 40px; color: #94a3b8; }
+.sa-error { text-align: center; padding: 40px; color: #ef4444; }
+.sa-array-badge { font-size: 0.72rem; background: rgba(99,102,241,0.15); color: #818cf8; padding: 2px 8px; border-radius: 10px; }
+
+/* Trash Type */
+.sa-trash-type { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.82rem; }
+.sa-trash-info { font-size: 0.82rem; color: #ef4444; background: rgba(239,68,68,0.1); padding: 8px 12px; border-radius: 6px; margin: 8px 0; }
+
+/* Modal Detail */
+.sa-modal-detail h3 { font-size: 1.1rem; margin: 0 0 8px; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.sa-modal-id { font-size: 0.8rem; color: #64748b; margin: 0 0 12px; }
+.sa-detail-table-wrap { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; }
+.sa-detail-table { width: 100%; border-collapse: collapse; }
+.sa-detail-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; vertical-align: top; }
+.sa-detail-key { font-weight: 600; color: #94a3b8; width: 160px; white-space: nowrap; }
+.sa-detail-val { color: #cbd5e1; word-break: break-all; }
+.sa-detail-val pre { font-size: 0.72rem; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; overflow-x: auto; color: #94a3b8; margin: 4px 0; }
+.sa-modal-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn-primary { background: #3b82f6; color: white; border: none; }
+.btn-primary:hover { background: #2563eb; }
+
+@media (max-width: 768px) {
+    .sa-overview-grid { grid-template-columns: 1fr; }
+    .sa-header { flex-direction: column; }
+    .sa-detail-header { flex-direction: column; align-items: flex-start; }
+    .sa-search-input { width: 100%; }
+}
