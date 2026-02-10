@@ -2439,6 +2439,36 @@ table tbody tr:last-child td {
 .btn-primary { background: #3b82f6; color: white; border: none; }
 .btn-primary:hover { background: #2563eb; }
 
+/* Hold/Freeze button styles */
+.btn-hold { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+.btn-hold:hover { background: rgba(14, 165, 233, 0.3); color: #7dd3fc; }
+.btn-held-active { background: rgba(14, 165, 233, 0.3); color: #7dd3fc; border: 1px solid #38bdf8; animation: pulse-freeze 2s infinite; }
+.btn-held-active:hover { background: rgba(14, 165, 233, 0.45); }
+
+@keyframes pulse-freeze {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.3); }
+    50% { box-shadow: 0 0 8px 2px rgba(56, 189, 248, 0.2); }
+}
+
+/* Permanent Delete button styles */
+.btn-perma-delete { background: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.4); }
+.btn-perma-delete:hover { background: rgba(220, 38, 38, 0.4); color: #fca5a5; border-color: #ef4444; }
+
+/* Held row visual indicator */
+.sa-row-held { background: rgba(14, 165, 233, 0.06) !important; border-left: 3px solid #38bdf8; }
+.sa-row-held td:first-child { padding-left: 8px; }
+
+/* Held badge in table cells */
+.sa-held-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.65rem; font-weight: 700; color: #38bdf8; background: rgba(14, 165, 233, 0.15); padding: 1px 6px; border-radius: 4px; margin-left: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sa-held-badge i { font-size: 0.6rem; }
+
+/* Held count in overview cards */
+.sa-count-held { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: #38bdf8; background: rgba(14, 165, 233, 0.1); padding: 2px 8px; border-radius: 4px; }
+.sa-count-held i { font-size: 0.7rem; }
+
+/* Held info banner in modal */
+.sa-held-info { font-size: 0.82rem; color: #38bdf8; background: rgba(14, 165, 233, 0.1); padding: 8px 12px; border-radius: 6px; margin: 8px 0; border-left: 3px solid #38bdf8; }
+
 @media (max-width: 768px) {
     .sa-overview-grid { grid-template-columns: 1fr; }
     .sa-header { flex-direction: column; }

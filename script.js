@@ -2811,6 +2811,7 @@ function renderSystemAdminTab(overview) {
                 <h4>${info.label}</h4>
                 <div class="sa-card-counts">
                     <span class="sa-count-live"><i class="fas fa-circle"></i> ${info.total} active</span>
+                    ${info.held > 0 ? `<span class="sa-count-held"><i class="fas fa-snowflake"></i> ${info.held} on hold</span>` : ''}
                     <span class="sa-count-trash"><i class="fas fa-trash"></i> ${info.deleted} in trash</span>
                 </div>
             </div>
@@ -2861,13 +2862,15 @@ function renderSystemAdminDetail(key, label, total) {
 
     const rows = items.map(item => {
         const displayFields = getItemDisplayFields(key, item);
-        return `<tr id="sa-row-${item._id}">
+        return `<tr id="sa-row-${item._id}" class="${item._held ? 'sa-row-held' : ''}">
             <td><input type="checkbox" class="sa-check" data-id="${item._id}" onchange="toggleSASelect('${item._id}')"></td>
             <td><code class="sa-id">${(item._id || '').substring(0, 10)}...</code></td>
             ${displayFields.map(f => `<td>${f}</td>`).join('')}
             <td class="sa-actions">
-                <button class="btn btn-sm" onclick="viewSAItemDetail('${key}', '${item._id}')"><i class="fas fa-eye"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="deleteSAItem('${key}', '${item._id}')"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-sm" onclick="viewSAItemDetail('${key}', '${item._id}')" title="View Details"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-sm ${item._held ? 'btn-held-active' : 'btn-hold'}" onclick="${item._held ? `unholdSAItem('${key}','${item._id}')` : `holdSAItem('${key}','${item._id}')`}" title="${item._held ? 'Release Hold' : 'Hold/Freeze'}"><i class="fas fa-snowflake"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSAItem('${key}', '${item._id}')" title="Move to Trash"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-sm btn-perma-delete" onclick="permanentDeleteLiveSAItem('${key}', '${item._id}')" title="Permanent Delete"><i class="fas fa-skull-crossbones"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -2913,19 +2916,20 @@ function getItemDisplayFields(key, item) {
     const safeStr = (v, max = 30) => v ? String(v).substring(0, max) : '<span class="sa-na">N/A</span>';
     const statusBadge = (s) => `<span class="status ${s || 'unknown'}">${s || 'N/A'}</span>`;
     const dateStr = (d) => { try { if (d?._seconds) return new Date(d._seconds * 1000).toLocaleDateString(); if (d?.seconds) return new Date(d.seconds * 1000).toLocaleDateString(); return d ? new Date(d).toLocaleDateString() : 'N/A'; } catch { return 'N/A'; } };
+    const heldBadge = item._held ? ' <span class="sa-held-badge"><i class="fas fa-snowflake"></i> HELD</span>' : '';
 
     const map = {
-        users: [safeStr(item.name), safeStr(item.email, 25), statusBadge(item.type), statusBadge(item.profileStatus || (item.canAccess === false ? 'blocked' : 'active'))],
-        jobs: [safeStr(item.title, 35), safeStr(item.posterName), safeStr(item.budget), statusBadge(item.status)],
-        quotes: [safeStr(item.designerName), safeStr(item.jobTitle, 25), `$${item.quoteAmount || 0}`, statusBadge(item.status)],
-        estimations: [safeStr(item.projectTitle, 30), safeStr(item.contractorName), statusBadge(item.status), `${(item.uploadedFiles || []).length} files`],
-        messages: [safeStr(item.name || item.email), safeStr(item.subject, 30), dateStr(item.createdAt), statusBadge(item.status || (item.read ? 'read' : 'unread'))],
-        conversations: [safeStr((item.participants || []).join(', '), 30), safeStr(item.jobTitle, 20), `${item.messageCount || '?'}`, dateStr(item.updatedAt || item.lastMessageAt)],
-        support_tickets: [safeStr(item.subject, 30), safeStr(item.userName || item.userEmail), statusBadge(item.priority), statusBadge(item.status)],
-        analysis_requests: [safeStr(item.contractorName), safeStr(item.dataType), statusBadge(item.status), dateStr(item.createdAt)],
-        notifications: [safeStr(item.userId, 15), safeStr(item.type), safeStr(item.message, 30), item.read ? 'Yes' : 'No']
+        users: [safeStr(item.name) + heldBadge, safeStr(item.email, 25), statusBadge(item.type), statusBadge(item.profileStatus || (item.canAccess === false ? 'blocked' : 'active'))],
+        jobs: [safeStr(item.title, 35) + heldBadge, safeStr(item.posterName), safeStr(item.budget), statusBadge(item.status)],
+        quotes: [safeStr(item.designerName) + heldBadge, safeStr(item.jobTitle, 25), `$${item.quoteAmount || 0}`, statusBadge(item.status)],
+        estimations: [safeStr(item.projectTitle, 30) + heldBadge, safeStr(item.contractorName), statusBadge(item.status), `${(item.uploadedFiles || []).length} files`],
+        messages: [safeStr(item.name || item.email) + heldBadge, safeStr(item.subject, 30), dateStr(item.createdAt), statusBadge(item.status || (item.read ? 'read' : 'unread'))],
+        conversations: [safeStr((item.participants || []).join(', '), 30) + heldBadge, safeStr(item.jobTitle, 20), `${item.messageCount || '?'}`, dateStr(item.updatedAt || item.lastMessageAt)],
+        support_tickets: [safeStr(item.subject, 30) + heldBadge, safeStr(item.userName || item.userEmail), statusBadge(item.priority), statusBadge(item.status)],
+        analysis_requests: [safeStr(item.contractorName) + heldBadge, safeStr(item.dataType), statusBadge(item.status), dateStr(item.createdAt)],
+        notifications: [safeStr(item.userId, 15) + heldBadge, safeStr(item.type), safeStr(item.message, 30), item.read ? 'Yes' : 'No']
     };
-    return map[key] || [safeStr(item._id), '', '', ''];
+    return map[key] || [safeStr(item._id) + heldBadge, '', '', ''];
 }
 
 function toggleSASelect(docId) {
@@ -2982,15 +2986,22 @@ function viewSAItemDetail(key, docId) {
     }).join('');
 
     const isTrash = !!item._deletedAt;
-    const actionBtns = isTrash
-        ? `<button class="btn btn-primary" onclick="restoreSAItem('${docId}');closeModal()"><i class="fas fa-undo"></i> Restore</button><button class="btn btn-danger" onclick="permanentDeleteSAItem('${docId}');closeModal()"><i class="fas fa-fire"></i> Permanent Delete</button>`
-        : `<button class="btn btn-danger" onclick="deleteSAItem('${key}', '${docId}');closeModal()"><i class="fas fa-trash"></i> Delete</button>`;
+    const isHeld = !!item._held;
+    let actionBtns;
+    if (isTrash) {
+        actionBtns = `<button class="btn btn-primary" onclick="restoreSAItem('${docId}');closeModal()"><i class="fas fa-undo"></i> Restore</button><button class="btn btn-danger" onclick="permanentDeleteSAItem('${docId}');closeModal()"><i class="fas fa-fire"></i> Permanent Delete</button>`;
+    } else {
+        actionBtns = `<button class="btn ${isHeld ? 'btn-held-active' : 'btn-hold'}" onclick="${isHeld ? `unholdSAItem('${key}','${docId}');closeModal()` : `holdSAItem('${key}','${docId}');closeModal()`}"><i class="fas fa-snowflake"></i> ${isHeld ? 'Release Hold' : 'Hold/Freeze'}</button>` +
+            `<button class="btn btn-danger" onclick="deleteSAItem('${key}', '${docId}');closeModal()"><i class="fas fa-trash"></i> Move to Trash</button>` +
+            `<button class="btn btn-perma-delete" onclick="closeModal();permanentDeleteLiveSAItem('${key}', '${docId}')"><i class="fas fa-skull-crossbones"></i> Permanent Delete</button>`;
+    }
 
     showModal(`
         <div class="sa-modal-detail">
             <h3><i class="fas ${SA_COLLECTION_ICONS[key] || 'fa-database'}"></i> ${isTrash ? 'Trash Item' : 'Item'} Details</h3>
             <p class="sa-modal-id">ID: <code>${docId}</code></p>
             ${isTrash ? `<p class="sa-trash-info"><i class="fas fa-trash"></i> Deleted on ${item._deletedAt} by ${item._deletedBy || 'Unknown'}</p>` : ''}
+            ${isHeld ? `<p class="sa-held-info"><i class="fas fa-snowflake"></i> ON HOLD — Frozen on ${item._heldAt || 'N/A'} by ${item._heldBy || 'Unknown'}</p>` : ''}
             <div class="sa-detail-table-wrap"><table class="sa-detail-table">${entries}</table></div>
             <div class="sa-modal-actions">${actionBtns}<button class="btn" onclick="closeModal()">Close</button></div>
         </div>`);
@@ -3113,6 +3124,89 @@ async function permanentDeleteSAItem(docId) {
         if (state.systemAdminView === 'trash') renderTrashView();
     } catch (error) {
         showNotification('Failed to permanently delete.', 'error');
+    }
+}
+
+// Hold/Freeze an item
+async function holdSAItem(key, docId) {
+    if (!confirm('Hold/Freeze this item? It will be frozen and marked as on hold.')) return;
+    try {
+        await apiCall(`/system-admin/hold/${key}/${docId}`, 'POST');
+        showNotification('Item frozen successfully!', 'success');
+        // Update local state
+        const item = state.systemAdminData.find(i => i._id === docId);
+        if (item) {
+            item._held = true;
+            item._heldAt = new Date().toISOString();
+        }
+        // Re-render current view
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification('Failed to hold/freeze item.', 'error');
+    }
+}
+
+// Unhold/Unfreeze an item
+async function unholdSAItem(key, docId) {
+    if (!confirm('Release hold on this item? It will be unfrozen and back to normal.')) return;
+    try {
+        await apiCall(`/system-admin/unhold/${key}/${docId}`, 'POST');
+        showNotification('Item released from hold!', 'success');
+        // Update local state
+        const item = state.systemAdminData.find(i => i._id === docId);
+        if (item) {
+            delete item._held;
+            delete item._heldAt;
+            delete item._heldBy;
+        }
+        // Re-render current view
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification('Failed to release hold.', 'error');
+    }
+}
+
+// Permanent Delete from live data - requires password 9666
+async function permanentDeleteLiveSAItem(key, docId) {
+    showModal(`
+        <div class="sa-modal-detail">
+            <h3 style="color: #ef4444;"><i class="fas fa-skull-crossbones"></i> Permanent Delete</h3>
+            <p style="color: #f87171; margin: 12px 0;">This will <strong>permanently destroy</strong> this item and all associated files. This action <strong>CANNOT</strong> be undone.</p>
+            <div style="margin: 16px 0;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">Enter System Admin Password to confirm:</label>
+                <input type="password" id="perma-delete-password" placeholder="Enter password..."
+                    style="width: 100%; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem;"
+                    onkeydown="if(event.key==='Enter')confirmPermanentDelete('${key}','${docId}')" autofocus />
+            </div>
+            <div class="sa-modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-perma-delete" onclick="confirmPermanentDelete('${key}','${docId}')">
+                    <i class="fas fa-skull-crossbones"></i> Permanently Destroy
+                </button>
+            </div>
+        </div>
+    `);
+    setTimeout(() => { const inp = document.getElementById('perma-delete-password'); if (inp) inp.focus(); }, 100);
+}
+
+async function confirmPermanentDelete(key, docId) {
+    const passwordInput = document.getElementById('perma-delete-password');
+    const password = passwordInput ? passwordInput.value : '';
+    if (!password) {
+        showNotification('Password is required for permanent delete.', 'error');
+        return;
+    }
+    try {
+        await apiCall(`/system-admin/permanent-delete/${key}/${docId}`, 'POST', { password });
+        closeModal();
+        showNotification('Item permanently destroyed!', 'success');
+        state.systemAdminData = state.systemAdminData.filter(i => i._id !== docId);
+        if (state.systemAdminView === 'overview') loadSystemAdminOverview();
+        else loadSACollectionData(key);
+    } catch (error) {
+        showNotification(error.message || 'Failed to permanently delete. Check password.', 'error');
     }
 }
 
