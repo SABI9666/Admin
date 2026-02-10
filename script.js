@@ -237,6 +237,12 @@ function showTab(tabName) {
     if (pageTitleEl) pageTitleEl.textContent = info.title;
     if (pageSubEl) pageSubEl.textContent = info.subtitle;
 
+    // Always reload dashboard stats to reflect latest data
+    if (tabName === 'dashboard') {
+        loadDashboardStats();
+        return;
+    }
+
     // Lazy load data
     const manualLoadMap = {
         'estimations': { data: state.estimations, loader: loadEstimationsData },
@@ -2789,6 +2795,29 @@ const SA_COLLECTION_COLORS = {
     support_tickets: '#ef4444', analysis_requests: '#14b8a6', notifications: '#6366f1'
 };
 
+// Invalidate cached state for a System Admin collection key so other tabs reload fresh data
+function invalidateStateForCollection(collectionKey) {
+    const stateKeyMap = {
+        users: 'users',
+        jobs: 'jobs',
+        quotes: 'quotes',
+        estimations: 'estimations',
+        messages: 'messages',
+        conversations: 'conversations',
+        support_tickets: 'supportMessages',
+        analysis_requests: 'contractorRequests',
+        notifications: null
+    };
+    const stateKey = stateKeyMap[collectionKey];
+    if (stateKey && state[stateKey]) {
+        state[stateKey] = [];
+    }
+    // Also clear profile reviews if users are affected
+    if (collectionKey === 'users') {
+        state.profileReviews = [];
+    }
+}
+
 async function loadSystemAdminOverview() {
     const container = document.getElementById('system-admin-tab');
     showLoader(container);
@@ -3015,6 +3044,7 @@ async function deleteSAItem(key, docId) {
         const row = document.getElementById(`sa-row-${docId}`);
         if (row) row.remove();
         state.systemAdminData = state.systemAdminData.filter(i => i._id !== docId);
+        invalidateStateForCollection(key);
     } catch (error) {
         showNotification('Failed to delete item.', 'error');
     }
@@ -3027,6 +3057,7 @@ async function bulkDeleteSA(key) {
         await apiCall(`/system-admin/bulk-delete/${key}`, 'POST', { docIds: state.systemAdminSelectedIds });
         showNotification(`${count} item(s) deleted.`, 'success');
         state.systemAdminSelectedIds = [];
+        invalidateStateForCollection(key);
         loadSystemAdminCollection(key);
     } catch (error) {
         showNotification('Bulk delete failed.', 'error');
@@ -3105,9 +3136,15 @@ function renderTrashView(filterKey) {
 async function restoreSAItem(docId) {
     if (!confirm('Restore this item back to its original collection?')) return;
     try {
+        // Find the collection key for invalidation
+        const trashItem = state.systemAdminTrash.find(i => i._id === docId);
         await apiCall(`/system-admin/restore/${docId}`, 'POST');
         showNotification('Item restored successfully!', 'success');
         state.systemAdminTrash = state.systemAdminTrash.filter(i => i._id !== docId);
+        // Invalidate the restored collection so other tabs reflect the change
+        if (trashItem && trashItem._collectionKey) {
+            invalidateStateForCollection(trashItem._collectionKey);
+        }
         if (state.systemAdminView === 'trash') renderTrashView();
         else loadSystemAdminOverview();
     } catch (error) {
@@ -3139,9 +3176,10 @@ async function holdSAItem(key, docId) {
             item._held = true;
             item._heldAt = new Date().toISOString();
         }
+        invalidateStateForCollection(key);
         // Re-render current view
         if (state.systemAdminView === 'overview') loadSystemAdminOverview();
-        else loadSACollectionData(key);
+        else loadSystemAdminCollection(key);
     } catch (error) {
         showNotification('Failed to hold/freeze item.', 'error');
     }
@@ -3160,9 +3198,10 @@ async function unholdSAItem(key, docId) {
             delete item._heldAt;
             delete item._heldBy;
         }
+        invalidateStateForCollection(key);
         // Re-render current view
         if (state.systemAdminView === 'overview') loadSystemAdminOverview();
-        else loadSACollectionData(key);
+        else loadSystemAdminCollection(key);
     } catch (error) {
         showNotification('Failed to release hold.', 'error');
     }
@@ -3172,12 +3211,12 @@ async function unholdSAItem(key, docId) {
 async function permanentDeleteLiveSAItem(key, docId) {
     showModal(`
         <div class="sa-modal-detail">
-            <h3 style="color: #ef4444;"><i class="fas fa-skull-crossbones"></i> Permanent Delete</h3>
-            <p style="color: #f87171; margin: 12px 0;">This will <strong>permanently destroy</strong> this item and all associated files. This action <strong>CANNOT</strong> be undone.</p>
+            <h3 style="color: #dc2626;"><i class="fas fa-skull-crossbones"></i> Permanent Delete</h3>
+            <p style="color: #b91c1c; margin: 12px 0;">This will <strong>permanently destroy</strong> this item and all associated files. This action <strong>CANNOT</strong> be undone.</p>
             <div style="margin: 16px 0;">
-                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">Enter System Admin Password to confirm:</label>
+                <label style="display: block; font-size: 0.85rem; color: #6b7280; margin-bottom: 6px;">Enter System Admin Password to confirm:</label>
                 <input type="password" id="perma-delete-password" placeholder="Enter password..."
-                    style="width: 100%; padding: 10px 14px; background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem;"
+                    style="width: 100%; padding: 10px 14px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #1f2937; font-size: 0.95rem;"
                     onkeydown="if(event.key==='Enter')confirmPermanentDelete('${key}','${docId}')" autofocus />
             </div>
             <div class="sa-modal-actions">
@@ -3203,8 +3242,9 @@ async function confirmPermanentDelete(key, docId) {
         closeModal();
         showNotification('Item permanently destroyed!', 'success');
         state.systemAdminData = state.systemAdminData.filter(i => i._id !== docId);
+        invalidateStateForCollection(key);
         if (state.systemAdminView === 'overview') loadSystemAdminOverview();
-        else loadSACollectionData(key);
+        else loadSystemAdminCollection(key);
     } catch (error) {
         showNotification(error.message || 'Failed to permanently delete. Check password.', 'error');
     }
