@@ -2,6 +2,33 @@
 // Updated to be fully compatible with the provided src/routes/admin.js backend.
 // This version incorporates enhanced file management, a support ticket system, and a corrected analysis portal.
 
+// Helper: safely parse any date format (Firestore Timestamp, ISO string, Date, epoch)
+function parseAdminDate(val) {
+    if (!val) return null;
+    let d;
+    if (typeof val === 'string') {
+        d = new Date(val);
+    } else if (val.toDate && typeof val.toDate === 'function') {
+        d = val.toDate();
+    } else if (typeof val._seconds === 'number') {
+        d = new Date(val._seconds * 1000);
+    } else if (typeof val.seconds === 'number') {
+        d = new Date(val.seconds * 1000);
+    } else if (val instanceof Date) {
+        d = val;
+    } else if (typeof val === 'number') {
+        d = new Date(val < 10000000000 ? val * 1000 : val);
+    } else {
+        d = new Date(String(val));
+    }
+    return (d && !isNaN(d.getTime())) ? d : null;
+}
+
+function formatAdminDate(val, fallback = 'N/A') {
+    const d = parseAdminDate(val);
+    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : fallback;
+}
+
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
 // --- CONFIGURATION & GLOBAL STATE ---
@@ -677,7 +704,7 @@ function renderEstimationsTab() {
                                 ` : '<span class="pending-result">Pending</span>'}
                             </td>
                             <td>
-                                <small>${new Date(est.createdAt).toLocaleDateString()}</small>
+                                <small>${formatAdminDate(est.createdAt)}</small>
                             </td>
                             <td class="action-buttons">
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
@@ -718,7 +745,7 @@ function showEstimationFiles(estimationId) {
                         const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
                         const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
                         const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
-                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+                        const uploadDate = formatAdminDate(file.uploadedAt, 'Unknown date');
 
                         return `
                             <div class="file-item-card">
@@ -843,7 +870,7 @@ function renderMessagesTab() {
                     <tr class="${message.status === 'unread' ? 'unread' : ''}">
                         <td>${message.senderName}<br><small>${message.senderEmail}</small></td>
                         <td>${message.subject}</td>
-                        <td>${new Date(message.createdAt).toLocaleDateString()}</td>
+                        <td>${formatAdminDate(message.createdAt)}</td>
                         <td>
                             <span class="status ${message.senderBlocked ? 'blocked' : message.status}">
                                 ${message.senderBlocked ? 'Blocked' : message.status}
@@ -1844,7 +1871,7 @@ function renderGenericTab(type) {
                             <td>
                                 <div class="job-title-cell">
                                     <strong>${job.title || 'Untitled Job'}</strong>
-                                    ${job.deadline ? `<br><small>Deadline: ${new Date(job.deadline).toLocaleDateString()}</small>` : ''}
+                                    ${job.deadline ? `<br><small>Deadline: ${formatAdminDate(job.deadline)}</small>` : ''}
                                 </div>
                             </td>
                             <td>
@@ -1894,7 +1921,7 @@ function renderGenericTab(type) {
                                 <div class="quote-info-cell">
                                     <strong>Quote #${quote._id.slice(-6)}</strong>
                                     ${quote.timeline ? `<br><small>Timeline: ${quote.timeline} days</small>` : ''}
-                                    ${quote.createdAt ? `<br><small>Submitted: ${new Date(quote.createdAt).toLocaleDateString()}</small>` : ''}
+                                    ${quote.createdAt ? `<br><small>Submitted: ${formatAdminDate(quote.createdAt)}</small>` : ''}
                                 </div>
                             </td>
                             <td>
@@ -1990,7 +2017,7 @@ function viewJobFiles(jobId) {
                         const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
                         const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
                         const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
-                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+                        const uploadDate = formatAdminDate(file.uploadedAt, 'Unknown date');
                         const fileIcon = getFileIconByName(fileName);
 
                         return `
@@ -2053,7 +2080,7 @@ function viewJobDetails(jobId) {
                         <div><label>Email:</label><span>${job.posterEmail || 'N/A'}</span></div>
                         <div><label>Budget:</label><span>${job.budget || 'N/A'}</span></div>
                         <div><label>Status:</label><span class="status ${job.status}">${job.status}</span></div>
-                        ${job.deadline ? `<div><label>Deadline:</label><span>${new Date(job.deadline).toLocaleDateString()}</span></div>` : ''}
+                        ${job.deadline ? `<div><label>Deadline:</label><span>${formatAdminDate(job.deadline)}</span></div>` : ''}
                         ${job.skills ? `<div><label>Skills:</label><span>${job.skills}</span></div>` : ''}
                     </div>
                 </div>
@@ -2182,7 +2209,7 @@ function viewQuoteFiles(quoteId) {
                         const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
                         const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
                         const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
-                        const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
+                        const uploadDate = formatAdminDate(file.uploadedAt, 'Unknown date');
                         const fileIcon = getQuoteFileIcon(fileName);
 
                         return `
@@ -2240,9 +2267,9 @@ function viewQuoteDetails(quoteId) {
                         <div><label>Amount:</label><span>$${quote.quoteAmount || 'N/A'}</span></div>
                         <div><label>Timeline:</label><span>${quote.timeline || 'N/A'} days</span></div>
                         <div><label>Status:</label><span class="status ${quote.status}">${quote.status}</span></div>
-                        <div><label>Submitted:</label><span>${quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</span></div>
-                        ${quote.approvedAt ? `<div><label>Approved:</label><span>${new Date(quote.approvedAt).toLocaleDateString()}</span></div>` : ''}
-                        ${quote.rejectedAt ? `<div><label>Rejected:</label><span>${new Date(quote.rejectedAt).toLocaleDateString()}</span></div>` : ''}
+                        <div><label>Submitted:</label><span>${formatAdminDate(quote.createdAt)}</span></div>
+                        ${quote.approvedAt ? `<div><label>Approved:</label><span>${formatAdminDate(quote.approvedAt)}</span></div>` : ''}
+                        ${quote.rejectedAt ? `<div><label>Rejected:</label><span>${formatAdminDate(quote.rejectedAt)}</span></div>` : ''}
                     </div>
                 </div>
                                 
@@ -2694,7 +2721,7 @@ function renderAnalysisPortalTab() {
                                     </span>
                                 </td>
                                 <td>
-                                    <small>${new Date(request.createdAt).toLocaleDateString()}</small>
+                                    <small>${formatAdminDate(request.createdAt)}</small>
                                 </td>
                                 <td class="action-buttons">
                                     ${request.status === 'pending' ?
@@ -3006,7 +3033,7 @@ function getItemHeaders(key) {
 function getItemDisplayFields(key, item) {
     const safeStr = (v, max = 30) => v ? String(v).substring(0, max) : '<span class="sa-na">N/A</span>';
     const statusBadge = (s) => `<span class="status ${s || 'unknown'}">${s || 'N/A'}</span>`;
-    const dateStr = (d) => { try { if (d?._seconds) return new Date(d._seconds * 1000).toLocaleDateString(); if (d?.seconds) return new Date(d.seconds * 1000).toLocaleDateString(); return d ? new Date(d).toLocaleDateString() : 'N/A'; } catch { return 'N/A'; } };
+    const dateStr = (d) => formatAdminDate(d);
     const heldBadge = item._held ? ' <span class="sa-held-badge"><i class="fas fa-snowflake"></i> HELD</span>' : '';
 
     const map = {
