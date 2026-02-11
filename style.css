@@ -438,6 +438,7 @@ body {
 .stat-card .stat-icon.conversations { background: #d1fae5; color: #047857; }
 .stat-card .stat-icon.support { background: #fce7f3; color: #be185d; }
 .stat-card .stat-icon.analysis { background: #ffedd5; color: #c2410c; }
+.stat-card .stat-icon.community { background: #fef3c7; color: #92400e; }
 .stat-card .stat-icon.estimations { background: #e0f2fe; color: #0369a1; }
 .stat-card .stat-icon.designers { background: #fae8ff; color: #a21caf; }
 .stat-card .stat-icon.active { background: #d1fae5; color: #047857; }

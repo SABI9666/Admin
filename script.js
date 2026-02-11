@@ -15,6 +15,7 @@ const state = {
     messages: [],
     conversations: [],
     supportMessages: [],
+    communityPosts: [],
     contractorRequests: [], // For Analysis Portal
     analysisFilterStatus: 'all',
     systemAdminData: [],
@@ -228,6 +229,7 @@ function showTab(tabName) {
         'quotes': { title: 'Quotes', subtitle: 'View designer quotes' },
         'messages': { title: 'Messages', subtitle: 'Manage contact messages' },
         'support-messages': { title: 'Support Tickets', subtitle: 'Handle support requests' },
+        'community-feed': { title: 'Community Feed', subtitle: 'Moderate community posts' },
         'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
         'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
     };
@@ -251,6 +253,7 @@ function showTab(tabName) {
         'messages': { data: state.messages, loader: loadMessagesData },
         'conversations': { data: state.conversations, loader: loadConversationsData },
         'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData },
+        'community-feed': { data: state.communityPosts, loader: loadCommunityPostsData },
         'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
         'system-admin': { data: [], loader: loadSystemAdminOverview },
     };
@@ -274,6 +277,12 @@ async function loadDashboardStats() {
         const reviewsBadge = document.getElementById('reviewsBadge');
         if (reviewsBadge && stats.pendingProfileReviews > 0) {
             reviewsBadge.textContent = stats.pendingProfileReviews;
+        }
+
+        // Update community feed badge in sidebar
+        const communityBadge = document.getElementById('communityPendingBadge');
+        if (communityBadge) {
+            communityBadge.textContent = (stats.pendingCommunityPosts || 0) > 0 ? stats.pendingCommunityPosts : '';
         }
 
         statsGrid.innerHTML = `
@@ -332,6 +341,14 @@ async function loadDashboardStats() {
                     <div class="stat-number">${analysisStats.pending || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${analysisStats.total || 0}</small></div>
                     <div class="stat-label">Pending Analysis</div>
                     <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('analysis-portal')">View Portal</button></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon community"><i class="fas fa-newspaper"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.pendingCommunityPosts || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalCommunityPosts || 0}</small></div>
+                    <div class="stat-label">Pending Community Posts</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('community-feed')">Moderate</button></div>
                 </div>
             </div>
         `;
@@ -3266,4 +3283,230 @@ async function emptyTrash(collectionKey) {
 function closeModal() {
     const modal = document.getElementById('modal-container');
     if (modal) modal.innerHTML = '';
+}
+
+// --- COMMUNITY FEED MODERATION ---
+
+async function loadCommunityPostsData() {
+    const container = document.getElementById('community-feed-tab');
+    showLoader(container);
+    try {
+        const response = await apiCall('/community-posts');
+        state.communityPosts = response.posts || [];
+        renderCommunityFeedTab();
+
+        // Update sidebar badge
+        const pendingCount = state.communityPosts.filter(p => p.status === 'pending').length;
+        const badge = document.getElementById('communityPendingBadge');
+        if (badge) badge.textContent = pendingCount > 0 ? pendingCount : '';
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load community posts.</p>
+            <button class="btn" onclick="loadCommunityPostsData()">Retry</button>`;
+    }
+}
+
+function renderCommunityFeedTab() {
+    const container = document.getElementById('community-feed-tab');
+    const pending = state.communityPosts.filter(p => p.status === 'pending');
+    const approved = state.communityPosts.filter(p => p.status === 'approved');
+    const rejected = state.communityPosts.filter(p => p.status === 'rejected');
+
+    container.innerHTML = `
+        <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h3 style="margin:0;">Community Feed Moderation</h3>
+            <button class="btn btn-sm" onclick="loadCommunityPostsData()"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+            <span class="status-badge" style="background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:20px;font-weight:600;">${pending.length} Pending</span>
+            <span class="status-badge" style="background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:20px;font-weight:600;">${approved.length} Approved</span>
+            <span class="status-badge" style="background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:20px;font-weight:600;">${rejected.length} Rejected</span>
+        </div>
+
+        <h4 style="margin-bottom:1rem;color:#1e293b;">Pending Review (${pending.length})</h4>
+        ${pending.length === 0 ? '<p style="color:#64748b;">No posts pending review.</p>' : `
+        <div class="profile-reviews-grid" style="margin-bottom:2rem;">
+            ${pending.map(post => renderCommunityPostCard(post)).join('')}
+        </div>`}
+
+        <h4 style="margin-top:2rem;margin-bottom:1rem;color:#1e293b;">Approved Posts (${approved.length})</h4>
+        ${approved.length === 0 ? '<p style="color:#64748b;">No approved posts.</p>' : `
+        <div class="profile-reviews-grid" style="margin-bottom:2rem;">
+            ${approved.slice(0, 20).map(post => renderCommunityPostCard(post)).join('')}
+        </div>`}
+
+        <h4 style="margin-top:2rem;margin-bottom:1rem;color:#1e293b;">Rejected Posts (${rejected.length})</h4>
+        ${rejected.length === 0 ? '<p style="color:#64748b;">No rejected posts.</p>' : `
+        <div class="profile-reviews-grid">
+            ${rejected.slice(0, 10).map(post => renderCommunityPostCard(post)).join('')}
+        </div>`}
+    `;
+}
+
+function renderCommunityPostCard(post) {
+    const statusColors = {
+        pending: { bg: '#fef3c7', color: '#92400e' },
+        approved: { bg: '#d1fae5', color: '#065f46' },
+        rejected: { bg: '#fee2e2', color: '#991b1b' }
+    };
+    const sc = statusColors[post.status] || statusColors.pending;
+    const contentPreview = sanitizeInput((post.content || '').substring(0, 200));
+    const imageCount = (post.images || []).length;
+    const commentCount = (post.comments || []).length;
+    const authorTypeBadge = post.authorType === 'designer'
+        ? '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Designer</span>'
+        : '<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Contractor</span>';
+
+    return `
+        <div class="review-card" style="padding:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                <div>
+                    <h4 style="margin:0 0 4px 0;font-size:15px;">${sanitizeInput(post.authorName || 'Unknown')} ${authorTypeBadge}</h4>
+                    <small style="color:#64748b;">${post.authorEmail || ''}</small>
+                </div>
+                <span style="background:${sc.bg};color:${sc.color};padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;text-transform:uppercase;">${post.status}</span>
+            </div>
+            <p style="color:#334155;margin:0.5rem 0;line-height:1.5;white-space:pre-wrap;">${contentPreview}${post.content && post.content.length > 200 ? '...' : ''}</p>
+            ${imageCount > 0 ? `<p style="color:#64748b;font-size:13px;"><i class="fas fa-images"></i> ${imageCount} image(s)</p>` : ''}
+            <p style="color:#64748b;font-size:13px;margin:4px 0;">
+                <i class="fas fa-heart"></i> ${post.likes || 0} likes &nbsp;
+                <i class="fas fa-comment"></i> ${commentCount} comments
+            </p>
+            <small style="color:#94a3b8;">Posted: ${new Date(post.createdAt).toLocaleString()}</small>
+            ${post.adminReviewedBy ? `<br><small style="color:#94a3b8;">Reviewed by: ${post.adminReviewedBy}</small>` : ''}
+            <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+                <button class="btn btn-sm btn-outline" onclick="viewCommunityPostDetail('${post._id}')"><i class="fas fa-eye"></i> View</button>
+                ${post.status === 'pending' ? `
+                    <button class="btn btn-sm btn-success" onclick="approveCommunityPost('${post._id}')"><i class="fas fa-check"></i> Approve</button>
+                    <button class="btn btn-sm btn-danger" onclick="rejectCommunityPost('${post._id}')"><i class="fas fa-times"></i> Reject</button>
+                ` : ''}
+                <button class="btn btn-sm btn-danger" onclick="deleteCommunityPostAdmin('${post._id}')"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+        </div>`;
+}
+
+function viewCommunityPostDetail(postId) {
+    const post = state.communityPosts.find(p => p._id === postId);
+    if (!post) return showNotification('Post not found.', 'error');
+
+    const imagesHTML = (post.images || []).map(img => {
+        const src = typeof img === 'object' ? (img.url || '') : img;
+        return `<img src="${src}" style="max-width:200px;margin:4px;border-radius:8px;cursor:pointer;" alt="Post image" onclick="window.open('${src}','_blank')">`;
+    }).join('');
+
+    const commentsHTML = (post.comments || []).map(c =>
+        `<div style="padding:10px;border-left:3px solid #e2e8f0;margin:6px 0;background:#f8fafc;border-radius:0 8px 8px 0;">
+            <strong>${sanitizeInput(c.authorName || 'Unknown')}</strong>
+            <span style="background:${c.authorType === 'designer' ? '#dbeafe' : '#e0e7ff'};color:${c.authorType === 'designer' ? '#1e40af' : '#3730a3'};padding:2px 6px;border-radius:8px;font-size:11px;margin-left:4px;">${c.authorType || 'user'}</span>
+            <span style="color:#94a3b8;font-size:12px;margin-left:8px;">${new Date(c.createdAt).toLocaleString()}</span>
+            <p style="margin:4px 0 0 0;color:#334155;">${sanitizeInput(c.text || '')}</p>
+        </div>`
+    ).join('');
+
+    const sc = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444' };
+
+    const modalContent = `
+        <div style="max-width:700px;">
+            <h3 style="margin-bottom:1rem;"><i class="fas fa-newspaper"></i> Community Post Detail</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                <div><label style="color:#64748b;font-size:13px;">Author</label><p style="margin:2px 0;font-weight:600;">${sanitizeInput(post.authorName || 'Unknown')}</p></div>
+                <div><label style="color:#64748b;font-size:13px;">Type</label><p style="margin:2px 0;">${post.authorType || 'unknown'}</p></div>
+                <div><label style="color:#64748b;font-size:13px;">Status</label><p style="margin:2px 0;"><span style="color:${sc[post.status] || '#64748b'};font-weight:600;text-transform:uppercase;">${post.status}</span></p></div>
+                <div><label style="color:#64748b;font-size:13px;">Posted</label><p style="margin:2px 0;">${new Date(post.createdAt).toLocaleString()}</p></div>
+                <div><label style="color:#64748b;font-size:13px;">Likes</label><p style="margin:2px 0;">${post.likes || 0}</p></div>
+                <div><label style="color:#64748b;font-size:13px;">Comments</label><p style="margin:2px 0;">${(post.comments || []).length}</p></div>
+            </div>
+            <h4 style="margin:1rem 0 0.5rem;">Content</h4>
+            <div style="background:#f8fafc;padding:12px;border-radius:8px;white-space:pre-wrap;color:#334155;line-height:1.6;">${sanitizeInput(post.content || '')}</div>
+            ${imagesHTML ? `<h4 style="margin:1rem 0 0.5rem;">Images</h4><div style="display:flex;flex-wrap:wrap;">${imagesHTML}</div>` : ''}
+            ${commentsHTML ? `<h4 style="margin:1rem 0 0.5rem;">Comments (${post.comments.length})</h4>${commentsHTML}` : '<p style="color:#94a3b8;margin-top:1rem;">No comments.</p>'}
+            ${post.adminComments ? `<h4 style="margin:1rem 0 0.5rem;">Admin Comments</h4><div style="background:#fef3c7;padding:10px;border-radius:8px;">${sanitizeInput(post.adminComments)}</div>` : ''}
+            <div style="display:flex;gap:0.5rem;margin-top:1.5rem;justify-content:flex-end;">
+                ${post.status === 'pending' ? `
+                    <button class="btn btn-success" onclick="approveCommunityPost('${postId}')"><i class="fas fa-check"></i> Approve</button>
+                    <button class="btn btn-danger" onclick="rejectCommunityPost('${postId}')"><i class="fas fa-times"></i> Reject</button>
+                ` : ''}
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>`;
+    showModal(modalContent);
+}
+
+function approveCommunityPost(postId) {
+    const modalContent = `
+        <div style="max-width:500px;">
+            <h3 style="margin-bottom:1rem;"><i class="fas fa-check-circle" style="color:#10b981;"></i> Approve Community Post</h3>
+            <p style="color:#64748b;">This post will be visible in the community feed for all users.</p>
+            <div class="form-group" style="margin:1rem 0;">
+                <label class="form-label">Admin Comments (Optional)</label>
+                <textarea id="community-approval-comments" class="form-input" rows="3" placeholder="e.g., Great content!" style="width:100%;"></textarea>
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button class="btn btn-success" onclick="confirmApproveCommunityPost('${postId}')"><i class="fas fa-check"></i> Confirm Approval</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>`;
+    showModal(modalContent);
+}
+
+async function confirmApproveCommunityPost(postId) {
+    const commentsEl = document.getElementById('community-approval-comments');
+    const comments = commentsEl ? commentsEl.value : '';
+    try {
+        const data = await apiCall(`/community-posts/${postId}/approve`, 'POST', {
+            adminComments: sanitizeInput(comments)
+        });
+        showNotification(data.message || 'Post approved!', 'success');
+        closeModal();
+        await loadCommunityPostsData();
+    } catch (error) {
+        showNotification('Failed to approve post.', 'error');
+    }
+}
+
+function rejectCommunityPost(postId) {
+    const modalContent = `
+        <div style="max-width:500px;">
+            <h3 style="margin-bottom:1rem;"><i class="fas fa-times-circle" style="color:#ef4444;"></i> Reject Community Post</h3>
+            <p style="color:#ef4444;font-size:14px;"><i class="fas fa-info-circle"></i> The author will be notified with your feedback.</p>
+            <div class="form-group" style="margin:1rem 0;">
+                <label class="form-label">Reason for Rejection *</label>
+                <textarea id="community-rejection-reason" class="form-input" rows="4" placeholder="Please provide specific reasons for rejection..." required style="width:100%;"></textarea>
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button class="btn btn-danger" onclick="confirmRejectCommunityPost('${postId}')"><i class="fas fa-times"></i> Confirm Rejection</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>`;
+    showModal(modalContent);
+}
+
+async function confirmRejectCommunityPost(postId) {
+    const reasonEl = document.getElementById('community-rejection-reason');
+    const reason = reasonEl ? reasonEl.value.trim() : '';
+    if (!reason) {
+        showNotification('Rejection reason is required.', 'warning');
+        return;
+    }
+    try {
+        const data = await apiCall(`/community-posts/${postId}/reject`, 'POST', {
+            reason: sanitizeInput(reason)
+        });
+        showNotification(data.message || 'Post rejected.', 'success');
+        closeModal();
+        await loadCommunityPostsData();
+    } catch (error) {
+        showNotification('Failed to reject post.', 'error');
+    }
+}
+
+async function deleteCommunityPostAdmin(postId) {
+    if (!confirm('Are you sure you want to delete this community post? It will be moved to trash.')) return;
+    try {
+        const data = await apiCall(`/community-posts/${postId}`, 'DELETE');
+        showNotification(data.message || 'Post deleted.', 'success');
+        await loadCommunityPostsData();
+    } catch (error) {
+        showNotification('Failed to delete post.', 'error');
+    }
 }
