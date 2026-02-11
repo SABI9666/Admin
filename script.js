@@ -706,15 +706,18 @@ function showEstimationFiles(estimationId) {
         <div class="modal-body">
             <h3><i class="fas fa-folder-open"></i> Project Files - ${estimation.projectName || estimation.projectTitle}</h3>
             <div class="files-summary-header">
-                <span class="files-count">${files.length} PDF files</span>
-                ${totalSize > 0 ? `<span class="files-size">Total: ${totalSizeMB}MB</span>` : ''}
+                <span class="files-count"><i class="fas fa-file-pdf"></i> ${files.length} PDF file${files.length !== 1 ? 's' : ''}</span>
+                ${totalSize > 0 ? `<span class="files-size-badge"><i class="fas fa-database"></i> Total: ${totalSizeMB} MB</span>` : ''}
             </div>
-            
+
             ${files.length > 0 ? `
                 <div class="files-grid">
                     ${files.map((file, index) => {
                         const fileName = file.originalname || file.filename || file.name || `File ${index + 1}`;
-                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const fileSizeBytes = file.size || 0;
+                        const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
+                        const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
+                        const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
                         const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
 
                         return `
@@ -725,8 +728,8 @@ function showEstimationFiles(estimationId) {
                                 <div class="file-details">
                                     <h4 class="file-name" title="${fileName}">${fileName}</h4>
                                     <div class="file-meta">
-                                        <span class="file-size">${fileSize}</span>
-                                        <span class="file-date">${uploadDate}</span>
+                                        <span class="file-size-badge">${fileSizeDisplay}</span>
+                                        <span class="file-date"><i class="fas fa-calendar-alt"></i> ${uploadDate}</span>
                                     </div>
                                 </div>
                                 <div class="file-actions">
@@ -1964,6 +1967,9 @@ function viewJobFiles(jobId) {
         });
     }
 
+    const totalSize = allFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+
     const modalContent = `
         <div class="modal-body">
             <h3><i class="fas fa-folder-open"></i> Project Files - ${job.title}</h3>
@@ -1973,22 +1979,30 @@ function viewJobFiles(jobId) {
                 <p><strong>Status:</strong> <span class="status ${job.status}">${job.status}</span></p>
             </div>
             ${allFiles.length > 0 ? `
+                <div class="files-summary-header">
+                    <span class="files-count"><i class="fas fa-paperclip"></i> ${allFiles.length} file${allFiles.length !== 1 ? 's' : ''}</span>
+                    ${totalSize > 0 ? `<span class="files-size-badge"><i class="fas fa-database"></i> Total: ${totalSizeMB} MB</span>` : ''}
+                </div>
                 <div class="files-grid">
                     ${allFiles.map((file, index) => {
                         const fileName = file.originalname || file.filename || file.name || `Attachment ${index + 1}`;
-                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const fileSizeBytes = file.size || 0;
+                        const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
+                        const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
+                        const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
                         const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
-                        
+                        const fileIcon = getFileIconByName(fileName);
+
                         return `
                             <div class="file-item-card">
                                 <div class="file-icon">
-                                    <i class="fas fa-file-pdf"></i>
+                                    <i class="fas ${fileIcon}"></i>
                                 </div>
                                 <div class="file-details">
                                     <h4 class="file-name" title="${fileName}">${fileName}</h4>
                                     <div class="file-meta">
-                                        <span class="file-size">${fileSize}</span>
-                                        <span class="file-date">${uploadDate}</span>
+                                        <span class="file-size-badge">${fileSizeDisplay}</span>
+                                        <span class="file-date"><i class="fas fa-calendar-alt"></i> ${uploadDate}</span>
                                     </div>
                                 </div>
                                 <div class="file-actions">
@@ -2063,6 +2077,12 @@ function viewJobDetails(jobId) {
                     ${totalFiles > 0 ? `
                         <div class="attachments-summary">
                             <p>${totalFiles} file(s) attached to this project.</p>
+                            ${(() => {
+                                const allJobFiles = [...attachments];
+                                if (legacyAttachment) allJobFiles.push({ size: null });
+                                const jobTotalSize = allJobFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+                                return jobTotalSize > 0 ? `<p class="files-size-info"><i class="fas fa-database"></i> Total size: <strong>${(jobTotalSize / (1024 * 1024)).toFixed(2)} MB</strong></p>` : '';
+                            })()}
                             <button class="btn btn-outline" onclick="viewJobFiles('${jobId}')">
                                 <i class="fas fa-folder-open"></i> View All Files
                             </button>
@@ -2139,6 +2159,8 @@ function viewQuoteFiles(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
     const attachments = quote.attachments || [];
+    const totalSize = attachments.reduce((sum, f) => sum + (f.size || 0), 0);
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
     const modalContent = `
         <div class="modal-body">
             <h3><i class="fas fa-folder-open"></i> Quote Attachments</h3>
@@ -2149,13 +2171,20 @@ function viewQuoteFiles(quoteId) {
                 <p><strong>Status:</strong> <span class="status ${quote.status}">${quote.status}</span></p>
             </div>
             ${attachments.length > 0 ? `
+                <div class="files-summary-header">
+                    <span class="files-count"><i class="fas fa-paperclip"></i> ${attachments.length} file${attachments.length !== 1 ? 's' : ''}</span>
+                    ${totalSize > 0 ? `<span class="files-size-badge"><i class="fas fa-database"></i> Total: ${totalSizeMB} MB</span>` : ''}
+                </div>
                 <div class="files-grid">
                     ${attachments.map((file, index) => {
                         const fileName = file.name || file.originalname || `Attachment ${index + 1}`;
-                        const fileSize = file.size ? (file.size / (1024 * 1024)).toFixed(2) + 'MB' : 'Unknown size';
+                        const fileSizeBytes = file.size || 0;
+                        const fileSizeMB = fileSizeBytes > 0 ? (fileSizeBytes / (1024 * 1024)).toFixed(2) : null;
+                        const fileSizeKB = fileSizeBytes > 0 ? (fileSizeBytes / 1024).toFixed(1) : null;
+                        const fileSizeDisplay = fileSizeMB ? (parseFloat(fileSizeMB) >= 1 ? fileSizeMB + ' MB' : fileSizeKB + ' KB') : 'Unknown size';
                         const uploadDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown date';
                         const fileIcon = getQuoteFileIcon(fileName);
-                        
+
                         return `
                             <div class="file-item-card">
                                 <div class="file-icon">
@@ -2164,8 +2193,8 @@ function viewQuoteFiles(quoteId) {
                                 <div class="file-details">
                                     <h4 class="file-name" title="${fileName}">${fileName}</h4>
                                     <div class="file-meta">
-                                        <span class="file-size">${fileSize}</span>
-                                        <span class="file-date">${uploadDate}</span>
+                                        <span class="file-size-badge">${fileSizeDisplay}</span>
+                                        <span class="file-date"><i class="fas fa-calendar-alt"></i> ${uploadDate}</span>
                                     </div>
                                 </div>
                                 <div class="file-actions">
@@ -2251,6 +2280,10 @@ function viewQuoteDetails(quoteId) {
                     ${attachments.length > 0 ? `
                         <div class="attachments-summary">
                             <p>${attachments.length} file(s) attached to this quote.</p>
+                            ${(() => {
+                                const quoteTotalSize = attachments.reduce((sum, f) => sum + (f.size || 0), 0);
+                                return quoteTotalSize > 0 ? `<p class="files-size-info"><i class="fas fa-database"></i> Total size: <strong>${(quoteTotalSize / (1024 * 1024)).toFixed(2)} MB</strong></p>` : '';
+                            })()}
                             <button class="btn btn-outline" onclick="viewQuoteFiles('${quoteId}')">
                                 <i class="fas fa-folder-open"></i> View All Files
                             </button>
@@ -2304,6 +2337,18 @@ function getQuoteFileIcon(fileName) {
         'jpeg': 'fa-file-image',
         'png': 'fa-file-image',
         'dwg': 'fa-drafting-compass'
+    };
+    return iconMap[ext] || 'fa-file';
+}
+
+function getFileIconByName(fileName) {
+    if (!fileName) return 'fa-file';
+    const ext = fileName.toLowerCase().split('.').pop();
+    const iconMap = {
+        'pdf': 'fa-file-pdf', 'doc': 'fa-file-word', 'docx': 'fa-file-word',
+        'xls': 'fa-file-excel', 'xlsx': 'fa-file-excel', 'txt': 'fa-file-alt',
+        'jpg': 'fa-file-image', 'jpeg': 'fa-file-image', 'png': 'fa-file-image',
+        'dwg': 'fa-drafting-compass', 'zip': 'fa-file-archive'
     };
     return iconMap[ext] || 'fa-file';
 }
