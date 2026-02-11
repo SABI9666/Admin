@@ -70,6 +70,11 @@
                 <i class="fas fa-headset"></i>
                 <span>Support Tickets</span>
             </button>
+            <button class="sidebar-link" onclick="showTab('community-feed')" data-tab="community-feed">
+                <i class="fas fa-newspaper"></i>
+                <span>Community Feed</span>
+                <span class="nav-badge" id="communityPendingBadge"></span>
+            </button>
 
             <div class="nav-section-label">Analytics</div>
             <button class="sidebar-link" onclick="showTab('analysis-portal')" data-tab="analysis-portal">
@@ -151,6 +156,7 @@
             <div id="messages-tab" class="tab-content"></div>
             <div id="support-messages-tab" class="tab-content"></div>
             <div id="analysis-portal-tab" class="tab-content"></div>
+            <div id="community-feed-tab" class="tab-content"></div>
             <div id="system-admin-tab" class="tab-content"></div>
         </div>
     </main>
