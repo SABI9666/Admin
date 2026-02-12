@@ -3074,9 +3074,12 @@ async function previewDashboard(dashboardId) {
                 <div class="adm-preview-kpi-label">${kpi.label}</div>
                 <div class="adm-preview-kpi-stats">
                     <span>Avg: ${formatKpiVal(kpi.avg)}</span>
+                    ${kpi.median !== undefined ? `<span>Med: ${formatKpiVal(kpi.median)}</span>` : ''}
                     <span>Max: ${formatKpiVal(kpi.max)}</span>
+                    <span>Min: ${formatKpiVal(kpi.min)}</span>
                 </div>
                 <div class="adm-preview-kpi-trend ${trendUp ? 'up' : 'down'}"><i class="fas fa-arrow-${trendUp ? 'up' : 'down'}"></i> ${Math.abs(kpi.trend)}%</div>
+                ${kpi.growthRate !== undefined ? `<div style="font-size:11px;color:${kpi.growthRate >= 0 ? '#10b981' : '#ef4444'};margin-top:4px"><i class="fas fa-chart-line"></i> Growth: ${kpi.growthRate >= 0 ? '+' : ''}${kpi.growthRate.toFixed(1)}%${kpi.peakLabel ? ' · Peak: ' + kpi.peakLabel : ''}</div>` : ''}
             </div>`;
         }).join('');
 
