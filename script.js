@@ -2818,7 +2818,7 @@ function renderAnalysisPortalTab() {
                         </div>
                         <div class="ap-db-meta-row">
                             <div class="ap-db-meta-item"><i class="fas fa-file-excel"></i><span>${db.fileName || 'No file'}</span></div>
-                            <div class="ap-db-meta-item"><i class="fas fa-chart-bar"></i><span>${db.chartCount || (db.charts ? db.charts.length : 0)} charts</span></div>
+                            <div class="ap-db-meta-item"><i class="fas fa-chart-bar"></i><span>${db.chartCount || 0} charts</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-sync-alt"></i><span>${db.frequency || 'daily'}</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-calendar-alt"></i><span>${formatAdminDate(db.createdAt)}</span></div>
                             ${db.googleSheetUrl ? `<div class="ap-db-meta-item"><a href="${db.googleSheetUrl}" target="_blank" rel="noopener" style="color:#34a853;font-weight:600;display:flex;align-items:center;gap:4px;text-decoration:none"><i class="fab fa-google-drive"></i> Google Sheet</a></div>` : ''}
@@ -3132,25 +3132,25 @@ async function previewDashboard(dashboardId) {
                 </div>
                 ${db.status === 'pending' ? `
                 <div class="adm-preview-actions-panel">
-                    <div class="adm-preview-actions-title"><i class="fas fa-gavel"></i> Decision</div>
+                    <div class="adm-preview-actions-title"><i class="fas fa-gavel"></i> Approve / Reject Dashboard</div>
                     <div class="adm-approve-options">
                         <div class="adm-approve-option">
-                            <button class="adm-approve-btn adm-btn-approve-auto" onclick="approveDashboard('${db._id}')" ${!hasCharts ? 'disabled title="No auto-generated charts available"' : ''}>
-                                <i class="fas fa-magic"></i> Approve Auto-Generated Dashboard
+                            <button class="adm-approve-btn adm-btn-approve-auto" onclick="approveDashboard('${db._id}')">
+                                <i class="fas fa-magic"></i> ${hasCharts ? 'Approve Auto-Generated Dashboard' : 'Approve Dashboard'}
                             </button>
-                            <small>${hasCharts ? 'Client will see the auto-generated charts above' : 'No charts generated - use manual link instead'}</small>
+                            <small>${hasCharts ? 'Client will see the ' + (db.charts || []).length + ' auto-generated chart(s) above' : 'Dashboard will be approved. Add a manual link below if needed, or approve as-is for the Google Sheet data.'}</small>
                         </div>
-                        <div class="adm-approve-divider"><span>OR</span></div>
+                        <div class="adm-approve-divider"><span>OR ADD CUSTOM LINK</span></div>
                         <div class="adm-approve-option">
                             <div class="adm-manual-link-group">
-                                <label><i class="fas fa-link"></i> Add Manual Dashboard Link</label>
+                                <label><i class="fas fa-link"></i> Approve with Custom Dashboard URL</label>
                                 <div class="adm-manual-input-row">
                                     <input type="url" id="adm-manual-url-${db._id}" class="adm-manual-input" placeholder="https://your-dashboard-url.vercel.app/..." value="${db.manualDashboardUrl || ''}">
                                     <button class="adm-approve-btn adm-btn-approve-manual" onclick="approveWithManualLink('${db._id}')">
                                         <i class="fas fa-check-circle"></i> Approve with Link
                                     </button>
                                 </div>
-                                <small>Client will view this URL instead of auto-generated dashboard</small>
+                                <small>Client will view this custom URL instead of auto-generated charts</small>
                             </div>
                         </div>
                     </div>
@@ -3162,6 +3162,10 @@ async function previewDashboard(dashboardId) {
                 </div>
                 ` : `
                 <div class="adm-preview-actions-panel" style="text-align:center;padding:20px 28px">
+                    <span class="ap-status-badge ap-status-${db.status}" style="font-size:.85rem;padding:8px 20px;margin-right:12px">
+                        <i class="fas fa-${db.status === 'approved' ? 'check-circle' : 'times-circle'}"></i>
+                        ${db.status === 'approved' ? 'Approved' : 'Rejected'}
+                    </span>
                     <button class="btn btn-secondary" onclick="closeModal()" style="min-width:160px">Close Preview</button>
                 </div>
                 `}
