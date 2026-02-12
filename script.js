@@ -138,7 +138,7 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
     }
     const options = { method, headers: { 'Authorization': `Bearer ${token}` } };
     if (body) {
-        if (isFileUpload) {
+        if (isFileUpload || body instanceof FormData) {
             options.body = body;
         } else {
             options.headers['Content-Type'] = 'application/json';
@@ -2878,18 +2878,45 @@ function filterDashboards(status) {
     renderAnalysisPortalTab();
 }
 
-// Upload Sheet Modal - Premium design with Google Sheet link support
-function showUploadSheetModal() {
+// Upload Sheet Modal - Premium design, auto-populates contractor from dropdown
+async function showUploadSheetModal() {
+    // Fetch contractors list for auto-populate
+    let contractors = [];
+    try {
+        const res = await apiCall('/users?role=contractor', 'GET');
+        contractors = (res.users || res.data || []).filter(u => u.email);
+    } catch (e) { console.warn('Could not fetch contractors list:', e); }
+
+    const contractorOptions = contractors.map(c =>
+        `<option value="${c.email}" data-name="${c.name || c.displayName || ''}">${c.name || c.displayName || c.email} (${c.email})</option>`
+    ).join('');
+
     const modalContent = `
         <div class="modal-body" style="max-width:700px;padding:0">
             <div class="adm-upload-header">
                 <div class="adm-upload-header-icon"><i class="fas fa-cloud-upload-alt"></i></div>
                 <div>
-                    <h3>Upload Data for Dashboard</h3>
-                    <p>Upload a spreadsheet file and/or paste a Google Sheet link to auto-generate a dashboard</p>
+                    <h3>Upload Data for Contractor</h3>
+                    <p>Select a contractor and upload data to auto-generate a dashboard for them</p>
                 </div>
             </div>
             <div class="adm-upload-form-body">
+                <div class="adm-upload-field">
+                    <label><i class="fas fa-user-circle"></i> Select Contractor *</label>
+                    ${contractors.length > 0 ? `
+                        <select id="sheet-contractor-select" class="adm-upload-input" onchange="adminAutoFillContractor()">
+                            <option value="">-- Select Contractor --</option>
+                            ${contractorOptions}
+                        </select>
+                    ` : `
+                        <div class="adm-upload-row" style="margin-bottom:0">
+                            <div class="adm-upload-field" style="margin-bottom:0"><input type="email" id="sheet-contractor-email" class="adm-upload-input" placeholder="contractor@email.com" required></div>
+                            <div class="adm-upload-field" style="margin-bottom:0"><input type="text" id="sheet-contractor-name" class="adm-upload-input" placeholder="Contractor Name"></div>
+                        </div>
+                    `}
+                    <input type="hidden" id="sheet-contractor-email-hidden" value="">
+                    <input type="hidden" id="sheet-contractor-name-hidden" value="">
+                </div>
                 <div class="adm-upload-row">
                     <div class="adm-upload-field">
                         <label><i class="fas fa-heading"></i> Dashboard Title *</label>
@@ -2903,16 +2930,6 @@ function showUploadSheetModal() {
                             <option value="monthly" selected>Monthly</option>
                             <option value="quarterly">Quarterly</option>
                         </select>
-                    </div>
-                </div>
-                <div class="adm-upload-row">
-                    <div class="adm-upload-field">
-                        <label><i class="fas fa-envelope"></i> Contractor Email *</label>
-                        <input type="email" id="sheet-contractor-email" class="adm-upload-input" placeholder="contractor@email.com" required>
-                    </div>
-                    <div class="adm-upload-field">
-                        <label><i class="fas fa-user"></i> Contractor Name</label>
-                        <input type="text" id="sheet-contractor-name" class="adm-upload-input" placeholder="John Doe">
                     </div>
                 </div>
                 <div class="adm-upload-field">
@@ -2962,6 +2979,15 @@ function showUploadSheetModal() {
     }, 200);
 }
 
+function adminAutoFillContractor() {
+    const select = document.getElementById('sheet-contractor-select');
+    if (!select) return;
+    const email = select.value;
+    const name = select.selectedOptions[0]?.dataset?.name || '';
+    document.getElementById('sheet-contractor-email-hidden').value = email;
+    document.getElementById('sheet-contractor-name-hidden').value = name;
+}
+
 function adminHandleFileSelect(input) {
     const content = document.getElementById('adm-file-drop-content');
     if (input.files && input.files[0]) {
@@ -2974,8 +3000,13 @@ function adminHandleFileSelect(input) {
 
 async function uploadSheetFile() {
     const title = document.getElementById('sheet-dash-title').value.trim();
-    const email = document.getElementById('sheet-contractor-email').value.trim();
-    const name = document.getElementById('sheet-contractor-name').value.trim();
+    // Get contractor from dropdown or hidden fields
+    const emailHidden = document.getElementById('sheet-contractor-email-hidden');
+    const emailDirect = document.getElementById('sheet-contractor-email');
+    const nameHidden = document.getElementById('sheet-contractor-name-hidden');
+    const nameDirect = document.getElementById('sheet-contractor-name');
+    const email = (emailHidden && emailHidden.value.trim()) || (emailDirect && emailDirect.value.trim()) || '';
+    const name = (nameHidden && nameHidden.value.trim()) || (nameDirect && nameDirect.value.trim()) || '';
     const freq = document.getElementById('sheet-frequency').value;
     const desc = document.getElementById('sheet-description').value.trim();
     const fileInput = document.getElementById('sheet-file-input');
@@ -2986,7 +3017,7 @@ async function uploadSheetFile() {
     const hasLink = googleUrlInput && googleUrlInput.value.trim();
 
     if (!title || !email) {
-        showNotification('Please fill in the title and contractor email', 'error');
+        showNotification('Please fill in the title and select a contractor', 'error');
         return;
     }
     if (!hasFile && !hasLink) {
