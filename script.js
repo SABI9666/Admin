@@ -31,6 +31,55 @@ function formatAdminDate(val, fallback = 'N/A') {
 
 document.addEventListener('DOMContentLoaded', initializeAdminPanel);
 
+// --- INACTIVITY TIMER FOR AUTO-LOGOUT (5 MIN) ---
+let adminInactivityTimer;
+let adminWarningTimer;
+
+function resetAdminInactivityTimer() {
+    clearTimeout(adminInactivityTimer);
+    clearTimeout(adminWarningTimer);
+    // Warning at 4 minutes
+    adminWarningTimer = setTimeout(() => {
+        showAdminInactivityWarning();
+    }, 240000);
+    // Logout at 5 minutes
+    adminInactivityTimer = setTimeout(() => {
+        dismissAdminInactivityWarning();
+        showNotification('You have been logged out due to inactivity.', 'warning');
+        setTimeout(() => logout(), 1500);
+    }, 300000);
+}
+
+function showAdminInactivityWarning() {
+    dismissAdminInactivityWarning();
+    const warning = document.createElement('div');
+    warning.id = 'admin-inactivity-warning';
+    warning.className = 'admin-inactivity-overlay';
+    warning.innerHTML = `
+        <div class="admin-inactivity-modal">
+            <div class="admin-inactivity-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>Session Timeout Warning</h3>
+            <p>You will be logged out in <strong>1 minute</strong> due to inactivity.</p>
+            <p>Click anywhere or press a key to stay logged in.</p>
+            <button class="btn btn-primary" onclick="dismissAdminInactivityWarning()">Stay Logged In</button>
+        </div>
+    `;
+    document.body.appendChild(warning);
+    const dismiss = () => { dismissAdminInactivityWarning(); document.removeEventListener('mousemove', dismiss); };
+    setTimeout(() => document.addEventListener('mousemove', dismiss, { once: true }), 200);
+}
+
+function dismissAdminInactivityWarning() {
+    const el = document.getElementById('admin-inactivity-warning');
+    if (el) { el.remove(); resetAdminInactivityTimer(); }
+}
+
+function initAdminInactivityTimer() {
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'wheel'];
+    events.forEach(ev => window.addEventListener(ev, resetAdminInactivityTimer, { passive: true }));
+    resetAdminInactivityTimer();
+}
+
 // --- CONFIGURATION & GLOBAL STATE ---
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com';
 const state = {
@@ -62,6 +111,8 @@ async function initializeAdminPanel() {
     }
     document.getElementById('adminName').textContent = user.name || user.email;
 
+    // Start inactivity auto-logout timer (5 min)
+    initAdminInactivityTimer();
 
     // Auto-fetch core data on startup for a faster experience
     await loadDashboardStats();
@@ -113,6 +164,9 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
 }
 
 function logout() {
+    clearTimeout(adminInactivityTimer);
+    clearTimeout(adminWarningTimer);
+    dismissAdminInactivityWarning();
     localStorage.clear();
     window.location.href = 'index.html';
 }

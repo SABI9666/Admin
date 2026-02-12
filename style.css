@@ -2530,3 +2530,103 @@ table tbody tr:last-child td {
     .sa-detail-header { flex-direction: column; align-items: flex-start; }
     .sa-search-input { width: 100%; }
 }
+
+/* ===== Admin Inactivity Warning Modal ===== */
+.admin-inactivity-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: adminFadeIn 0.3s ease;
+}
+
+@keyframes adminFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes adminSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes adminPulseWarn {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.admin-inactivity-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px 32px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: adminSlideUp 0.4s ease;
+}
+
+.admin-inactivity-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: adminPulseWarn 2s infinite;
+}
+
+.admin-inactivity-icon i {
+    font-size: 28px;
+    color: #ef4444;
+}
+
+.admin-inactivity-modal h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+}
+
+.admin-inactivity-modal p {
+    font-size: 0.92rem;
+    color: #64748b;
+    margin: 0 0 6px 0;
+    line-height: 1.5;
+}
+
+.admin-inactivity-timer {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #ef4444;
+    margin: 16px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-inactivity-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border: none;
+    padding: 12px 36px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+}
+
+.admin-inactivity-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
