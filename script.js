@@ -2693,154 +2693,172 @@ function getFileIcon(mimeType, fileName) {
 }
 
 
-// === ANALYSIS PORTAL FUNCTIONS (FIXED) ===
+// === ANALYSIS PORTAL - SMART DASHBOARD MANAGEMENT ===
+// State for dashboards
+if (!state.dashboards) state.dashboards = [];
+if (!state.dashboardFilter) state.dashboardFilter = 'all';
+let adminDashboardCharts = {};
+
 async function loadAnalysisPortalData() {
     const container = document.getElementById('analysis-portal-tab');
     showLoader(container);
     try {
-        // FIXED: Using correct endpoint path
-        const response = await apiCall('/business-analytics/requests', 'GET');
-        state.contractorRequests = response.requests || [];
+        const [reqRes, dbRes] = await Promise.all([
+            apiCall('/business-analytics/requests', 'GET'),
+            apiCall('/dashboards', 'GET')
+        ]);
+        state.contractorRequests = reqRes.requests || [];
+        state.dashboards = dbRes.dashboards || [];
         renderAnalysisPortalTab();
     } catch (error) {
-        console.error('Error loading analysis portal data:', error);
-        container.innerHTML = `<p class="error">Failed to load analysis requests.</p><button class="btn" onclick="loadAnalysisPortalData()">Retry</button>`;
+        console.error('Error loading analysis portal:', error);
+        container.innerHTML = `<p class="error">Failed to load analysis data.</p><button class="btn" onclick="loadAnalysisPortalData()">Retry</button>`;
     }
 }
 
 function renderAnalysisPortalTab() {
     const container = document.getElementById('analysis-portal-tab');
-    const requests = state.contractorRequests;
-    const filteredRequests = state.analysisFilterStatus === 'all'
-        ? requests
-        : requests.filter(r => r.status === state.analysisFilterStatus);
+    const dashboards = state.dashboards || [];
+    const requests = state.contractorRequests || [];
+    const filtered = state.dashboardFilter === 'all' ? dashboards :
+        dashboards.filter(d => d.status === state.dashboardFilter);
+
+    const pendingCount = dashboards.filter(d => d.status === 'pending').length;
+    const approvedCount = dashboards.filter(d => d.status === 'approved').length;
 
     container.innerHTML = `
         <div class="section-header">
-            <h3>Business Analytics Portal</h3>
+            <h3><i class="fas fa-chart-line"></i> Analytics Dashboard Manager</h3>
             <div class="header-actions">
-                <select class="filter-select" onchange="filterAnalysisRequests(this.value)">
-                    <option value="all" ${state.analysisFilterStatus === 'all' ? 'selected' : ''}>All Requests</option>
-                    <option value="pending" ${state.analysisFilterStatus === 'pending' ? 'selected' : ''}>Pending</option>
-                    <option value="completed" ${state.analysisFilterStatus === 'completed' ? 'selected' : ''}>Completed</option>
-                </select>
-                <button class="btn" onclick="loadAnalysisPortalData()">Refresh</button>
+                <button class="btn btn-primary" onclick="showUploadSheetModal()">
+                    <i class="fas fa-file-excel"></i> Upload Google Sheet
+                </button>
+                <button class="btn" onclick="loadAnalysisPortalData()"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
         </div>
-        
-        <div class="analysis-requests-container">
-            ${filteredRequests.length === 0 ?
-                '<p class="no-data">No analysis requests found.</p>' :
-                `<table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Contractor</th>
-                            <th>Data Type</th>
-                            <th>Frequency</th>
-                            <th>Description</th>
-                            <th>Google Sheet</th>
-                            <th>Status</th>
-                            <th>Submitted</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filteredRequests.map(request => `
-                            <tr>
-                                <td>
-                                    <div class="user-info-cell">
-                                        <strong>${request.contractorName}</strong><br>
-                                        <small>${request.contractorEmail}</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge">${request.dataType}</span></td>
-                                <td><span class="frequency-badge">${request.frequency}</span></td>
-                                <td>
-                                    <div class="description-cell" title="${request.description}">
-                                        ${request.description.length > 50 ?
-                                             request.description.substring(0, 50) + '...' :
-                                             request.description}
-                                    </div>
-                                </td>
-                                <td>
-                                    <a href="${request.googleSheetUrl}" target="_blank" class="sheet-link">
-                                        <i class="fas fa-external-link-alt"></i> View Sheet
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="status-badge ${request.status}">
-                                        ${request.status === 'completed' ?
-                                             '<i class="fas fa-check-circle"></i> Completed' :
-                                             '<i class="fas fa-clock"></i> Pending'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <small>${formatAdminDate(request.createdAt)}</small>
-                                </td>
-                                <td class="action-buttons">
-                                    ${request.status === 'pending' ?
-                                         `<button class="btn btn-primary btn-sm" onclick="showUploadReportModal('${request._id}')">
-                                            <i class="fas fa-upload"></i> Upload Report
-                                        </button>` :
-                                        `<button class="btn btn-outline btn-sm" onclick="updateReportUrl('${request._id}')">
-                                            <i class="fas fa-edit"></i> Update Report
-                                        </button>`
-                                    }
-                                    <button class="btn btn-danger btn-sm" onclick="deleteAnalysisRequest('${request._id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>`
-            }
+
+        <div class="adm-stats-row">
+            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-chart-bar"></i></div>
+                <div><div class="adm-stat-num">${dashboards.length}</div><div class="adm-stat-label">Total Dashboards</div></div></div>
+            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(245,158,11,.1);color:#f59e0b"><i class="fas fa-clock"></i></div>
+                <div><div class="adm-stat-num">${pendingCount}</div><div class="adm-stat-label">Pending Approval</div></div></div>
+            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(16,185,129,.1);color:#10b981"><i class="fas fa-check-circle"></i></div>
+                <div><div class="adm-stat-num">${approvedCount}</div><div class="adm-stat-label">Live Dashboards</div></div></div>
+            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(236,72,153,.1);color:#ec4899"><i class="fas fa-users"></i></div>
+                <div><div class="adm-stat-num">${requests.length}</div><div class="adm-stat-label">Analysis Requests</div></div></div>
         </div>
+
+        <div class="adm-filter-row">
+            <button class="adm-filter-btn ${state.dashboardFilter === 'all' ? 'active' : ''}" onclick="filterDashboards('all')">All</button>
+            <button class="adm-filter-btn ${state.dashboardFilter === 'pending' ? 'active' : ''}" onclick="filterDashboards('pending')">Pending</button>
+            <button class="adm-filter-btn ${state.dashboardFilter === 'approved' ? 'active' : ''}" onclick="filterDashboards('approved')">Approved</button>
+        </div>
+
+        <div class="adm-dashboards-grid">
+            ${filtered.length === 0 ? '<div class="no-data" style="grid-column:1/-1;text-align:center;padding:40px"><i class="fas fa-chart-area" style="font-size:2rem;color:#cbd5e1;margin-bottom:12px;display:block"></i>No dashboards found. Upload a Google Sheet to auto-generate one.</div>' :
+            filtered.map(db => `
+                <div class="adm-db-card">
+                    <div class="adm-db-card-head">
+                        <div class="adm-db-icon"><i class="fas fa-chart-pie"></i></div>
+                        <div class="adm-db-info">
+                            <h4>${db.title || 'Untitled Dashboard'}</h4>
+                            <span class="adm-db-for">${db.contractorName || db.contractorEmail}</span>
+                        </div>
+                        <span class="status-badge ${db.status}">
+                            <i class="fas fa-${db.status === 'approved' ? 'check-circle' : db.status === 'rejected' ? 'times-circle' : 'clock'}"></i>
+                            ${db.status.charAt(0).toUpperCase() + db.status.slice(1)}
+                        </span>
+                    </div>
+                    <div class="adm-db-meta">
+                        <span><i class="fas fa-file-excel"></i> ${db.fileName || 'N/A'}</span>
+                        <span><i class="fas fa-table"></i> ${db.chartCount || 0} chart(s)</span>
+                        <span><i class="fas fa-clock"></i> ${db.frequency || 'daily'}</span>
+                        <span><i class="fas fa-calendar"></i> ${formatAdminDate(db.createdAt)}</span>
+                    </div>
+                    <div class="adm-db-actions">
+                        <button class="btn btn-sm btn-outline" onclick="previewDashboard('${db._id}')">
+                            <i class="fas fa-eye"></i> Preview
+                        </button>
+                        ${db.status === 'pending' ? `
+                            <button class="btn btn-sm btn-primary" onclick="approveDashboard('${db._id}')">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectDashboard('${db._id}')">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteDashboard('${db._id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+
+        ${requests.length > 0 ? `
+        <div class="section-header" style="margin-top:32px">
+            <h3><i class="fas fa-inbox"></i> Contractor Analysis Requests</h3>
+        </div>
+        <table class="data-table">
+            <thead><tr><th>Contractor</th><th>Data Type</th><th>Frequency</th><th>Google Sheet</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody>
+                ${requests.map(r => `<tr>
+                    <td><strong>${r.contractorName}</strong><br><small>${r.contractorEmail}</small></td>
+                    <td><span class="badge">${r.dataType}</span></td>
+                    <td>${r.frequency}</td>
+                    <td><a href="${r.googleSheetUrl}" target="_blank" class="sheet-link"><i class="fas fa-external-link-alt"></i> View</a></td>
+                    <td><span class="status-badge ${r.status}">${r.status}</span></td>
+                    <td><small>${formatAdminDate(r.createdAt)}</small></td>
+                    <td><button class="btn btn-sm btn-danger" onclick="deleteAnalysisRequest('${r._id}')"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('')}
+            </tbody>
+        </table>` : ''}
     `;
 }
 
-function filterAnalysisRequests(status) {
-    state.analysisFilterStatus = status;
+function filterDashboards(status) {
+    state.dashboardFilter = status;
     renderAnalysisPortalTab();
 }
 
-function showUploadReportModal(requestId) {
-    const request = state.contractorRequests.find(r => r._id === requestId);
-    if (!request) return;
-
+// Upload Sheet Modal
+function showUploadSheetModal() {
     const modalContent = `
         <div class="modal-body">
-            <h3><i class="fas fa-chart-line"></i> Upload Analytics Report</h3>
-            <div class="request-details">
-                <p><strong>Contractor:</strong> ${request.contractorName} (${request.contractorEmail})</p>
-                <p><strong>Data Type:</strong> ${request.dataType}</p>
-                <p><strong>Frequency:</strong> ${request.frequency}</p>
-                <p><strong>Description:</strong> ${request.description}</p>
-                <p><strong>Google Sheet:</strong> <a href="${request.googleSheetUrl}" target="_blank">View Sheet</a></p>
-            </div>
-            
+            <h3><i class="fas fa-file-excel" style="color:#10b981"></i> Upload Google Sheet / Excel File</h3>
+            <p style="color:#64748b;margin-bottom:20px">Upload a .xlsx, .xls, or .csv file. The system will automatically parse the data and generate a dashboard with charts.</p>
             <div class="form-group">
-                <label for="report-url">Report URL (Vercel or other hosted link)</label>
-                <input type="url"
-                        id="report-url"
-                        class="form-input"
-                        placeholder="https://your-analytics-app.vercel.app"
-                       value="${request.vercelUrl || ''}"
-                       required>
-                <small>Enter the URL where the analytics report is hosted</small>
+                <label>Dashboard Title *</label>
+                <input type="text" id="sheet-dash-title" class="form-input" placeholder="e.g., Monthly Production Report" required>
             </div>
-            
             <div class="form-group">
-                <label for="admin-notes">Admin Notes (Optional)</label>
-                <textarea id="admin-notes"
-                           rows="3"
-                           class="form-textarea"
-                          placeholder="Any notes about this analysis...">${request.adminNotes || ''}</textarea>
+                <label>Contractor Email *</label>
+                <input type="email" id="sheet-contractor-email" class="form-input" placeholder="contractor@email.com" required>
             </div>
-            
+            <div class="form-group">
+                <label>Contractor Name</label>
+                <input type="text" id="sheet-contractor-name" class="form-input" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+                <label>Frequency</label>
+                <select id="sheet-frequency" class="form-input">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly" selected>Monthly</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="sheet-description" class="form-textarea" rows="2" placeholder="Brief description of this dashboard..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Select Spreadsheet File *</label>
+                <input type="file" id="sheet-file-input" class="form-input" accept=".xlsx,.xls,.csv" required>
+                <small style="color:#94a3b8">Supported: .xlsx, .xls, .csv (Max 50MB)</small>
+            </div>
             <div class="modal-actions">
-                <button class="btn btn-primary" onclick="submitReportUrl('${requestId}')">
-                    <i class="fas fa-check"></i> Submit Report URL
+                <button class="btn btn-primary" onclick="uploadSheetFile()" id="sheet-upload-btn">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload & Generate Dashboard
                 </button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
@@ -2849,68 +2867,179 @@ function showUploadReportModal(requestId) {
     showModal(modalContent);
 }
 
-async function submitReportUrl(requestId) {
-    const reportUrl = document.getElementById('report-url').value.trim();
-    const adminNotes = document.getElementById('admin-notes').value.trim();
+async function uploadSheetFile() {
+    const title = document.getElementById('sheet-dash-title').value.trim();
+    const email = document.getElementById('sheet-contractor-email').value.trim();
+    const name = document.getElementById('sheet-contractor-name').value.trim();
+    const freq = document.getElementById('sheet-frequency').value;
+    const desc = document.getElementById('sheet-description').value.trim();
+    const fileInput = document.getElementById('sheet-file-input');
+    const btn = document.getElementById('sheet-upload-btn');
 
-    if (!reportUrl) {
-        showNotification('Please enter a report URL', 'error');
+    if (!title || !email || !fileInput.files[0]) {
+        showNotification('Please fill in all required fields and select a file', 'error');
         return;
     }
 
-    try {
-        new URL(reportUrl);
-    } catch (e) {
-        showNotification('Please enter a valid URL', 'error');
-        return;
-    }
+    btn.disabled = true;
+    btn.innerHTML = '<div class="btn-spinner"></div> Processing...';
 
     try {
-        // FIXED: Using correct endpoint path and payload key
-        await apiCall('/business-analytics/upload-report', 'POST', {
-            requestId: requestId,
-            reportUrl: reportUrl,
-            adminNotes: adminNotes
-        });
+        const formData = new FormData();
+        formData.append('spreadsheet', fileInput.files[0]);
+        formData.append('title', title);
+        formData.append('contractorEmail', email);
+        formData.append('contractorName', name);
+        formData.append('frequency', freq);
+        formData.append('description', desc);
 
-        showNotification('Analytics report uploaded successfully!', 'success');
+        const response = await apiCall('/dashboards/upload', 'POST', formData);
+        showNotification(`Dashboard auto-generated! ${response.charts?.length || 0} chart(s) created.`, 'success');
         closeModal();
         await loadAnalysisPortalData();
-        await loadDashboardStats();
-
-        const request = state.contractorRequests.find(r => r._id === requestId);
-        if (request) {
-            sendAnalysisNotification(request.contractorEmail, request.contractorName);
-        }
-
     } catch (error) {
-        console.error('Error submitting report URL:', error);
-        showNotification('Failed to upload report URL', 'error');
+        console.error('Sheet upload error:', error);
+        showNotification('Failed to upload and process the spreadsheet', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload & Generate Dashboard';
     }
 }
 
-function updateReportUrl(requestId) {
-    showUploadReportModal(requestId);
+// Preview Dashboard
+async function previewDashboard(dashboardId) {
+    try {
+        showNotification('Loading dashboard preview...', 'info');
+        const response = await apiCall(`/dashboards/${dashboardId}`, 'GET');
+        const db = response.dashboard;
+        if (!db) { showNotification('Dashboard not found', 'error'); return; }
+
+        // Build KPI HTML
+        const allKpis = [];
+        (db.charts || []).forEach(c => { if (c.kpis) allKpis.push(...c.kpis); });
+        const kpisHTML = allKpis.slice(0, 6).map(kpi => {
+            const trendUp = kpi.trend >= 0;
+            return `<div class="adm-preview-kpi">
+                <div class="adm-preview-kpi-val">${formatKpiVal(kpi.total)}</div>
+                <div class="adm-preview-kpi-label">${kpi.label}</div>
+                <div class="adm-preview-kpi-trend ${trendUp ? 'up' : 'down'}"><i class="fas fa-arrow-${trendUp ? 'up' : 'down'}"></i> ${Math.abs(kpi.trend)}%</div>
+            </div>`;
+        }).join('');
+
+        const chartsHTML = (db.charts || []).map((chart, idx) =>
+            `<div class="adm-preview-chart-card">
+                <h4>${chart.customTitle || chart.sheetName} <small>(${chart.chartType}, ${chart.rowCount} rows)</small></h4>
+                <div style="height:280px;position:relative"><canvas id="adm-preview-chart-${idx}"></canvas></div>
+            </div>`
+        ).join('');
+
+        const modalContent = `
+            <div class="modal-body" style="max-width:900px">
+                <div class="adm-preview-head">
+                    <h3><i class="fas fa-chart-bar" style="color:#6366f1"></i> ${db.title}</h3>
+                    <span class="status-badge ${db.status}">${db.status}</span>
+                </div>
+                <p style="color:#64748b">${db.description || ''} | For: <strong>${db.contractorName || db.contractorEmail}</strong> | Frequency: ${db.frequency}</p>
+                ${kpisHTML ? `<div class="adm-preview-kpi-grid">${kpisHTML}</div>` : ''}
+                <div class="adm-preview-charts">${chartsHTML}</div>
+                <div class="modal-actions" style="margin-top:20px">
+                    ${db.status === 'pending' ? `
+                        <button class="btn btn-primary" onclick="approveDashboard('${db._id}');closeModal()"><i class="fas fa-check"></i> Approve for Client</button>
+                        <button class="btn btn-danger" onclick="rejectDashboard('${db._id}');closeModal()"><i class="fas fa-times"></i> Reject</button>
+                    ` : ''}
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        `;
+        showModal(modalContent);
+
+        // Render charts after modal opens
+        setTimeout(() => {
+            (db.charts || []).forEach((chart, idx) => {
+                const ctx = document.getElementById(`adm-preview-chart-${idx}`);
+                if (!ctx || typeof Chart === 'undefined') return;
+                const isCirc = ['doughnut','pie','polarArea'].includes(chart.chartType);
+                const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#22c55e'];
+                const datasets = chart.datasets.map((ds, di) => {
+                    if (isCirc) return { label: ds.label, data: ds.data, backgroundColor: ds.data.map((_, i) => colors[i % colors.length]), borderWidth: 2, borderColor: '#fff' };
+                    return { label: ds.label, data: ds.data, borderColor: colors[di % colors.length],
+                        backgroundColor: chart.chartType === 'bar' ? colors[di % colors.length] + 'CC' : colors[di % colors.length] + '15',
+                        borderWidth: 3, tension: 0.4, fill: chart.chartType === 'line', borderRadius: chart.chartType === 'bar' ? 6 : 0 };
+                });
+                if (adminDashboardCharts[idx]) adminDashboardCharts[idx].destroy();
+                adminDashboardCharts[idx] = new Chart(ctx, {
+                    type: chart.chartType,
+                    data: { labels: chart.labels, datasets },
+                    options: { responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top', labels: { usePointStyle: true } } },
+                        ...(!isCirc ? { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.05)' } } } } : {})
+                    }
+                });
+            });
+        }, 300);
+    } catch (error) {
+        console.error('Preview error:', error);
+        showNotification('Failed to load dashboard preview', 'error');
+    }
+}
+
+function formatKpiVal(val) {
+    if (val === null || val === undefined) return '0';
+    const num = parseFloat(val);
+    if (isNaN(num)) return String(val);
+    if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (Math.abs(num) >= 1000) return (num / 1000).toFixed(1) + 'K';
+    if (Number.isInteger(num)) return num.toLocaleString();
+    return num.toFixed(2);
+}
+
+async function approveDashboard(id) {
+    if (!confirm('Approve this dashboard? The client will be able to view it immediately.')) return;
+    try {
+        await apiCall(`/dashboards/${id}/approve`, 'POST', {});
+        showNotification('Dashboard approved! Client can now view it.', 'success');
+        await loadAnalysisPortalData();
+    } catch (error) {
+        showNotification('Failed to approve dashboard', 'error');
+    }
+}
+
+async function rejectDashboard(id) {
+    const reason = prompt('Enter rejection reason (optional):');
+    try {
+        await apiCall(`/dashboards/${id}/reject`, 'POST', { reason: reason || '' });
+        showNotification('Dashboard rejected', 'info');
+        await loadAnalysisPortalData();
+    } catch (error) {
+        showNotification('Failed to reject dashboard', 'error');
+    }
+}
+
+async function deleteDashboard(id) {
+    if (!confirm('Delete this dashboard permanently?')) return;
+    try {
+        await apiCall(`/dashboards/${id}`, 'DELETE');
+        showNotification('Dashboard deleted', 'success');
+        await loadAnalysisPortalData();
+    } catch (error) {
+        showNotification('Failed to delete dashboard', 'error');
+    }
 }
 
 async function deleteAnalysisRequest(requestId) {
-    if (!confirm('Are you sure you want to delete this analysis request?')) return;
-
+    if (!confirm('Delete this analysis request?')) return;
     try {
-        // FIXED: Using correct endpoint path
         await apiCall(`/business-analytics/request/${requestId}`, 'DELETE');
-        showNotification('Analysis request deleted successfully', 'success');
+        showNotification('Request deleted', 'success');
         await loadAnalysisPortalData();
-        await loadDashboardStats();
     } catch (error) {
-        console.error('Error deleting analysis request:', error);
-        showNotification('Failed to delete analysis request', 'error');
+        showNotification('Failed to delete request', 'error');
     }
 }
 
-async function sendAnalysisNotification(email, name) {
-    console.log(`Notification would be sent to ${name} (${email}) that their analysis report is ready.`);
-    showNotification(`Notification sent to ${name}.`, 'info');
+function filterAnalysisRequests(status) {
+    state.analysisFilterStatus = status;
+    renderAnalysisPortalTab();
 }
 
 // === ANALYSIS STATS FOR DASHBOARD ===
