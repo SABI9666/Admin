@@ -2725,94 +2725,152 @@ function renderAnalysisPortalTab() {
 
     const pendingCount = dashboards.filter(d => d.status === 'pending').length;
     const approvedCount = dashboards.filter(d => d.status === 'approved').length;
+    const rejectedCount = dashboards.filter(d => d.status === 'rejected').length;
 
     container.innerHTML = `
-        <div class="section-header">
-            <h3><i class="fas fa-chart-line"></i> Analytics Dashboard Manager</h3>
-            <div class="header-actions">
-                <button class="btn btn-primary" onclick="showUploadSheetModal()">
-                    <i class="fas fa-file-excel"></i> Upload Google Sheet
+        <div class="ap-header">
+            <div class="ap-header-left">
+                <div class="ap-header-icon"><i class="fas fa-chart-bar"></i></div>
+                <div>
+                    <h3>Analytics Dashboard Manager</h3>
+                    <p>Upload Google Sheets, auto-generate dashboards, and approve for clients</p>
+                </div>
+            </div>
+            <div class="ap-header-actions">
+                <button class="btn btn-primary ap-upload-btn" onclick="showUploadSheetModal()">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload Sheet
                 </button>
-                <button class="btn" onclick="loadAnalysisPortalData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn ap-refresh-btn" onclick="loadAnalysisPortalData()"><i class="fas fa-sync-alt"></i></button>
             </div>
         </div>
 
-        <div class="adm-stats-row">
-            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-chart-bar"></i></div>
-                <div><div class="adm-stat-num">${dashboards.length}</div><div class="adm-stat-label">Total Dashboards</div></div></div>
-            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(245,158,11,.1);color:#f59e0b"><i class="fas fa-clock"></i></div>
-                <div><div class="adm-stat-num">${pendingCount}</div><div class="adm-stat-label">Pending Approval</div></div></div>
-            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(16,185,129,.1);color:#10b981"><i class="fas fa-check-circle"></i></div>
-                <div><div class="adm-stat-num">${approvedCount}</div><div class="adm-stat-label">Live Dashboards</div></div></div>
-            <div class="adm-stat-card"><div class="adm-stat-icon" style="background:rgba(236,72,153,.1);color:#ec4899"><i class="fas fa-users"></i></div>
-                <div><div class="adm-stat-num">${requests.length}</div><div class="adm-stat-label">Analysis Requests</div></div></div>
+        <div class="ap-stats-row">
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(99,102,241,.05));color:#6366f1"><i class="fas fa-chart-bar"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${dashboards.length}</div>
+                    <div class="ap-stat-label">Total Dashboards</div>
+                </div>
+            </div>
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));color:#f59e0b"><i class="fas fa-clock"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${pendingCount}</div>
+                    <div class="ap-stat-label">Pending Approval</div>
+                </div>
+                ${pendingCount > 0 ? '<div class="ap-stat-alert"></div>' : ''}
+            </div>
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05));color:#10b981"><i class="fas fa-check-circle"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${approvedCount}</div>
+                    <div class="ap-stat-label">Live for Clients</div>
+                </div>
+            </div>
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05));color:#ec4899"><i class="fas fa-inbox"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${requests.length}</div>
+                    <div class="ap-stat-label">Client Requests</div>
+                </div>
+            </div>
         </div>
 
-        <div class="adm-filter-row">
-            <button class="adm-filter-btn ${state.dashboardFilter === 'all' ? 'active' : ''}" onclick="filterDashboards('all')">All</button>
-            <button class="adm-filter-btn ${state.dashboardFilter === 'pending' ? 'active' : ''}" onclick="filterDashboards('pending')">Pending</button>
-            <button class="adm-filter-btn ${state.dashboardFilter === 'approved' ? 'active' : ''}" onclick="filterDashboards('approved')">Approved</button>
+        <div class="ap-filter-bar">
+            <div class="ap-filter-tabs">
+                <button class="ap-filter-tab ${state.dashboardFilter === 'all' ? 'active' : ''}" onclick="filterDashboards('all')">
+                    <i class="fas fa-layer-group"></i> All <span class="ap-tab-count">${dashboards.length}</span>
+                </button>
+                <button class="ap-filter-tab ${state.dashboardFilter === 'pending' ? 'active' : ''}" onclick="filterDashboards('pending')">
+                    <i class="fas fa-clock"></i> Pending <span class="ap-tab-count warning">${pendingCount}</span>
+                </button>
+                <button class="ap-filter-tab ${state.dashboardFilter === 'approved' ? 'active' : ''}" onclick="filterDashboards('approved')">
+                    <i class="fas fa-check-circle"></i> Approved <span class="ap-tab-count success">${approvedCount}</span>
+                </button>
+            </div>
         </div>
 
-        <div class="adm-dashboards-grid">
-            ${filtered.length === 0 ? '<div class="no-data" style="grid-column:1/-1;text-align:center;padding:40px"><i class="fas fa-chart-area" style="font-size:2rem;color:#cbd5e1;margin-bottom:12px;display:block"></i>No dashboards found. Upload a Google Sheet to auto-generate one.</div>' :
+        <div class="ap-dashboards-grid">
+            ${filtered.length === 0 ? `
+                <div class="ap-empty-state">
+                    <div class="ap-empty-icon"><i class="fas fa-chart-area"></i></div>
+                    <h4>No dashboards found</h4>
+                    <p>Upload a Google Sheet or Excel file to auto-generate a dashboard with charts and KPIs.</p>
+                    <button class="btn btn-primary" onclick="showUploadSheetModal()"><i class="fas fa-cloud-upload-alt"></i> Upload Sheet</button>
+                </div>
+            ` :
             filtered.map(db => `
-                <div class="adm-db-card">
-                    <div class="adm-db-card-head">
-                        <div class="adm-db-icon"><i class="fas fa-chart-pie"></i></div>
-                        <div class="adm-db-info">
-                            <h4>${db.title || 'Untitled Dashboard'}</h4>
-                            <span class="adm-db-for">${db.contractorName || db.contractorEmail}</span>
+                <div class="ap-db-card ${db.status === 'pending' ? 'ap-db-pending' : db.status === 'approved' ? 'ap-db-approved' : 'ap-db-rejected'}">
+                    <div class="ap-db-status-strip" style="background:${db.status === 'approved' ? '#10b981' : db.status === 'rejected' ? '#ef4444' : '#f59e0b'}"></div>
+                    <div class="ap-db-card-content">
+                        <div class="ap-db-card-head">
+                            <div class="ap-db-icon-wrap">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="ap-db-info">
+                                <h4>${db.title || 'Untitled Dashboard'}</h4>
+                                <span class="ap-db-contractor"><i class="fas fa-user"></i> ${db.contractorName || db.contractorEmail}</span>
+                            </div>
+                            <span class="ap-status-badge ap-status-${db.status}">
+                                <i class="fas fa-${db.status === 'approved' ? 'check-circle' : db.status === 'rejected' ? 'times-circle' : 'hourglass-half'}"></i>
+                                ${db.status.charAt(0).toUpperCase() + db.status.slice(1)}
+                            </span>
                         </div>
-                        <span class="status-badge ${db.status}">
-                            <i class="fas fa-${db.status === 'approved' ? 'check-circle' : db.status === 'rejected' ? 'times-circle' : 'clock'}"></i>
-                            ${db.status.charAt(0).toUpperCase() + db.status.slice(1)}
-                        </span>
-                    </div>
-                    <div class="adm-db-meta">
-                        <span><i class="fas fa-file-excel"></i> ${db.fileName || 'N/A'}</span>
-                        <span><i class="fas fa-table"></i> ${db.chartCount || 0} chart(s)</span>
-                        <span><i class="fas fa-clock"></i> ${db.frequency || 'daily'}</span>
-                        <span><i class="fas fa-calendar"></i> ${formatAdminDate(db.createdAt)}</span>
-                    </div>
-                    <div class="adm-db-actions">
-                        <button class="btn btn-sm btn-outline" onclick="previewDashboard('${db._id}')">
-                            <i class="fas fa-eye"></i> Preview
-                        </button>
-                        ${db.status === 'pending' ? `
-                            <button class="btn btn-sm btn-primary" onclick="approveDashboard('${db._id}')">
-                                <i class="fas fa-check"></i> Approve
+                        <div class="ap-db-meta-row">
+                            <div class="ap-db-meta-item"><i class="fas fa-file-excel"></i><span>${db.fileName || 'N/A'}</span></div>
+                            <div class="ap-db-meta-item"><i class="fas fa-chart-bar"></i><span>${db.chartCount || (db.charts ? db.charts.length : 0)} charts</span></div>
+                            <div class="ap-db-meta-item"><i class="fas fa-sync-alt"></i><span>${db.frequency || 'daily'}</span></div>
+                            <div class="ap-db-meta-item"><i class="fas fa-calendar-alt"></i><span>${formatAdminDate(db.createdAt)}</span></div>
+                        </div>
+                        <div class="ap-db-actions-row">
+                            <button class="ap-action-btn ap-btn-preview" onclick="previewDashboard('${db._id}')">
+                                <i class="fas fa-eye"></i> Preview Dashboard
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectDashboard('${db._id}')">
-                                <i class="fas fa-times"></i> Reject
+                            ${db.status === 'pending' ? `
+                                <button class="ap-action-btn ap-btn-approve" onclick="approveDashboard('${db._id}')">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button class="ap-action-btn ap-btn-reject" onclick="rejectDashboard('${db._id}')">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            ` : ''}
+                            <button class="ap-action-btn ap-btn-delete" onclick="deleteDashboard('${db._id}')">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
-                        ` : ''}
-                        <button class="btn btn-sm btn-danger" onclick="deleteDashboard('${db._id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        </div>
                     </div>
                 </div>
             `).join('')}
         </div>
 
         ${requests.length > 0 ? `
-        <div class="section-header" style="margin-top:32px">
-            <h3><i class="fas fa-inbox"></i> Contractor Analysis Requests</h3>
+        <div class="ap-section-divider">
+            <div class="ap-section-title"><i class="fas fa-inbox"></i> Client Analysis Requests</div>
+            <span class="ap-section-count">${requests.length} request${requests.length !== 1 ? 's' : ''}</span>
         </div>
-        <table class="data-table">
-            <thead><tr><th>Contractor</th><th>Data Type</th><th>Frequency</th><th>Google Sheet</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-            <tbody>
-                ${requests.map(r => `<tr>
-                    <td><strong>${r.contractorName}</strong><br><small>${r.contractorEmail}</small></td>
-                    <td><span class="badge">${r.dataType}</span></td>
-                    <td>${r.frequency}</td>
-                    <td><a href="${r.googleSheetUrl}" target="_blank" class="sheet-link"><i class="fas fa-external-link-alt"></i> View</a></td>
-                    <td><span class="status-badge ${r.status}">${r.status}</span></td>
-                    <td><small>${formatAdminDate(r.createdAt)}</small></td>
-                    <td><button class="btn btn-sm btn-danger" onclick="deleteAnalysisRequest('${r._id}')"><i class="fas fa-trash"></i></button></td>
-                </tr>`).join('')}
-            </tbody>
-        </table>` : ''}
+        <div class="ap-requests-table-wrap">
+            <table class="ap-requests-table">
+                <thead><tr>
+                    <th>Contractor</th><th>Data Type</th><th>Frequency</th><th>Google Sheet</th><th>Status</th><th>Date</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    ${requests.map(r => `<tr>
+                        <td>
+                            <div class="ap-contractor-cell">
+                                <div class="ap-contractor-avatar">${(r.contractorName || 'U').charAt(0).toUpperCase()}</div>
+                                <div><strong>${r.contractorName || 'Unknown'}</strong><br><small style="color:#64748b">${r.contractorEmail}</small></div>
+                            </div>
+                        </td>
+                        <td><span class="ap-type-badge">${r.dataType}</span></td>
+                        <td><span style="font-weight:600;color:#475569">${r.frequency}</span></td>
+                        <td><a href="${r.googleSheetUrl}" target="_blank" class="ap-sheet-link"><i class="fas fa-external-link-alt"></i> Open Sheet</a></td>
+                        <td><span class="ap-status-badge ap-status-${r.status}">${r.status}</span></td>
+                        <td><small style="color:#64748b">${formatAdminDate(r.createdAt)}</small></td>
+                        <td><button class="ap-action-btn ap-btn-delete" onclick="deleteAnalysisRequest('${r._id}')" title="Delete"><i class="fas fa-trash-alt"></i></button></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>` : ''}
     `;
 }
 
