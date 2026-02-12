@@ -2823,14 +2823,12 @@ function renderAnalysisPortalTab() {
                             <div class="ap-db-meta-item"><i class="fas fa-calendar-alt"></i><span>${formatAdminDate(db.createdAt)}</span></div>
                             ${db.googleSheetUrl ? `<div class="ap-db-meta-item"><a href="${db.googleSheetUrl}" target="_blank" rel="noopener" style="color:#34a853;font-weight:600;display:flex;align-items:center;gap:4px;text-decoration:none"><i class="fab fa-google-drive"></i> Google Sheet</a></div>` : ''}
                         </div>
+                        ${db.manualDashboardUrl ? `<div class="ap-db-manual-link"><i class="fas fa-external-link-alt"></i> Manual: <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener">${db.manualDashboardUrl.length > 50 ? db.manualDashboardUrl.substring(0, 50) + '...' : db.manualDashboardUrl}</a></div>` : ''}
                         <div class="ap-db-actions-row">
                             <button class="ap-action-btn ap-btn-preview" onclick="previewDashboard('${db._id}')">
-                                <i class="fas fa-eye"></i> Preview Dashboard
+                                <i class="fas fa-eye"></i> ${db.status === 'pending' ? 'Review & Approve' : 'Preview'}
                             </button>
                             ${db.status === 'pending' ? `
-                                <button class="ap-action-btn ap-btn-approve" onclick="approveDashboard('${db._id}')">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
                                 <button class="ap-action-btn ap-btn-reject" onclick="rejectDashboard('${db._id}')">
                                     <i class="fas fa-times"></i> Reject
                                 </button>
@@ -2880,50 +2878,98 @@ function filterDashboards(status) {
     renderAnalysisPortalTab();
 }
 
-// Upload Sheet Modal
+// Upload Sheet Modal - Premium design with Google Sheet link support
 function showUploadSheetModal() {
     const modalContent = `
-        <div class="modal-body">
-            <h3><i class="fas fa-file-excel" style="color:#10b981"></i> Upload Google Sheet / Excel File</h3>
-            <p style="color:#64748b;margin-bottom:20px">Upload a .xlsx, .xls, or .csv file. The system will automatically parse the data and generate a dashboard with charts.</p>
-            <div class="form-group">
-                <label>Dashboard Title *</label>
-                <input type="text" id="sheet-dash-title" class="form-input" placeholder="e.g., Monthly Production Report" required>
+        <div class="modal-body" style="max-width:700px;padding:0">
+            <div class="adm-upload-header">
+                <div class="adm-upload-header-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div>
+                    <h3>Upload Data for Dashboard</h3>
+                    <p>Upload a spreadsheet file and/or paste a Google Sheet link to auto-generate a dashboard</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Contractor Email *</label>
-                <input type="email" id="sheet-contractor-email" class="form-input" placeholder="contractor@email.com" required>
-            </div>
-            <div class="form-group">
-                <label>Contractor Name</label>
-                <input type="text" id="sheet-contractor-name" class="form-input" placeholder="John Doe">
-            </div>
-            <div class="form-group">
-                <label>Frequency</label>
-                <select id="sheet-frequency" class="form-input">
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly" selected>Monthly</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="sheet-description" class="form-textarea" rows="2" placeholder="Brief description of this dashboard..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Select Spreadsheet File *</label>
-                <input type="file" id="sheet-file-input" class="form-input" accept=".xlsx,.xls,.csv" required>
-                <small style="color:#94a3b8">Supported: .xlsx, .xls, .csv (Max 50MB)</small>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary" onclick="uploadSheetFile()" id="sheet-upload-btn">
-                    <i class="fas fa-cloud-upload-alt"></i> Upload & Generate Dashboard
-                </button>
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <div class="adm-upload-form-body">
+                <div class="adm-upload-row">
+                    <div class="adm-upload-field">
+                        <label><i class="fas fa-heading"></i> Dashboard Title *</label>
+                        <input type="text" id="sheet-dash-title" class="adm-upload-input" placeholder="e.g., Monthly Production Report" required>
+                    </div>
+                    <div class="adm-upload-field">
+                        <label><i class="fas fa-sync-alt"></i> Frequency</label>
+                        <select id="sheet-frequency" class="adm-upload-input">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="adm-upload-row">
+                    <div class="adm-upload-field">
+                        <label><i class="fas fa-envelope"></i> Contractor Email *</label>
+                        <input type="email" id="sheet-contractor-email" class="adm-upload-input" placeholder="contractor@email.com" required>
+                    </div>
+                    <div class="adm-upload-field">
+                        <label><i class="fas fa-user"></i> Contractor Name</label>
+                        <input type="text" id="sheet-contractor-name" class="adm-upload-input" placeholder="John Doe">
+                    </div>
+                </div>
+                <div class="adm-upload-field">
+                    <label><i class="fas fa-file-alt"></i> Description</label>
+                    <input type="text" id="sheet-description" class="adm-upload-input" placeholder="Brief description of the dashboard data...">
+                </div>
+                <div class="adm-upload-field">
+                    <label><i class="fab fa-google-drive" style="color:#34a853"></i> Google Sheet Link <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+                    <div class="adm-gsheet-wrap">
+                        <span class="adm-gsheet-prefix"><i class="fab fa-google-drive"></i></span>
+                        <input type="url" id="sheet-google-url" class="adm-upload-input adm-gsheet-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    </div>
+                </div>
+                <div class="adm-upload-divider"><span>and / or</span></div>
+                <div class="adm-upload-field">
+                    <label><i class="fas fa-cloud-upload-alt"></i> Spreadsheet File <span style="font-weight:400;color:#94a3b8">(for auto-generation)</span></label>
+                    <div class="adm-file-drop" id="adm-file-drop" onclick="document.getElementById('sheet-file-input').click()">
+                        <input type="file" id="sheet-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="adminHandleFileSelect(this)">
+                        <div id="adm-file-drop-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Click to browse or drag & drop</span>
+                            <small>Supported: .xlsx, .xls, .csv (Max 50MB)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-upload-actions">
+                    <button class="adm-upload-submit" onclick="uploadSheetFile()" id="sheet-upload-btn">
+                        <i class="fas fa-rocket"></i> Upload & Generate Dashboard
+                    </button>
+                    <button class="adm-upload-cancel" onclick="closeModal()">Cancel</button>
+                </div>
             </div>
         </div>
     `;
     showModal(modalContent);
+
+    // Drag & drop
+    setTimeout(() => {
+        const dz = document.getElementById('adm-file-drop');
+        if (!dz) return;
+        ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('dragover'); }));
+        ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove('dragover'); }));
+        dz.addEventListener('drop', ev => {
+            const fi = document.getElementById('sheet-file-input');
+            if (ev.dataTransfer.files.length > 0) { fi.files = ev.dataTransfer.files; adminHandleFileSelect(fi); }
+        });
+    }, 200);
+}
+
+function adminHandleFileSelect(input) {
+    const content = document.getElementById('adm-file-drop-content');
+    if (input.files && input.files[0]) {
+        const f = input.files[0];
+        const size = f.size > 1024*1024 ? (f.size/(1024*1024)).toFixed(1)+' MB' : (f.size/1024).toFixed(0)+' KB';
+        content.innerHTML = `<i class="fas fa-file-excel" style="color:#10b981;font-size:1.5rem"></i><span style="font-weight:700;color:#1e293b">${f.name}</span><small style="color:#64748b">${size}</small>`;
+        document.getElementById('adm-file-drop').classList.add('has-file');
+    }
 }
 
 async function uploadSheetFile() {
@@ -2933,10 +2979,18 @@ async function uploadSheetFile() {
     const freq = document.getElementById('sheet-frequency').value;
     const desc = document.getElementById('sheet-description').value.trim();
     const fileInput = document.getElementById('sheet-file-input');
+    const googleUrlInput = document.getElementById('sheet-google-url');
     const btn = document.getElementById('sheet-upload-btn');
 
-    if (!title || !email || !fileInput.files[0]) {
-        showNotification('Please fill in all required fields and select a file', 'error');
+    const hasFile = fileInput && fileInput.files && fileInput.files[0];
+    const hasLink = googleUrlInput && googleUrlInput.value.trim();
+
+    if (!title || !email) {
+        showNotification('Please fill in the title and contractor email', 'error');
+        return;
+    }
+    if (!hasFile && !hasLink) {
+        showNotification('Please upload a file or provide a Google Sheet link', 'error');
         return;
     }
 
@@ -2945,7 +2999,8 @@ async function uploadSheetFile() {
 
     try {
         const formData = new FormData();
-        formData.append('spreadsheet', fileInput.files[0]);
+        if (hasFile) formData.append('spreadsheet', fileInput.files[0]);
+        if (hasLink) formData.append('googleSheetUrl', googleUrlInput.value.trim());
         formData.append('title', title);
         formData.append('contractorEmail', email);
         formData.append('contractorName', name);
@@ -2953,19 +3008,19 @@ async function uploadSheetFile() {
         formData.append('description', desc);
 
         const response = await apiCall('/dashboards/upload', 'POST', formData);
-        showNotification(`Dashboard auto-generated! ${response.charts?.length || 0} chart(s) created.`, 'success');
+        showNotification(`Dashboard created! ${response.charts?.length || 0} chart(s) auto-generated.`, 'success');
         closeModal();
         await loadAnalysisPortalData();
     } catch (error) {
         console.error('Sheet upload error:', error);
-        showNotification('Failed to upload and process the spreadsheet', 'error');
+        showNotification('Failed to upload and process the data', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload & Generate Dashboard';
+        btn.innerHTML = '<i class="fas fa-rocket"></i> Upload & Generate Dashboard';
     }
 }
 
-// Preview Dashboard
+// Preview Dashboard - Premium modal with auto-generated charts + approve/manual link options
 async function previewDashboard(dashboardId) {
     try {
         showNotification('Loading dashboard preview...', 'info');
@@ -2973,41 +3028,112 @@ async function previewDashboard(dashboardId) {
         const db = response.dashboard;
         if (!db) { showNotification('Dashboard not found', 'error'); return; }
 
+        const hasCharts = db.charts && db.charts.length > 0;
+        const hasManualLink = db.manualDashboardUrl && db.manualDashboardUrl.trim();
+
         // Build KPI HTML
         const allKpis = [];
         (db.charts || []).forEach(c => { if (c.kpis) allKpis.push(...c.kpis); });
-        const kpisHTML = allKpis.slice(0, 6).map(kpi => {
+        const kpisHTML = allKpis.slice(0, 8).map((kpi, i) => {
             const trendUp = kpi.trend >= 0;
-            return `<div class="adm-preview-kpi">
+            const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#22c55e'];
+            const c = colors[i % colors.length];
+            return `<div class="adm-preview-kpi" style="border-left:3px solid ${c}">
                 <div class="adm-preview-kpi-val">${formatKpiVal(kpi.total)}</div>
                 <div class="adm-preview-kpi-label">${kpi.label}</div>
+                <div class="adm-preview-kpi-stats">
+                    <span>Avg: ${formatKpiVal(kpi.avg)}</span>
+                    <span>Max: ${formatKpiVal(kpi.max)}</span>
+                </div>
                 <div class="adm-preview-kpi-trend ${trendUp ? 'up' : 'down'}"><i class="fas fa-arrow-${trendUp ? 'up' : 'down'}"></i> ${Math.abs(kpi.trend)}%</div>
             </div>`;
         }).join('');
 
         const chartsHTML = (db.charts || []).map((chart, idx) =>
             `<div class="adm-preview-chart-card">
-                <h4>${chart.customTitle || chart.sheetName} <small>(${chart.chartType}, ${chart.rowCount} rows)</small></h4>
-                <div style="height:280px;position:relative"><canvas id="adm-preview-chart-${idx}"></canvas></div>
+                <div class="adm-chart-card-head">
+                    <h4><i class="fas fa-chart-${chart.chartType === 'bar' ? 'bar' : chart.chartType === 'doughnut' ? 'pie' : 'line'}"></i> ${chart.customTitle || chart.sheetName}</h4>
+                    <span class="adm-chart-meta">${chart.chartType} &middot; ${chart.rowCount} rows &middot; ${chart.dataColumns.length} metrics</span>
+                </div>
+                <div style="height:300px;position:relative;padding:12px"><canvas id="adm-preview-chart-${idx}"></canvas></div>
             </div>`
         ).join('');
 
+        // Google Sheet link badge
+        const sheetBadge = db.googleSheetUrl ? `<a href="${db.googleSheetUrl}" target="_blank" rel="noopener" class="adm-preview-sheet-link"><i class="fab fa-google-drive"></i> View Google Sheet</a>` : '';
+
+        // Manual link badge (if already set)
+        const manualBadge = hasManualLink ? `<div class="adm-preview-manual-badge"><i class="fas fa-external-link-alt"></i> Manual Dashboard: <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener">${db.manualDashboardUrl}</a></div>` : '';
+
         const modalContent = `
-            <div class="modal-body" style="max-width:900px">
-                <div class="adm-preview-head">
-                    <h3><i class="fas fa-chart-bar" style="color:#6366f1"></i> ${db.title}</h3>
-                    <span class="status-badge ${db.status}">${db.status}</span>
+            <div class="modal-body" style="max-width:960px;padding:0">
+                <div class="adm-preview-header">
+                    <div class="adm-preview-header-left">
+                        <div class="adm-preview-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div>
+                            <h3>${db.title || 'Dashboard Preview'}</h3>
+                            <p>${db.description || 'Auto-generated dashboard'}</p>
+                        </div>
+                    </div>
+                    <span class="ap-status-badge ap-status-${db.status}">
+                        <i class="fas fa-${db.status === 'approved' ? 'check-circle' : db.status === 'rejected' ? 'times-circle' : 'hourglass-half'}"></i>
+                        ${db.status.charAt(0).toUpperCase() + db.status.slice(1)}
+                    </span>
                 </div>
-                <p style="color:#64748b">${db.description || ''} | For: <strong>${db.contractorName || db.contractorEmail}</strong> | Frequency: ${db.frequency}</p>
-                ${kpisHTML ? `<div class="adm-preview-kpi-grid">${kpisHTML}</div>` : ''}
-                <div class="adm-preview-charts">${chartsHTML}</div>
-                <div class="modal-actions" style="margin-top:20px">
-                    ${db.status === 'pending' ? `
-                        <button class="btn btn-primary" onclick="approveDashboard('${db._id}');closeModal()"><i class="fas fa-check"></i> Approve for Client</button>
-                        <button class="btn btn-danger" onclick="rejectDashboard('${db._id}');closeModal()"><i class="fas fa-times"></i> Reject</button>
-                    ` : ''}
-                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <div class="adm-preview-info-bar">
+                    <div class="adm-preview-info-item"><i class="fas fa-user"></i> <strong>${db.contractorName || 'Unknown'}</strong> <span>${db.contractorEmail || ''}</span></div>
+                    <div class="adm-preview-info-item"><i class="fas fa-sync-alt"></i> ${db.frequency || 'monthly'}</div>
+                    <div class="adm-preview-info-item"><i class="fas fa-chart-pie"></i> ${(db.charts || []).length} charts</div>
+                    <div class="adm-preview-info-item"><i class="fas fa-file-excel"></i> ${db.fileName || 'No file'}</div>
+                    ${sheetBadge}
                 </div>
+                ${manualBadge}
+                <div class="adm-preview-body">
+                    ${hasCharts ? `
+                        ${kpisHTML ? `<div class="adm-preview-kpi-grid">${kpisHTML}</div>` : ''}
+                        <div class="adm-preview-charts">${chartsHTML}</div>
+                    ` : `
+                        <div class="adm-preview-no-charts">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No auto-generated charts. ${db.googleSheetUrl ? 'Contractor submitted a Google Sheet link for manual processing.' : 'Add a manual dashboard link below.'}</p>
+                        </div>
+                    `}
+                </div>
+                ${db.status === 'pending' ? `
+                <div class="adm-preview-actions-panel">
+                    <div class="adm-preview-actions-title"><i class="fas fa-gavel"></i> Decision</div>
+                    <div class="adm-approve-options">
+                        <div class="adm-approve-option">
+                            <button class="adm-approve-btn adm-btn-approve-auto" onclick="approveDashboard('${db._id}')" ${!hasCharts ? 'disabled title="No auto-generated charts available"' : ''}>
+                                <i class="fas fa-magic"></i> Approve Auto-Generated Dashboard
+                            </button>
+                            <small>${hasCharts ? 'Client will see the auto-generated charts above' : 'No charts generated - use manual link instead'}</small>
+                        </div>
+                        <div class="adm-approve-divider"><span>OR</span></div>
+                        <div class="adm-approve-option">
+                            <div class="adm-manual-link-group">
+                                <label><i class="fas fa-link"></i> Add Manual Dashboard Link</label>
+                                <div class="adm-manual-input-row">
+                                    <input type="url" id="adm-manual-url-${db._id}" class="adm-manual-input" placeholder="https://your-dashboard-url.vercel.app/..." value="${db.manualDashboardUrl || ''}">
+                                    <button class="adm-approve-btn adm-btn-approve-manual" onclick="approveWithManualLink('${db._id}')">
+                                        <i class="fas fa-check-circle"></i> Approve with Link
+                                    </button>
+                                </div>
+                                <small>Client will view this URL instead of auto-generated dashboard</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="adm-reject-row">
+                        <button class="adm-approve-btn adm-btn-reject" onclick="rejectDashboard('${db._id}');closeModal()">
+                            <i class="fas fa-times"></i> Reject Dashboard
+                        </button>
+                    </div>
+                </div>
+                ` : `
+                <div class="adm-preview-actions-panel" style="text-align:center;padding:20px 28px">
+                    <button class="btn btn-secondary" onclick="closeModal()" style="min-width:160px">Close Preview</button>
+                </div>
+                `}
             </div>
         `;
         showModal(modalContent);
@@ -3020,18 +3146,20 @@ async function previewDashboard(dashboardId) {
                 const isCirc = ['doughnut','pie','polarArea'].includes(chart.chartType);
                 const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#22c55e'];
                 const datasets = chart.datasets.map((ds, di) => {
-                    if (isCirc) return { label: ds.label, data: ds.data, backgroundColor: ds.data.map((_, i) => colors[i % colors.length]), borderWidth: 2, borderColor: '#fff' };
+                    if (isCirc) return { label: ds.label, data: ds.data, backgroundColor: ds.data.map((_, i) => colors[i % colors.length] + 'DD'), hoverBackgroundColor: ds.data.map((_, i) => colors[i % colors.length]), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 };
                     return { label: ds.label, data: ds.data, borderColor: colors[di % colors.length],
                         backgroundColor: chart.chartType === 'bar' ? colors[di % colors.length] + 'CC' : colors[di % colors.length] + '15',
-                        borderWidth: 3, tension: 0.4, fill: chart.chartType === 'line', borderRadius: chart.chartType === 'bar' ? 6 : 0 };
+                        borderWidth: 3, tension: 0.4, fill: chart.chartType === 'line', borderRadius: chart.chartType === 'bar' ? 8 : 0, pointRadius: chart.chartType === 'line' ? 4 : 0, pointHoverRadius: 7, barPercentage: 0.7 };
                 });
                 if (adminDashboardCharts[idx]) adminDashboardCharts[idx].destroy();
                 adminDashboardCharts[idx] = new Chart(ctx, {
                     type: chart.chartType,
                     data: { labels: chart.labels, datasets },
                     options: { responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { position: 'top', labels: { usePointStyle: true } } },
-                        ...(!isCirc ? { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.05)' } } } } : {})
+                        animation: { duration: 800, easing: 'easeOutQuart' },
+                        plugins: { legend: { position: isCirc ? 'right' : 'top', labels: { usePointStyle: true, padding: 16, font: { weight: '600' } } },
+                            tooltip: { backgroundColor: 'rgba(15,23,42,.95)', titleFont: { size: 13, weight: '700' }, bodyFont: { size: 12 }, padding: 14, cornerRadius: 10 } },
+                        ...(!isCirc ? { scales: { x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 11 }, callback: v => formatKpiVal(v) } } } } : {})
                     }
                 });
             });
@@ -3053,10 +3181,34 @@ function formatKpiVal(val) {
 }
 
 async function approveDashboard(id) {
-    if (!confirm('Approve this dashboard? The client will be able to view it immediately.')) return;
+    if (!confirm('Approve this auto-generated dashboard? The client will be able to view the charts immediately.')) return;
     try {
         await apiCall(`/dashboards/${id}/approve`, 'POST', {});
-        showNotification('Dashboard approved! Client can now view it.', 'success');
+        showNotification('Dashboard approved with auto-generated charts! Client can now view it.', 'success');
+        closeModal();
+        await loadAnalysisPortalData();
+    } catch (error) {
+        showNotification('Failed to approve dashboard', 'error');
+    }
+}
+
+async function approveWithManualLink(id) {
+    const input = document.getElementById(`adm-manual-url-${id}`);
+    const url = input ? input.value.trim() : '';
+    if (!url) {
+        showNotification('Please enter a dashboard URL', 'error');
+        if (input) input.focus();
+        return;
+    }
+    if (!url.startsWith('http')) {
+        showNotification('Please enter a valid URL starting with http:// or https://', 'error');
+        return;
+    }
+    if (!confirm('Approve with manual link? The client will view this URL instead of the auto-generated dashboard.')) return;
+    try {
+        await apiCall(`/dashboards/${id}/approve`, 'POST', { manualDashboardUrl: url });
+        showNotification('Dashboard approved with manual link! Client will see the custom URL.', 'success');
+        closeModal();
         await loadAnalysisPortalData();
     } catch (error) {
         showNotification('Failed to approve dashboard', 'error');
