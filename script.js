@@ -2817,10 +2817,11 @@ function renderAnalysisPortalTab() {
                             </span>
                         </div>
                         <div class="ap-db-meta-row">
-                            <div class="ap-db-meta-item"><i class="fas fa-file-excel"></i><span>${db.fileName || 'N/A'}</span></div>
+                            <div class="ap-db-meta-item"><i class="fas fa-file-excel"></i><span>${db.fileName || 'No file'}</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-chart-bar"></i><span>${db.chartCount || (db.charts ? db.charts.length : 0)} charts</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-sync-alt"></i><span>${db.frequency || 'daily'}</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-calendar-alt"></i><span>${formatAdminDate(db.createdAt)}</span></div>
+                            ${db.googleSheetUrl ? `<div class="ap-db-meta-item"><a href="${db.googleSheetUrl}" target="_blank" rel="noopener" style="color:#34a853;font-weight:600;display:flex;align-items:center;gap:4px;text-decoration:none"><i class="fab fa-google-drive"></i> Google Sheet</a></div>` : ''}
                         </div>
                         <div class="ap-db-actions-row">
                             <button class="ap-action-btn ap-btn-preview" onclick="previewDashboard('${db._id}')">
