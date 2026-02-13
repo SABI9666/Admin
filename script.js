@@ -3134,60 +3134,94 @@ async function previewDashboard(dashboardId) {
         const manualBadge = hasManualLink ? `<div class="adm-preview-manual-badge"><i class="fas fa-external-link-alt"></i> Manual Dashboard: <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener">${db.manualDashboardUrl}</a></div>` : '';
 
         // Build predictive analysis HTML for preview
+        // Data structure from generatePredictiveAnalysis:
+        //   insights: [{type, icon, text}]
+        //   forecasts: [{sheet, column, regression:{slope,intercept,rSquared}, values, forecastLabels}]
+        //   anomalies: [{sheet, column, anomalies:[{index,label,value,zScore,type,deviation}]}]
+        //   correlations: {columns, matrix, insights:[{col1,col2,correlation,strength,direction}]}
+        //   seasonality: {period, strength, label} (single object)
+        //   movingAverages: {'sheet:col': {ma3, ma5, original, totalPoints}}
         const pa = db.predictiveAnalysis;
         let predictiveHTML = '';
         if (pa) {
-            // Insights
-            const insightsHTML = (pa.insights || []).slice(0, 6).map(ins => {
+            // Insights — field is "text" (not title/message)
+            const insightsHTML = (pa.insights || []).slice(0, 8).map(ins => {
                 const typeColors = { positive: '#10b981', warning: '#f59e0b', info: '#6366f1', negative: '#ef4444' };
                 const typeIcons = { positive: 'arrow-up', warning: 'exclamation-triangle', info: 'lightbulb', negative: 'arrow-down' };
                 const c = typeColors[ins.type] || '#6366f1';
-                const ic = typeIcons[ins.type] || 'info-circle';
+                const ic = typeIcons[ins.type] || (ins.icon || 'info-circle');
+                const insText = ins.text || ins.message || ins.title || '';
                 return `<div style="background:${c}10;border:1px solid ${c}30;border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start">
                     <i class="fas fa-${ic}" style="color:${c};margin-top:2px;font-size:14px"></i>
-                    <div><div style="font-weight:600;color:#1e293b;font-size:13px;margin-bottom:3px">${ins.title}</div><div style="color:#475569;font-size:12px;line-height:1.4">${ins.message}</div></div>
+                    <div style="color:#1e293b;font-size:13px;line-height:1.5">${insText}</div>
                 </div>`;
             }).join('');
 
-            // Forecasts
-            const forecastsHTML = (pa.forecasts || []).slice(0, 4).map(f => {
-                const isUp = f.direction === 'up';
-                const predVals = (f.predictedValues || f.values || []).map(v => formatKpiVal(v)).join(', ');
-                return `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;min-width:200px">
-                    <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600">${f.metric || 'Metric'}</div>
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                        <span style="font-size:22px;font-weight:700;color:#0f172a">${formatKpiVal(f.currentValue)}</span>
+            // Forecasts — fields: sheet, column, regression.rSquared, values (predicted), forecastLabels
+            const forecastsHTML = (pa.forecasts || []).slice(0, 6).map(f => {
+                const reg = f.regression || {};
+                const isUp = (reg.slope || 0) > 0;
+                const predVals = (f.values || f.predictedValues || []);
+                const rSq = reg.rSquared || f.rSquared || 0;
+                const metricName = f.column || f.metric || 'Metric';
+                const sheetLabel = f.sheet ? `<span style="font-size:10px;color:#94a3b8;display:block;margin-top:4px">${f.sheet}</span>` : '';
+                return `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;min-width:200px;flex:1">
+                    <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600">${metricName}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <span style="font-size:18px;font-weight:700;color:#0f172a">${predVals.length > 0 ? formatKpiVal(predVals[predVals.length - 1]) : 'N/A'}</span>
                         <i class="fas fa-arrow-${isUp ? 'up' : 'down'}" style="color:${isUp ? '#10b981' : '#ef4444'};font-size:14px"></i>
+                        <span style="font-size:11px;color:${isUp ? '#10b981' : '#ef4444'};font-weight:600">${isUp ? 'Upward' : 'Downward'} trend</span>
                     </div>
-                    ${predVals ? `<div style="font-size:11px;color:#64748b">Next ${f.periods || '?'} periods: <strong style="color:${isUp ? '#10b981' : '#ef4444'}">${predVals}</strong></div>` : ''}
-                    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Confidence: ${((f.confidence || 0) * 100).toFixed(0)}% (R²=${(f.rSquared || 0).toFixed(2)})</div>
+                    ${predVals.length > 0 ? `<div style="font-size:11px;color:#64748b">Forecast (${predVals.length} periods): <strong style="color:${isUp ? '#10b981' : '#ef4444'}">${predVals.map(v => formatKpiVal(v)).join(', ')}</strong></div>` : ''}
+                    <div style="font-size:11px;color:#94a3b8;margin-top:4px">R² = ${rSq.toFixed(3)} &middot; Slope: ${(reg.slope || 0).toFixed(2)}</div>
+                    ${sheetLabel}
                 </div>`;
             }).join('');
 
-            // Anomalies
-            const anomaliesHTML = (pa.anomalies || []).slice(0, 4).map(a => {
+            // Anomalies — nested: [{sheet, column, anomalies:[{index,label,value,zScore,type,deviation}]}]
+            const flatAnomalies = [];
+            (pa.anomalies || []).forEach(group => {
+                const col = group.column || group.metric || '';
+                const sheet = group.sheet || '';
+                (group.anomalies || []).forEach(a => {
+                    flatAnomalies.push({ ...a, metric: col, sheet });
+                });
+                // Support flat anomaly objects too (from stored lightweight data)
+                if (!group.anomalies && group.type) flatAnomalies.push(group);
+            });
+            const anomaliesHTML = flatAnomalies.slice(0, 6).map(a => {
                 const isHigh = a.type === 'high';
                 return `<div style="background:${isHigh ? '#fef2f210' : '#eff6ff10'};border:1px solid ${isHigh ? '#fecaca' : '#bfdbfe'};border-radius:8px;padding:10px 12px">
                     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
                         <span style="background:${isHigh ? '#ef4444' : '#3b82f6'};color:white;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">${isHigh ? 'HIGH' : 'LOW'}</span>
                         <span style="font-weight:600;font-size:12px;color:#1e293b">${a.metric || ''}</span>
                     </div>
-                    <div style="font-size:12px;color:#475569">${a.label || ''}: <strong>${formatKpiVal(a.value)}</strong>${a.zScore != null ? ` (z-score: ${a.zScore.toFixed(2)})` : ''}</div>
+                    <div style="font-size:12px;color:#475569">${a.label || ''}: <strong>${formatKpiVal(a.value)}</strong>${a.zScore != null ? ` (z-score: ${a.zScore.toFixed(2)})` : ''}${a.deviation != null ? ` · ${a.deviation.toFixed(1)}σ deviation` : ''}</div>
                 </div>`;
             }).join('');
 
-            // Correlations
+            // Correlations — insights: [{col1, col2, correlation, strength, direction}]
             let correlationsHTML = '';
             if (pa.correlations && pa.correlations.insights && pa.correlations.insights.length > 0) {
-                correlationsHTML = pa.correlations.insights.slice(0, 3).map(ci => {
-                    const strength = Math.abs(ci.value || 0);
-                    const color = strength > 0.7 ? '#10b981' : strength > 0.4 ? '#f59e0b' : '#94a3b8';
-                    const pair = ci.pair || ['?', '?'];
+                correlationsHTML = pa.correlations.insights.slice(0, 4).map(ci => {
+                    const corrVal = ci.correlation != null ? ci.correlation : (ci.value || 0);
+                    const absCorr = Math.abs(corrVal);
+                    const color = absCorr > 0.7 ? '#10b981' : absCorr > 0.4 ? '#f59e0b' : '#94a3b8';
+                    const c1 = ci.col1 || (ci.pair ? ci.pair[0] : '?');
+                    const c2 = ci.col2 || (ci.pair ? ci.pair[1] : '?');
+                    const strengthLabel = ci.strength ? `${ci.strength} ${ci.direction || ''}` : (ci.label || '');
                     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8fafc;border-radius:8px">
-                        <div style="width:40px;height:40px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:${color}">${(ci.value || 0).toFixed(2)}</div>
-                        <div><div style="font-size:12px;font-weight:600;color:#1e293b">${pair[0]} ↔ ${pair[1]}</div><div style="font-size:11px;color:#64748b">${ci.label || ''}</div></div>
+                        <div style="width:40px;height:40px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:${color}">${corrVal.toFixed(2)}</div>
+                        <div><div style="font-size:12px;font-weight:600;color:#1e293b">${c1} ↔ ${c2}</div><div style="font-size:11px;color:#64748b">${strengthLabel}</div></div>
                     </div>`;
                 }).join('');
+            }
+
+            // Seasonality — single object {period, strength, label} not array
+            let seasonHTML = '';
+            if (pa.seasonality) {
+                const s = Array.isArray(pa.seasonality) ? pa.seasonality : [pa.seasonality];
+                seasonHTML = `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${s.map(item => `<span style="background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-wave-square"></i> ${item.label || 'Seasonal'} pattern (period: ${item.period || '?'}, strength: ${((item.strength || 0) * 100).toFixed(0)}%)</span>`).join('')}</div>`;
             }
 
             predictiveHTML = `
@@ -3199,8 +3233,8 @@ async function previewDashboard(dashboardId) {
                     ${insightsHTML ? `<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-lightbulb" style="color:#f59e0b"></i> Key Insights</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">${insightsHTML}</div></div>` : ''}
                     ${forecastsHTML ? `<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-chart-line" style="color:#6366f1"></i> Forecasts</div><div style="display:flex;flex-wrap:wrap;gap:10px">${forecastsHTML}</div></div>` : ''}
                     ${correlationsHTML ? `<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-project-diagram" style="color:#8b5cf6"></i> Correlations</div><div style="display:grid;gap:6px">${correlationsHTML}</div></div>` : ''}
-                    ${anomaliesHTML ? `<div><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Anomalies Detected</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">${anomaliesHTML}</div></div>` : ''}
-                    ${pa.seasonality && pa.seasonality.length > 0 ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${pa.seasonality.map(s => `<span style="background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-wave-square"></i> ${s.metric || ''}: ${s.label || ''} (strength: ${((s.strength || 0) * 100).toFixed(0)}%)</span>`).join('')}</div>` : ''}
+                    ${anomaliesHTML ? `<div style="margin-bottom:12px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Anomalies Detected</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">${anomaliesHTML}</div></div>` : ''}
+                    ${seasonHTML}
                 </div>`;
         }
 
