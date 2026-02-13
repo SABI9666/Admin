@@ -575,36 +575,120 @@ function viewProfileDetails(reviewId) {
     if (!review) return showNotification('Could not find review.', 'error');
     const user = review.user;
     const documents = user.documents || [];
-    const modalContent = `
-        <div class="profile-review-modal">
-            <h3><i class="fas fa-user-check"></i> Profile Review: ${user.name}</h3>
-            <div class="info-grid">
-                <div><label>Email:</label><span>${user.email}</span></div>
-                <div><label>Type:</label><span>${user.type}</span></div>
-                <div><label>Status:</label><span class="status ${review.status}">${review.status}</span></div>
-                ${user.phone ? `<div><label>Phone:</label><span>${user.phone}</span></div>` : ''}
-                ${user.company ? `<div><label>Company:</label><span>${user.company}</span></div>` : ''}
+    const isDesigner = user.type === 'designer';
+    const isContractor = user.type === 'contractor';
+
+    // Build profile info rows
+    let profileInfoHTML = '';
+
+    // Common fields
+    profileInfoHTML += `
+        <div class="profile-detail-section">
+            <h4><i class="fas fa-user"></i> Basic Information</h4>
+            <div class="profile-detail-grid">
+                <div class="profile-detail-item"><label>Full Name</label><span>${user.name}</span></div>
+                <div class="profile-detail-item"><label>Email</label><span>${user.email}</span></div>
+                <div class="profile-detail-item"><label>User Type</label><span class="profile-type-badge profile-type-${user.type}">${user.type.charAt(0).toUpperCase() + user.type.slice(1)}</span></div>
+                <div class="profile-detail-item"><label>Status</label><span class="status ${review.status}">${review.status.charAt(0).toUpperCase() + review.status.slice(1)}</span></div>
+                ${user.phone ? `<div class="profile-detail-item"><label>Phone</label><span>${user.phone}</span></div>` : ''}
+                ${user.linkedinProfile ? `<div class="profile-detail-item"><label>LinkedIn</label><span><a href="${user.linkedinProfile}" target="_blank" style="color:#2563eb;">${user.linkedinProfile}</a></span></div>` : ''}
+                ${user.submittedAt ? `<div class="profile-detail-item"><label>Submitted</label><span>${new Date(user.submittedAt).toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div>` : ''}
             </div>
-            <h4><i class="fas fa-file-alt"></i> Documents</h4>
-            ${documents.length > 0 ? `
-                <ul class="file-list">
-                    ${documents.map(doc => `
-                        <li>
-                            <i class="fas ${getFileIcon(doc.type, doc.filename)}"></i> ${doc.filename}
-                            <a href="${doc.url}" target="_blank" class="btn btn-sm">View</a>
-                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${doc.url}', '${(doc.filename || 'resume.pdf').replace(/'/g, "\\'")}')"><i class="fas fa-download"></i> Download</button>
-                        </li>
-                    `).join('')}
-                </ul>
-                <button class="btn" onclick="downloadAllProfileFiles('${reviewId}')">Download All</button>
-            ` : `<p>No documents uploaded.</p>`}
-             <div class="review-actions">
+        </div>`;
+
+    // Designer-specific fields
+    if (isDesigner) {
+        profileInfoHTML += `
+        <div class="profile-detail-section">
+            <h4><i class="fas fa-paint-brush"></i> Designer Details</h4>
+            <div class="profile-detail-grid">
+                ${user.skills && user.skills.length > 0 ? `<div class="profile-detail-item profile-detail-full"><label>Skills</label><div class="profile-tags">${user.skills.map(s => `<span class="profile-tag">${s}</span>`).join('')}</div></div>` : ''}
+                ${user.specializations && user.specializations.length > 0 ? `<div class="profile-detail-item profile-detail-full"><label>Specializations</label><div class="profile-tags">${user.specializations.map(s => `<span class="profile-tag profile-tag-alt">${s}</span>`).join('')}</div></div>` : ''}
+                ${user.experience ? `<div class="profile-detail-item profile-detail-full"><label>Experience</label><span>${user.experience}</span></div>` : ''}
+                ${user.education ? `<div class="profile-detail-item profile-detail-full"><label>Education</label><span>${user.education}</span></div>` : ''}
+                ${user.bio ? `<div class="profile-detail-item profile-detail-full"><label>Professional Bio</label><span>${user.bio}</span></div>` : ''}
+                ${user.hourlyRate ? `<div class="profile-detail-item"><label>Hourly Rate</label><span>$${user.hourlyRate}/hr</span></div>` : ''}
+            </div>
+        </div>`;
+    }
+
+    // Contractor-specific fields
+    if (isContractor) {
+        profileInfoHTML += `
+        <div class="profile-detail-section">
+            <h4><i class="fas fa-building"></i> Company Details</h4>
+            <div class="profile-detail-grid">
+                ${user.companyName ? `<div class="profile-detail-item"><label>Company Name</label><span>${user.companyName}</span></div>` : ''}
+                ${user.businessType ? `<div class="profile-detail-item"><label>Business Type</label><span>${user.businessType}</span></div>` : ''}
+                ${user.yearEstablished ? `<div class="profile-detail-item"><label>Year Established</label><span>${user.yearEstablished}</span></div>` : ''}
+                ${user.companySize ? `<div class="profile-detail-item"><label>Company Size</label><span>${user.companySize} employees</span></div>` : ''}
+                ${user.companyWebsite ? `<div class="profile-detail-item"><label>Website</label><span><a href="${user.companyWebsite}" target="_blank" style="color:#2563eb;">${user.companyWebsite}</a></span></div>` : ''}
+                ${user.address ? `<div class="profile-detail-item profile-detail-full"><label>Address</label><span>${user.address}</span></div>` : ''}
+                ${user.description ? `<div class="profile-detail-item profile-detail-full"><label>Company Description</label><span>${user.description}</span></div>` : ''}
+            </div>
+        </div>`;
+    }
+
+    // Documents section with preview
+    let documentsHTML = '';
+    if (documents.length > 0) {
+        documentsHTML = `
+        <div class="profile-detail-section">
+            <h4><i class="fas fa-folder-open"></i> Uploaded Documents (${documents.length})</h4>
+            <div class="profile-documents-grid">
+                ${documents.map((doc, i) => {
+                    const isPDF = (doc.filename || '').toLowerCase().endsWith('.pdf') || (doc.type === 'resume');
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.filename || '');
+                    const safeFilename = (doc.filename || 'document').replace(/'/g, "\\'");
+                    const docLabel = doc.type === 'resume' ? 'Resume' : doc.type === 'certificate' ? 'Certificate' : doc.type === 'license' ? 'Business License' : doc.type === 'insurance' ? 'Insurance' : 'Document';
+                    return `
+                    <div class="profile-doc-card">
+                        <div class="profile-doc-header">
+                            <span class="profile-doc-type-badge profile-doc-type-${doc.type}">${docLabel}</span>
+                        </div>
+                        <div class="profile-doc-preview" id="doc-preview-${i}">
+                            ${isImage ? `<img src="${doc.url}" alt="${doc.filename}" style="max-width:100%;max-height:200px;border-radius:8px;">` :
+                              isPDF ? `<iframe src="${doc.url}#toolbar=1&navpanes=0" style="width:100%;height:300px;border:none;border-radius:8px;" title="${doc.filename}"></iframe>` :
+                              `<div class="profile-doc-icon"><i class="fas ${getFileIcon(doc.type, doc.filename)} fa-3x"></i><p>${doc.filename}</p></div>`}
+                        </div>
+                        <div class="profile-doc-info">
+                            <span class="profile-doc-name" title="${doc.filename}"><i class="fas ${getFileIcon(doc.type, doc.filename)}"></i> ${doc.filename}</span>
+                        </div>
+                        <div class="profile-doc-actions">
+                            <a href="${doc.url}" target="_blank" class="btn btn-sm"><i class="fas fa-external-link-alt"></i> Open</a>
+                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${doc.url}', '${safeFilename}')"><i class="fas fa-download"></i> Download</button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+            ${documents.length > 1 ? `<div style="text-align:center;margin-top:12px;"><button class="btn" onclick="downloadAllProfileFiles('${reviewId}')"><i class="fas fa-download"></i> Download All Files</button></div>` : ''}
+        </div>`;
+    } else {
+        documentsHTML = `
+        <div class="profile-detail-section">
+            <h4><i class="fas fa-folder-open"></i> Uploaded Documents</h4>
+            <p style="color:#94a3b8;text-align:center;padding:20px;">No documents uploaded.</p>
+        </div>`;
+    }
+
+    const modalContent = `
+        <div class="profile-review-modal-full">
+            <div class="profile-review-header">
+                <h3><i class="fas fa-user-check"></i> Profile Review: ${user.name}</h3>
+                <span class="status ${review.status}" style="font-size:13px;padding:4px 12px;border-radius:20px;">${review.status.charAt(0).toUpperCase() + review.status.slice(1)}</span>
+            </div>
+            ${profileInfoHTML}
+            ${documentsHTML}
+            <div class="review-actions" style="margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb;">
                 <button class="btn btn-success" onclick="approveProfileWithComment('${reviewId}')"><i class="fas fa-check"></i> Approve</button>
                 <button class="btn btn-danger" onclick="showRejectModal('${reviewId}')"><i class="fas fa-times"></i> Reject</button>
             </div>
         </div>
     `;
     showModal(modalContent);
+    // Make modal wider for full profile view
+    const modalEl = document.querySelector('.modal-content');
+    if (modalEl) modalEl.classList.add('large');
 }
 
 function approveProfileWithComment(reviewId) {

@@ -1073,6 +1073,258 @@ table tbody tr:last-child td {
     margin-bottom: 16px;
 }
 
+/* Full Profile Review Modal */
+.profile-review-modal-full {
+    padding: 28px;
+    max-width: 850px;
+}
+
+.profile-review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.profile-review-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.profile-review-header h3 i {
+    color: var(--primary);
+}
+
+.profile-detail-section {
+    margin-bottom: 24px;
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--gray-200);
+}
+
+.profile-detail-section h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-detail-section h4 i {
+    color: var(--primary);
+    font-size: 14px;
+}
+
+.profile-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.profile-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-detail-item label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-detail-item span {
+    font-size: 14px;
+    color: var(--gray-800);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.profile-detail-full {
+    grid-column: 1 / -1;
+}
+
+/* Profile tags for skills/specializations */
+.profile-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.profile-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #1e40af;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #bfdbfe;
+}
+
+.profile-tag-alt {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    color: #5b21b6;
+    border-color: #c4b5fd;
+}
+
+.profile-type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.profile-type-designer {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.profile-type-contractor {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* Document cards grid */
+.profile-documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.profile-doc-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.profile-doc-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.profile-doc-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.profile-doc-type-badge {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.profile-doc-type-resume {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.profile-doc-type-certificate {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.profile-doc-type-license {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.profile-doc-type-insurance {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.profile-doc-preview {
+    padding: 12px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-50);
+}
+
+.profile-doc-icon {
+    text-align: center;
+    color: var(--gray-400);
+    padding: 20px;
+}
+
+.profile-doc-icon p {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.profile-doc-info {
+    padding: 8px 14px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.profile-doc-name {
+    font-size: 13px;
+    color: var(--gray-700);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-doc-name i {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.profile-doc-actions {
+    padding: 10px 14px;
+    border-top: 1px solid var(--gray-100);
+    display: flex;
+    gap: 8px;
+}
+
+.profile-doc-actions .btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .profile-detail-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-documents-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-review-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
