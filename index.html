@@ -116,6 +116,75 @@
             display: none;
         }
 
+        .forgot-password-link {
+            text-align: right;
+            margin: -10px 0 16px 0;
+        }
+
+        .forgot-password-link a {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .forgot-password-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .back-to-login {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .back-to-login a {
+            color: #667eea;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .back-to-login a:hover {
+            text-decoration: underline;
+        }
+
+        .reset-code-input {
+            text-align: center;
+            font-size: 24px !important;
+            font-weight: 700 !important;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .reset-code-input::placeholder {
+            font-size: 14px;
+            letter-spacing: normal;
+            font-weight: 400;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e1e8ed;
+            transition: background 0.3s;
+        }
+
+        .step-dot.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         .spinner {
             display: inline-block;
             width: 20px;
@@ -141,25 +210,118 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
 
-        <form id="adminLoginForm">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" required>
-            </div>
+        <div id="login-view">
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
 
-            <button type="submit" class="login-btn" id="loginButton">
-                <i class="fas fa-sign-in-alt"></i> Login to Admin Portal
-            </button>
-        </form>
+                <div class="forgot-password-link">
+                    <a onclick="showForgotPassword()"><i class="fas fa-key"></i> Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginButton">
+                    <i class="fas fa-sign-in-alt"></i> Login to Admin Portal
+                </button>
+            </form>
+        </div>
+
+        <div id="forgot-view" style="display:none;">
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="forgotEmail">Email Address</label>
+                    <input type="email" id="forgotEmail" name="forgotEmail" required placeholder="Enter your registered email">
+                </div>
+
+                <button type="submit" class="login-btn" id="forgotButton">
+                    <i class="fas fa-paper-plane"></i> Send Reset Code
+                </button>
+            </form>
+            <div class="back-to-login">
+                <a onclick="showLoginView()"><i class="fas fa-arrow-left"></i> Back to Login</a>
+            </div>
+        </div>
+
+        <div id="reset-view" style="display:none;">
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot active"></div>
+            </div>
+            <form id="resetPasswordForm">
+                <input type="hidden" id="resetEmail" name="resetEmail">
+
+                <div class="form-group">
+                    <label for="resetCode">Verification Code</label>
+                    <input type="text" id="resetCode" name="resetCode" class="reset-code-input" required placeholder="6-digit code" maxlength="6" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" name="newPassword" required placeholder="Min 6 characters" minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm new password" minlength="6">
+                </div>
+
+                <button type="submit" class="login-btn" id="resetButton">
+                    <i class="fas fa-check-circle"></i> Reset Password
+                </button>
+            </form>
+            <div class="back-to-login">
+                <a onclick="showForgotPassword()"><i class="fas fa-redo"></i> Resend Code</a> &nbsp;|&nbsp;
+                <a onclick="showLoginView()"><i class="fas fa-arrow-left"></i> Back to Login</a>
+            </div>
+        </div>
     </div>
 
     <script>
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
+
+        // View switching functions
+        function showLoginView() {
+            document.getElementById('login-view').style.display = 'block';
+            document.getElementById('forgot-view').style.display = 'none';
+            document.getElementById('reset-view').style.display = 'none';
+            document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-shield-alt"></i> Admin Login';
+            document.querySelector('.login-header p').textContent = 'Access SteelConnect Admin Portal';
+            hideMessages();
+        }
+
+        function showForgotPassword() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('forgot-view').style.display = 'block';
+            document.getElementById('reset-view').style.display = 'none';
+            document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-key"></i> Forgot Password';
+            document.querySelector('.login-header p').textContent = 'Enter your email to receive a reset code';
+            hideMessages();
+        }
+
+        function showResetPassword(email) {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('forgot-view').style.display = 'none';
+            document.getElementById('reset-view').style.display = 'block';
+            document.getElementById('resetEmail').value = email;
+            document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-shield-alt"></i> Reset Password';
+            document.querySelector('.login-header p').textContent = 'Enter the code sent to your email';
+            hideMessages();
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
 
         function showMessage(message, type = 'error') {
             const errorEl = document.getElementById('errorMessage');
@@ -242,6 +404,101 @@
                 // Re-enable button
                 loginButton.disabled = false;
                 loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
+            }
+        });
+
+        // Forgot password form handler
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const forgotButton = document.getElementById('forgotButton');
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!email) {
+                showMessage('Please enter your email address', 'error');
+                return;
+            }
+
+            forgotButton.disabled = true;
+            forgotButton.innerHTML = '<span class="spinner"></span> Sending...';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to send reset code');
+                }
+
+                showMessage('Reset code sent! Check your email inbox.', 'success');
+
+                setTimeout(() => {
+                    showResetPassword(email);
+                }, 2000);
+
+            } catch (error) {
+                showMessage(error.message || 'Failed to send reset code. Please try again.', 'error');
+                forgotButton.disabled = false;
+                forgotButton.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reset Code';
+            }
+        });
+
+        // Reset password form handler
+        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const resetButton = document.getElementById('resetButton');
+            const email = document.getElementById('resetEmail').value.trim();
+            const code = document.getElementById('resetCode').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!code || !newPassword || !confirmPassword) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showMessage('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            resetButton.disabled = true;
+            resetButton.innerHTML = '<span class="spinner"></span> Resetting...';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, newPassword })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to reset password');
+                }
+
+                showMessage('Password reset successful! Redirecting to login...', 'success');
+
+                setTimeout(() => {
+                    showLoginView();
+                }, 2000);
+
+            } catch (error) {
+                showMessage(error.message || 'Failed to reset password. Please try again.', 'error');
+                resetButton.disabled = false;
+                resetButton.innerHTML = '<i class="fas fa-check-circle"></i> Reset Password';
             }
         });
 
