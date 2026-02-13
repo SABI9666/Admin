@@ -3076,6 +3076,21 @@ async function previewDashboard(dashboardId) {
         const db = response.dashboard;
         if (!db) { showNotification('Dashboard not found', 'error'); return; }
 
+        // For link-based dashboards with no stored charts, fetch live data from the sheet
+        if (db.googleSheetUrl && (!db.charts || db.charts.length === 0)) {
+            try {
+                showNotification('Fetching live data from linked sheet...', 'info');
+                const liveData = await apiCall(`/dashboards/${dashboardId}/live-data`, 'GET');
+                if (liveData.charts && liveData.charts.length > 0) {
+                    db.charts = liveData.charts;
+                    db.predictiveAnalysis = liveData.predictiveAnalysis || db.predictiveAnalysis;
+                    db.sheetNames = liveData.sheetNames || db.sheetNames;
+                }
+            } catch (liveErr) {
+                console.error('[ADMIN] Live data fetch failed:', liveErr.message || liveErr);
+            }
+        }
+
         const hasCharts = db.charts && db.charts.length > 0;
         const hasManualLink = db.manualDashboardUrl && db.manualDashboardUrl.trim();
 
@@ -3205,7 +3220,7 @@ async function previewDashboard(dashboardId) {
                 <div class="adm-preview-info-bar">
                     <div class="adm-preview-info-item"><i class="fas fa-user"></i> <strong>${db.contractorName || 'Unknown'}</strong> <span>${db.contractorEmail || ''}</span></div>
                     <div class="adm-preview-info-item"><i class="fas fa-sync-alt"></i> ${db.frequency || 'monthly'}</div>
-                    <div class="adm-preview-info-item"><i class="fas fa-chart-pie"></i> ${(db.charts || []).length} charts</div>
+                    <div class="adm-preview-info-item"><i class="fas fa-chart-pie"></i> ${(db.charts || []).length || db.totalChartsGenerated || 0} charts</div>
                     <div class="adm-preview-info-item"><i class="fas fa-file-excel"></i> ${db.fileName || 'No file'}</div>
                     ${sheetBadge}
                     ${db.syncInterval && db.syncInterval !== 'manual' ? `<div class="adm-preview-info-item" style="color:#6366f1"><i class="fas fa-sync"></i> Auto-sync: ${db.syncInterval}</div>` : ''}
@@ -3233,7 +3248,7 @@ async function previewDashboard(dashboardId) {
                             <button class="adm-approve-btn adm-btn-approve-auto" onclick="approveDashboard('${db._id}')">
                                 <i class="fas fa-magic"></i> ${hasCharts ? 'Approve Auto-Generated Dashboard' : 'Approve Dashboard'}
                             </button>
-                            <small>${hasCharts ? 'Client will see the ' + (db.charts || []).length + ' auto-generated chart(s) above' : 'Dashboard will be approved. Add a manual link below if needed, or approve as-is for the Google Sheet data.'}</small>
+                            <small>${hasCharts ? 'Client will see the ' + (db.charts || []).length + ' auto-generated chart(s) above' : 'Dashboard will be approved. Add a manual link below if needed.'}</small>
                         </div>
                         <div class="adm-approve-divider"><span>OR ADD CUSTOM LINK</span></div>
                         <div class="adm-approve-option">
