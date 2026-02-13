@@ -3098,19 +3098,19 @@ async function previewDashboard(dashboardId) {
         const allKpis = [];
         (db.charts || []).forEach(c => { if (c.kpis) allKpis.push(...c.kpis); });
         const kpisHTML = allKpis.slice(0, 8).map((kpi, i) => {
-            const trendUp = kpi.trend >= 0;
+            const trendUp = (kpi.trend || 0) >= 0;
             const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#22c55e'];
             const c = colors[i % colors.length];
             return `<div class="adm-preview-kpi" style="border-left:3px solid ${c}">
                 <div class="adm-preview-kpi-val">${formatKpiVal(kpi.total)}</div>
-                <div class="adm-preview-kpi-label">${kpi.label}</div>
+                <div class="adm-preview-kpi-label">${kpi.label || ''}</div>
                 <div class="adm-preview-kpi-stats">
                     <span>Avg: ${formatKpiVal(kpi.avg)}</span>
                     ${kpi.median !== undefined ? `<span>Med: ${formatKpiVal(kpi.median)}</span>` : ''}
                     <span>Max: ${formatKpiVal(kpi.max)}</span>
                     <span>Min: ${formatKpiVal(kpi.min)}</span>
                 </div>
-                <div class="adm-preview-kpi-trend ${trendUp ? 'up' : 'down'}"><i class="fas fa-arrow-${trendUp ? 'up' : 'down'}"></i> ${Math.abs(kpi.trend)}%</div>
+                <div class="adm-preview-kpi-trend ${trendUp ? 'up' : 'down'}"><i class="fas fa-arrow-${trendUp ? 'up' : 'down'}"></i> ${Math.abs(kpi.trend || 0)}%</div>
                 ${kpi.growthRate !== undefined ? `<div style="font-size:11px;color:${kpi.growthRate >= 0 ? '#10b981' : '#ef4444'};margin-top:4px"><i class="fas fa-chart-line"></i> Growth: ${kpi.growthRate >= 0 ? '+' : ''}${kpi.growthRate.toFixed(1)}%${kpi.peakLabel ? ' · Peak: ' + kpi.peakLabel : ''}</div>` : ''}
             </div>`;
         }).join('');
@@ -3118,8 +3118,8 @@ async function previewDashboard(dashboardId) {
         const chartsHTML = (db.charts || []).map((chart, idx) =>
             `<div class="adm-preview-chart-card">
                 <div class="adm-chart-card-head">
-                    <h4><i class="fas fa-chart-${chart.chartType === 'bar' ? 'bar' : chart.chartType === 'doughnut' ? 'pie' : 'line'}"></i> ${chart.customTitle || chart.sheetName}</h4>
-                    <span class="adm-chart-meta">${chart.chartType} &middot; ${chart.rowCount} rows &middot; ${chart.dataColumns.length} metrics</span>
+                    <h4><i class="fas fa-chart-${chart.chartType === 'bar' ? 'bar' : chart.chartType === 'doughnut' ? 'pie' : 'line'}"></i> ${chart.customTitle || chart.sheetName || 'Chart'}</h4>
+                    <span class="adm-chart-meta">${chart.chartType || 'bar'} &middot; ${chart.rowCount || 0} rows &middot; ${(chart.dataColumns || []).length} metrics</span>
                 </div>
                 <div style="height:300px;position:relative;padding:12px"><canvas id="adm-preview-chart-${idx}"></canvas></div>
             </div>`
@@ -3152,14 +3152,15 @@ async function previewDashboard(dashboardId) {
             // Forecasts
             const forecastsHTML = (pa.forecasts || []).slice(0, 4).map(f => {
                 const isUp = f.direction === 'up';
+                const predVals = (f.predictedValues || f.values || []).map(v => formatKpiVal(v)).join(', ');
                 return `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;min-width:200px">
-                    <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600">${f.metric}</div>
+                    <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600">${f.metric || 'Metric'}</div>
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                         <span style="font-size:22px;font-weight:700;color:#0f172a">${formatKpiVal(f.currentValue)}</span>
                         <i class="fas fa-arrow-${isUp ? 'up' : 'down'}" style="color:${isUp ? '#10b981' : '#ef4444'};font-size:14px"></i>
                     </div>
-                    <div style="font-size:11px;color:#64748b">Next ${f.periods} periods: <strong style="color:${isUp ? '#10b981' : '#ef4444'}">${f.predictedValues.map(v => formatKpiVal(v)).join(', ')}</strong></div>
-                    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Confidence: ${(f.confidence * 100).toFixed(0)}% (R²=${f.rSquared.toFixed(2)})</div>
+                    ${predVals ? `<div style="font-size:11px;color:#64748b">Next ${f.periods || '?'} periods: <strong style="color:${isUp ? '#10b981' : '#ef4444'}">${predVals}</strong></div>` : ''}
+                    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Confidence: ${((f.confidence || 0) * 100).toFixed(0)}% (R²=${(f.rSquared || 0).toFixed(2)})</div>
                 </div>`;
             }).join('');
 
@@ -3169,9 +3170,9 @@ async function previewDashboard(dashboardId) {
                 return `<div style="background:${isHigh ? '#fef2f210' : '#eff6ff10'};border:1px solid ${isHigh ? '#fecaca' : '#bfdbfe'};border-radius:8px;padding:10px 12px">
                     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
                         <span style="background:${isHigh ? '#ef4444' : '#3b82f6'};color:white;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">${isHigh ? 'HIGH' : 'LOW'}</span>
-                        <span style="font-weight:600;font-size:12px;color:#1e293b">${a.metric}</span>
+                        <span style="font-weight:600;font-size:12px;color:#1e293b">${a.metric || ''}</span>
                     </div>
-                    <div style="font-size:12px;color:#475569">${a.label}: <strong>${formatKpiVal(a.value)}</strong> (z-score: ${a.zScore.toFixed(2)})</div>
+                    <div style="font-size:12px;color:#475569">${a.label || ''}: <strong>${formatKpiVal(a.value)}</strong>${a.zScore != null ? ` (z-score: ${a.zScore.toFixed(2)})` : ''}</div>
                 </div>`;
             }).join('');
 
@@ -3179,11 +3180,12 @@ async function previewDashboard(dashboardId) {
             let correlationsHTML = '';
             if (pa.correlations && pa.correlations.insights && pa.correlations.insights.length > 0) {
                 correlationsHTML = pa.correlations.insights.slice(0, 3).map(ci => {
-                    const strength = Math.abs(ci.value);
+                    const strength = Math.abs(ci.value || 0);
                     const color = strength > 0.7 ? '#10b981' : strength > 0.4 ? '#f59e0b' : '#94a3b8';
+                    const pair = ci.pair || ['?', '?'];
                     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8fafc;border-radius:8px">
-                        <div style="width:40px;height:40px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:${color}">${ci.value.toFixed(2)}</div>
-                        <div><div style="font-size:12px;font-weight:600;color:#1e293b">${ci.pair[0]} ↔ ${ci.pair[1]}</div><div style="font-size:11px;color:#64748b">${ci.label}</div></div>
+                        <div style="width:40px;height:40px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:${color}">${(ci.value || 0).toFixed(2)}</div>
+                        <div><div style="font-size:12px;font-weight:600;color:#1e293b">${pair[0]} ↔ ${pair[1]}</div><div style="font-size:11px;color:#64748b">${ci.label || ''}</div></div>
                     </div>`;
                 }).join('');
             }
@@ -3198,7 +3200,7 @@ async function previewDashboard(dashboardId) {
                     ${forecastsHTML ? `<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-chart-line" style="color:#6366f1"></i> Forecasts</div><div style="display:flex;flex-wrap:wrap;gap:10px">${forecastsHTML}</div></div>` : ''}
                     ${correlationsHTML ? `<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-project-diagram" style="color:#8b5cf6"></i> Correlations</div><div style="display:grid;gap:6px">${correlationsHTML}</div></div>` : ''}
                     ${anomaliesHTML ? `<div><div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px"><i class="fas fa-exclamation-triangle" style="color:#ef4444"></i> Anomalies Detected</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">${anomaliesHTML}</div></div>` : ''}
-                    ${pa.seasonality && pa.seasonality.length > 0 ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${pa.seasonality.map(s => `<span style="background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-wave-square"></i> ${s.metric}: ${s.label} (strength: ${(s.strength * 100).toFixed(0)}%)</span>`).join('')}</div>` : ''}
+                    ${pa.seasonality && pa.seasonality.length > 0 ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${pa.seasonality.map(s => `<span style="background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-wave-square"></i> ${s.metric || ''}: ${s.label || ''} (strength: ${((s.strength || 0) * 100).toFixed(0)}%)</span>`).join('')}</div>` : ''}
                 </div>`;
         }
 
@@ -3290,16 +3292,17 @@ async function previewDashboard(dashboardId) {
                 if (!ctx || typeof Chart === 'undefined') return;
                 const isCirc = ['doughnut','pie','polarArea'].includes(chart.chartType);
                 const colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#22c55e'];
-                const datasets = chart.datasets.map((ds, di) => {
-                    if (isCirc) return { label: ds.label, data: ds.data, backgroundColor: ds.data.map((_, i) => colors[i % colors.length] + 'DD'), hoverBackgroundColor: ds.data.map((_, i) => colors[i % colors.length]), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 };
-                    return { label: ds.label, data: ds.data, borderColor: colors[di % colors.length],
+                const datasets = (chart.datasets || []).map((ds, di) => {
+                    const dsData = ds.data || [];
+                    if (isCirc) return { label: ds.label || '', data: dsData, backgroundColor: dsData.map((_, i) => colors[i % colors.length] + 'DD'), hoverBackgroundColor: dsData.map((_, i) => colors[i % colors.length]), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 };
+                    return { label: ds.label || '', data: dsData, borderColor: colors[di % colors.length],
                         backgroundColor: chart.chartType === 'bar' ? colors[di % colors.length] + 'CC' : colors[di % colors.length] + '15',
                         borderWidth: 3, tension: 0.4, fill: chart.chartType === 'line', borderRadius: chart.chartType === 'bar' ? 8 : 0, pointRadius: chart.chartType === 'line' ? 4 : 0, pointHoverRadius: 7, barPercentage: 0.7 };
                 });
                 if (adminDashboardCharts[idx]) adminDashboardCharts[idx].destroy();
                 adminDashboardCharts[idx] = new Chart(ctx, {
-                    type: chart.chartType,
-                    data: { labels: chart.labels, datasets },
+                    type: chart.chartType || 'bar',
+                    data: { labels: chart.labels || [], datasets },
                     options: { responsive: true, maintainAspectRatio: false,
                         animation: { duration: 800, easing: 'easeOutQuart' },
                         plugins: { legend: { position: isCirc ? 'right' : 'top', labels: { usePointStyle: true, padding: 16, font: { weight: '600' } } },
