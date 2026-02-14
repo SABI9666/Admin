@@ -92,6 +92,7 @@ const state = {
     conversations: [],
     supportMessages: [],
     communityPosts: [],
+    announcements: [],
     contractorRequests: [], // For Analysis Portal
     analysisFilterStatus: 'all',
     systemAdminData: [],
@@ -311,6 +312,7 @@ function showTab(tabName) {
         'messages': { title: 'Messages', subtitle: 'Manage contact messages' },
         'support-messages': { title: 'Support Tickets', subtitle: 'Handle support requests' },
         'community-feed': { title: 'Community Feed', subtitle: 'Moderate community posts' },
+        'announcements': { title: 'News & Updates', subtitle: 'Manage announcements, offers, and maintenance notices' },
         'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
         'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
     };
@@ -335,6 +337,7 @@ function showTab(tabName) {
         'conversations': { data: state.conversations, loader: loadConversationsData },
         'support-messages': { data: state.supportMessages || [], loader: loadSupportMessagesData },
         'community-feed': { data: state.communityPosts, loader: loadCommunityPostsData },
+        'announcements': { data: state.announcements, loader: loadAnnouncementsData },
         'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
         'system-admin': { data: [], loader: loadSystemAdminOverview },
     };
@@ -4261,5 +4264,265 @@ async function deleteCommunityPostAdmin(postId) {
         await loadCommunityPostsData();
     } catch (error) {
         showNotification('Failed to delete post.', 'error');
+    }
+}
+
+// ==========================================
+// NEWS & ANNOUNCEMENTS MANAGEMENT
+// ==========================================
+
+async function loadAnnouncementsData() {
+    const container = document.getElementById('announcements-tab');
+    showLoader(container);
+    try {
+        const response = await apiCall('/announcements');
+        state.announcements = response.data || [];
+        renderAnnouncementsTab();
+    } catch (error) {
+        console.error('Error loading announcements:', error);
+        container.innerHTML = '<p class="error">Failed to load announcements.</p>';
+    }
+}
+
+function renderAnnouncementsTab() {
+    const container = document.getElementById('announcements-tab');
+    const announcements = state.announcements;
+
+    const typeIcons = {
+        offer: { icon: 'fa-tags', color: '#10b981', label: 'Offer' },
+        maintenance: { icon: 'fa-tools', color: '#f59e0b', label: 'Maintenance' },
+        update: { icon: 'fa-sync-alt', color: '#3b82f6', label: 'Update' },
+        general: { icon: 'fa-info-circle', color: '#6366f1', label: 'General' },
+        alert: { icon: 'fa-exclamation-triangle', color: '#ef4444', label: 'Alert' }
+    };
+
+    const statusColors = {
+        active: '#10b981',
+        inactive: '#94a3b8',
+        expired: '#ef4444'
+    };
+
+    let html = `
+        <div class="announcements-header">
+            <div class="announcements-header-left">
+                <h3><i class="fas fa-bullhorn"></i> News & Announcements</h3>
+                <p>Create and manage announcements visible on the portal dashboard</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreateAnnouncementModal()">
+                <i class="fas fa-plus"></i> Create Announcement
+            </button>
+        </div>
+
+        <div class="announcements-stats-row">
+            <div class="ann-stat-card ann-stat-total">
+                <div class="ann-stat-icon"><i class="fas fa-newspaper"></i></div>
+                <div class="ann-stat-data">
+                    <span class="ann-stat-number">${announcements.length}</span>
+                    <span class="ann-stat-label">Total</span>
+                </div>
+            </div>
+            <div class="ann-stat-card ann-stat-active">
+                <div class="ann-stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="ann-stat-data">
+                    <span class="ann-stat-number">${announcements.filter(a => a.status === 'active').length}</span>
+                    <span class="ann-stat-label">Active</span>
+                </div>
+            </div>
+            <div class="ann-stat-card ann-stat-offers">
+                <div class="ann-stat-icon"><i class="fas fa-tags"></i></div>
+                <div class="ann-stat-data">
+                    <span class="ann-stat-number">${announcements.filter(a => a.type === 'offer').length}</span>
+                    <span class="ann-stat-label">Offers</span>
+                </div>
+            </div>
+            <div class="ann-stat-card ann-stat-maintenance">
+                <div class="ann-stat-icon"><i class="fas fa-tools"></i></div>
+                <div class="ann-stat-data">
+                    <span class="ann-stat-number">${announcements.filter(a => a.type === 'maintenance').length}</span>
+                    <span class="ann-stat-label">Maintenance</span>
+                </div>
+            </div>
+        </div>`;
+
+    if (announcements.length === 0) {
+        html += `
+            <div class="announcements-empty">
+                <i class="fas fa-bullhorn"></i>
+                <h4>No Announcements Yet</h4>
+                <p>Create your first announcement to keep users informed about offers, maintenance, and updates.</p>
+                <button class="btn btn-primary" onclick="showCreateAnnouncementModal()"><i class="fas fa-plus"></i> Create First Announcement</button>
+            </div>`;
+    } else {
+        html += '<div class="announcements-list">';
+        announcements.forEach(ann => {
+            const typeInfo = typeIcons[ann.type] || typeIcons.general;
+            const statusColor = statusColors[ann.status] || statusColors.inactive;
+            const createdDate = formatAdminDate(ann.createdAt);
+            const expiresDate = ann.expiresAt ? formatAdminDate(ann.expiresAt) : 'Never';
+            const priorityBadge = ann.priority === 'high' ? '<span class="ann-priority-high">HIGH</span>' : ann.priority === 'urgent' ? '<span class="ann-priority-urgent">URGENT</span>' : '';
+
+            html += `
+                <div class="announcement-card">
+                    <div class="ann-card-left">
+                        <div class="ann-type-badge" style="background: ${typeInfo.color}15; color: ${typeInfo.color}; border-color: ${typeInfo.color}30">
+                            <i class="fas ${typeInfo.icon}"></i>
+                            <span>${typeInfo.label}</span>
+                        </div>
+                        <div class="ann-card-content">
+                            <h4>${sanitizeInput(ann.title)} ${priorityBadge}</h4>
+                            <p>${sanitizeInput(ann.content).substring(0, 150)}${ann.content.length > 150 ? '...' : ''}</p>
+                            <div class="ann-card-meta">
+                                <span><i class="fas fa-user"></i> ${ann.createdByName || 'Admin'}</span>
+                                <span><i class="fas fa-calendar"></i> ${createdDate}</span>
+                                <span><i class="fas fa-clock"></i> Expires: ${expiresDate}</span>
+                                <span><i class="fas fa-users"></i> ${ann.targetAudience === 'all' ? 'Everyone' : ann.targetAudience === 'contractor' ? 'Contractors' : 'Designers'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ann-card-right">
+                        <span class="ann-status-badge" style="background: ${statusColor}15; color: ${statusColor}; border-color: ${statusColor}30">${ann.status}</span>
+                        <div class="ann-card-actions">
+                            <button class="btn btn-sm btn-outline" onclick="editAnnouncement('${ann.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm ${ann.status === 'active' ? 'btn-warning' : 'btn-success'}" onclick="toggleAnnouncementStatus('${ann.id}', '${ann.status}')" title="${ann.status === 'active' ? 'Deactivate' : 'Activate'}">
+                                <i class="fas ${ann.status === 'active' ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement('${ann.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+function showCreateAnnouncementModal(editData = null) {
+    const isEdit = !!editData;
+    const modal = document.getElementById('modal-container');
+    modal.innerHTML = `
+        <div class="modal-overlay active" onclick="closeModal(event)">
+            <div class="modal-content modal-lg" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3><i class="fas fa-bullhorn"></i> ${isEdit ? 'Edit' : 'Create'} Announcement</h3>
+                    <button class="modal-close" onclick="document.getElementById('modal-container').innerHTML=''">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="announcement-form" onsubmit="handleAnnouncementSubmit(event, ${isEdit ? `'${editData.id}'` : 'null'})">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2">
+                                <label class="form-label"><i class="fas fa-heading"></i> Title *</label>
+                                <input type="text" class="form-input" id="ann-title" value="${isEdit ? sanitizeInput(editData.title) : ''}" placeholder="e.g., Summer Discount - 20% Off All Services" required maxlength="200">
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <label class="form-label"><i class="fas fa-tag"></i> Type *</label>
+                                <select class="form-input" id="ann-type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="offer" ${isEdit && editData.type === 'offer' ? 'selected' : ''}>Offer / Promotion</option>
+                                    <option value="maintenance" ${isEdit && editData.type === 'maintenance' ? 'selected' : ''}>Maintenance</option>
+                                    <option value="update" ${isEdit && editData.type === 'update' ? 'selected' : ''}>Platform Update</option>
+                                    <option value="general" ${isEdit && editData.type === 'general' ? 'selected' : ''}>General News</option>
+                                    <option value="alert" ${isEdit && editData.type === 'alert' ? 'selected' : ''}>Important Alert</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-align-left"></i> Content *</label>
+                            <textarea class="form-input" id="ann-content" rows="5" placeholder="Write the announcement details here..." required maxlength="2000">${isEdit ? sanitizeInput(editData.content) : ''}</textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-exclamation-circle"></i> Priority</label>
+                                <select class="form-input" id="ann-priority">
+                                    <option value="normal" ${isEdit && editData.priority === 'normal' ? 'selected' : ''}>Normal</option>
+                                    <option value="high" ${isEdit && editData.priority === 'high' ? 'selected' : ''}>High</option>
+                                    <option value="urgent" ${isEdit && editData.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-users"></i> Target Audience</label>
+                                <select class="form-input" id="ann-audience">
+                                    <option value="all" ${isEdit && editData.targetAudience === 'all' ? 'selected' : ''}>Everyone</option>
+                                    <option value="contractor" ${isEdit && editData.targetAudience === 'contractor' ? 'selected' : ''}>Contractors Only</option>
+                                    <option value="designer" ${isEdit && editData.targetAudience === 'designer' ? 'selected' : ''}>Designers Only</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-calendar-times"></i> Expires At</label>
+                                <input type="datetime-local" class="form-input" id="ann-expires" value="${isEdit && editData.expiresAt ? new Date(editData.expiresAt).toISOString().slice(0, 16) : ''}">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-container').innerHTML=''">Cancel</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas ${isEdit ? 'fa-save' : 'fa-paper-plane'}"></i> ${isEdit ? 'Update' : 'Publish'} Announcement</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>`;
+}
+
+async function handleAnnouncementSubmit(event, editId) {
+    event.preventDefault();
+    const title = document.getElementById('ann-title').value.trim();
+    const content = document.getElementById('ann-content').value.trim();
+    const type = document.getElementById('ann-type').value;
+    const priority = document.getElementById('ann-priority').value;
+    const targetAudience = document.getElementById('ann-audience').value;
+    const expiresAt = document.getElementById('ann-expires').value ? new Date(document.getElementById('ann-expires').value).toISOString() : null;
+
+    const btn = event.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<div class="btn-spinner"></div> Publishing...';
+    btn.disabled = true;
+
+    try {
+        const body = { title, content, type, priority, targetAudience, expiresAt };
+
+        if (editId) {
+            await apiCall(`/announcements/${editId}`, 'PUT', body);
+            showNotification('Announcement updated successfully!', 'success');
+        } else {
+            await apiCall('/announcements', 'POST', body);
+            showNotification('Announcement published successfully!', 'success');
+        }
+
+        document.getElementById('modal-container').innerHTML = '';
+        state.announcements = [];
+        loadAnnouncementsData();
+    } catch (error) {
+        showNotification('Failed to save announcement.', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function editAnnouncement(id) {
+    const ann = state.announcements.find(a => a.id === id);
+    if (ann) showCreateAnnouncementModal(ann);
+}
+
+async function toggleAnnouncementStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+        await apiCall(`/announcements/${id}`, 'PUT', { status: newStatus });
+        showNotification(`Announcement ${newStatus === 'active' ? 'activated' : 'deactivated'}.`, 'success');
+        state.announcements = [];
+        loadAnnouncementsData();
+    } catch (error) {
+        showNotification('Failed to update status.', 'error');
+    }
+}
+
+async function deleteAnnouncement(id) {
+    if (!confirm('Are you sure you want to delete this announcement?')) return;
+    try {
+        await apiCall(`/announcements/${id}`, 'DELETE');
+        showNotification('Announcement deleted.', 'success');
+        state.announcements = [];
+        loadAnnouncementsData();
+    } catch (error) {
+        showNotification('Failed to delete announcement.', 'error');
     }
 }
