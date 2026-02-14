@@ -367,69 +367,69 @@ async function loadDashboardStats() {
         }
 
         statsGrid.innerHTML = `
-            <div class="stat-card">
+            <div class="stat-card stat-card-indigo">
                 <div class="stat-icon users"><i class="fas fa-users"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.totalUsers || 0}</div>
                     <div class="stat-label">Total Users</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('users')">View All</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('users')"><i class="fas fa-arrow-right"></i> View All</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-amber">
                 <div class="stat-icon reviews"><i class="fas fa-user-check"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.pendingProfileReviews || 0}</div>
                     <div class="stat-label">Pending Reviews</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('profile-reviews')">Review</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('profile-reviews')"><i class="fas fa-arrow-right"></i> Review</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-blue">
                 <div class="stat-icon jobs"><i class="fas fa-briefcase"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.totalJobs || 0}</div>
                     <div class="stat-label">Total Jobs</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('jobs')">View</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('jobs')"><i class="fas fa-arrow-right"></i> View</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-violet">
                 <div class="stat-icon quotes"><i class="fas fa-file-invoice-dollar"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.totalQuotes || 0}</div>
                     <div class="stat-label">Total Quotes</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('quotes')">View</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('quotes')"><i class="fas fa-arrow-right"></i> View</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-emerald">
                 <div class="stat-icon conversations"><i class="fas fa-comments"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.totalConversations || 0}</div>
                     <div class="stat-label">Conversations</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('conversations')">View</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('conversations')"><i class="fas fa-arrow-right"></i> View</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-rose">
                 <div class="stat-icon support"><i class="fas fa-headset"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${supportCount}</div>
                     <div class="stat-label">Support Tickets</div>
                     ${criticalCount > 0 ? `<small class="critical-indicator"><i class="fas fa-exclamation-triangle"></i> ${criticalCount} Critical</small>` : ''}
-                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('support-messages')">Manage</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('support-messages')"><i class="fas fa-arrow-right"></i> Manage</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-orange">
                 <div class="stat-icon analysis"><i class="fas fa-chart-line"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${analysisStats.pending || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${analysisStats.total || 0}</small></div>
                     <div class="stat-label">Pending Analysis</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('analysis-portal')">View Portal</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('analysis-portal')"><i class="fas fa-arrow-right"></i> View Portal</button></div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-gold">
                 <div class="stat-icon community"><i class="fas fa-newspaper"></i></div>
                 <div class="stat-content">
                     <div class="stat-number">${stats.pendingCommunityPosts || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalCommunityPosts || 0}</small></div>
                     <div class="stat-label">Pending Community Posts</div>
-                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('community-feed')">Moderate</button></div>
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('community-feed')"><i class="fas fa-arrow-right"></i> Moderate</button></div>
                 </div>
             </div>
         `;
