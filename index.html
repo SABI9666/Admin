@@ -185,6 +185,52 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
+        .otp-input {
+            text-align: center;
+            font-size: 32px !important;
+            font-weight: 700 !important;
+            letter-spacing: 12px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #667eea !important;
+            background: #f8f9ff;
+        }
+
+        .otp-input::placeholder {
+            font-size: 14px;
+            letter-spacing: normal;
+            font-weight: 400;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .otp-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .otp-info .otp-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .otp-info p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .otp-info .otp-email {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .otp-timer {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-top: 12px;
+        }
+
         .spinner {
             display: inline-block;
             width: 20px;
@@ -284,37 +330,83 @@
                 <a onclick="showLoginView()"><i class="fas fa-arrow-left"></i> Back to Login</a>
             </div>
         </div>
+
+        <div id="otp-view" style="display:none;">
+            <div class="otp-info">
+                <div class="otp-icon"><i class="fas fa-lock"></i></div>
+                <p>A verification code has been sent to<br><span class="otp-email" id="otpEmailDisplay"></span></p>
+            </div>
+            <form id="otpVerifyForm">
+                <input type="hidden" id="otpEmail" name="otpEmail">
+
+                <div class="form-group">
+                    <label for="otpCode">Enter 6-Digit Code</label>
+                    <input type="text" id="otpCode" name="otpCode" class="otp-input" required placeholder="000000" maxlength="6" autocomplete="off" inputmode="numeric" pattern="[0-9]{6}">
+                </div>
+
+                <button type="submit" class="login-btn" id="otpButton">
+                    <i class="fas fa-check-circle"></i> Verify & Login
+                </button>
+            </form>
+            <div class="otp-timer">
+                <i class="fas fa-clock"></i> Code expires in 5 minutes
+            </div>
+            <div class="back-to-login">
+                <a onclick="resendOTP()"><i class="fas fa-redo"></i> Resend Code</a> &nbsp;|&nbsp;
+                <a onclick="showLoginView()"><i class="fas fa-arrow-left"></i> Back to Login</a>
+            </div>
+        </div>
     </div>
 
     <script>
         const API_BASE = 'https://steelconnect-backend.onrender.com/api';
 
         // View switching functions
-        function showLoginView() {
-            document.getElementById('login-view').style.display = 'block';
+        let pendingOTPEmail = '';
+
+        function hideAllViews() {
+            document.getElementById('login-view').style.display = 'none';
             document.getElementById('forgot-view').style.display = 'none';
             document.getElementById('reset-view').style.display = 'none';
+            document.getElementById('otp-view').style.display = 'none';
+        }
+
+        function showLoginView() {
+            hideAllViews();
+            document.getElementById('login-view').style.display = 'block';
             document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-shield-alt"></i> Admin Login';
             document.querySelector('.login-header p').textContent = 'Access SteelConnect Admin Portal';
             hideMessages();
         }
 
         function showForgotPassword() {
-            document.getElementById('login-view').style.display = 'none';
+            hideAllViews();
             document.getElementById('forgot-view').style.display = 'block';
-            document.getElementById('reset-view').style.display = 'none';
             document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-key"></i> Forgot Password';
             document.querySelector('.login-header p').textContent = 'Enter your email to receive a reset code';
             hideMessages();
         }
 
         function showResetPassword(email) {
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('forgot-view').style.display = 'none';
+            hideAllViews();
             document.getElementById('reset-view').style.display = 'block';
             document.getElementById('resetEmail').value = email;
             document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-shield-alt"></i> Reset Password';
             document.querySelector('.login-header p').textContent = 'Enter the code sent to your email';
+            hideMessages();
+        }
+
+        function showOTPView(email) {
+            hideAllViews();
+            document.getElementById('otp-view').style.display = 'block';
+            document.getElementById('otpEmail').value = email;
+            pendingOTPEmail = email;
+            // Mask email for display
+            const parts = email.split('@');
+            const masked = parts[0].substring(0, 2) + '***@' + parts[1];
+            document.getElementById('otpEmailDisplay').textContent = masked;
+            document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-lock"></i> Verification';
+            document.querySelector('.login-header p').textContent = 'Two-factor authentication required';
             hideMessages();
         }
 
@@ -373,29 +465,22 @@
                 if (!response.ok) {
                     throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
                 }
-                
+
+                // Check if 2FA is required
+                if (data.requires2FA) {
+                    console.log('2FA required, showing OTP view');
+                    showMessage('Verification code sent to your email!', 'success');
+                    setTimeout(() => {
+                        showOTPView(email);
+                    }, 1500);
+                    return;
+                }
+
                 if (!data.success || !data.token || !data.user) {
                     throw new Error(data.message || 'Invalid login response format');
                 }
-                
-                // Store authentication data in multiple locations for compatibility
-                localStorage.setItem('adminToken', data.token);
-                localStorage.setItem('jwtToken', data.token);
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                localStorage.setItem('adminUser', JSON.stringify(data.user));
-                
-                // Also store in sessionStorage as backup
-                sessionStorage.setItem('adminToken', data.token);
-                sessionStorage.setItem('jwtToken', data.token);
-                
-                console.log('Login successful, tokens stored');
-                showMessage('Login successful! Redirecting...', 'success');
-                
-                // Redirect to admin dashboard
-                setTimeout(() => {
-                    window.location.href = 'admin.html';
-                }, 1500);
+
+                completeAdminLogin(data);
                 
             } catch (error) {
                 console.error('Login error:', error);
@@ -501,6 +586,98 @@
                 resetButton.innerHTML = '<i class="fas fa-check-circle"></i> Reset Password';
             }
         });
+
+        // Complete admin login after successful auth (direct or 2FA)
+        function completeAdminLogin(data) {
+            localStorage.setItem('adminToken', data.token);
+            localStorage.setItem('jwtToken', data.token);
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            localStorage.setItem('adminUser', JSON.stringify(data.user));
+            sessionStorage.setItem('adminToken', data.token);
+            sessionStorage.setItem('jwtToken', data.token);
+
+            console.log('Login successful, tokens stored');
+            showMessage('Login successful! Redirecting...', 'success');
+
+            setTimeout(() => {
+                window.location.href = 'admin.html';
+            }, 1500);
+        }
+
+        // OTP verification form handler
+        document.getElementById('otpVerifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const otpButton = document.getElementById('otpButton');
+            const email = document.getElementById('otpEmail').value.trim();
+            const otp = document.getElementById('otpCode').value.trim();
+
+            if (!otp || otp.length !== 6) {
+                showMessage('Please enter the 6-digit verification code', 'error');
+                return;
+            }
+
+            otpButton.disabled = true;
+            otpButton.innerHTML = '<span class="spinner"></span> Verifying...';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp, loginType: 'admin' })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Verification failed');
+                }
+
+                if (!data.success || !data.token || !data.user) {
+                    throw new Error(data.message || 'Invalid verification response');
+                }
+
+                completeAdminLogin(data);
+
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showMessage(error.message || 'Verification failed. Please try again.', 'error');
+                otpButton.disabled = false;
+                otpButton.innerHTML = '<i class="fas fa-check-circle"></i> Verify & Login';
+            }
+        });
+
+        // Resend OTP handler
+        async function resendOTP() {
+            if (!pendingOTPEmail) {
+                showMessage('Session expired. Please login again.', 'error');
+                setTimeout(() => showLoginView(), 2000);
+                return;
+            }
+
+            showMessage('Sending new code...', 'success');
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/resend-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: pendingOTPEmail, loginType: 'admin' })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to resend code');
+                }
+
+                showMessage('New verification code sent to your email!', 'success');
+                document.getElementById('otpCode').value = '';
+
+            } catch (error) {
+                showMessage(error.message || 'Failed to resend code. Please try again.', 'error');
+            }
+        }
 
         // Check if already logged in
         document.addEventListener('DOMContentLoaded', () => {
