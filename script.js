@@ -825,6 +825,7 @@ function renderEstimationsTab() {
                         est.uploadedFiles.reduce((sum, file) => sum + (file.size || 0), 0) : 0;
                     const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(1) + 'MB' : '';
                     const hasAI = !!(est.aiEstimate);
+                    const aiStatus = est.aiStatus || (hasAI ? 'completed' : null);
                     const amountDisplay = est.estimatedAmount ? '$' + Number(est.estimatedAmount).toLocaleString() : '';
 
                     return `
@@ -857,7 +858,17 @@ function renderEstimationsTab() {
                                     <span class="status completed" style="font-size:11px;">AI Ready</span>
                                     ${amountDisplay ? `<br><small><strong>${amountDisplay}</strong></small>` : ''}
                                     <br><button class="btn btn-xs" onclick="viewAIEstimate('${est._id}')"><i class="fas fa-eye"></i> View</button>
-                                ` : '<span class="pending-result">No AI</span>'}
+                                ` : aiStatus === 'generating' ? `
+                                    <span class="status pending" style="font-size:11px;"><i class="fas fa-spinner fa-spin"></i> Generating...</span>
+                                    <br><small style="color:#64748b;">AI is processing</small>
+                                ` : aiStatus === 'failed' ? `
+                                    <span class="status rejected" style="font-size:11px;">AI Failed</span>
+                                    ${est.aiError ? `<br><small style="color:#ef4444;" title="${est.aiError}">Error</small>` : ''}
+                                    <br><button class="btn btn-xs btn-warning" onclick="retryAIEstimate('${est._id}')"><i class="fas fa-redo"></i> Retry</button>
+                                ` : `
+                                    <span class="pending-result">No AI</span>
+                                    <br><button class="btn btn-xs btn-warning" onclick="retryAIEstimate('${est._id}')"><i class="fas fa-robot"></i> Generate</button>
+                                `}
                             </td>
                             <td>
                                 ${est.resultFile ? `
@@ -1116,6 +1127,18 @@ async function sendAIReport(estimationId) {
         await loadEstimationsData();
     } catch (error) {
         showNotification('Failed to send AI report: ' + error.message, 'error');
+    }
+}
+
+async function retryAIEstimate(estimationId) {
+    if (!confirm('Generate/retry AI estimate for this estimation? This may take 30-60 seconds.')) return;
+    try {
+        showNotification('AI estimate generation started. Please wait...', 'info');
+        const data = await apiCall(`/estimations/${estimationId}/retry-ai`, 'POST');
+        showNotification(data.message || 'AI estimate generated successfully!', 'success');
+        await loadEstimationsData();
+    } catch (error) {
+        showNotification('Failed to generate AI estimate: ' + error.message, 'error');
     }
 }
 
