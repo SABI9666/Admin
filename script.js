@@ -800,6 +800,7 @@ function renderEstimationsTab() {
                     <th>Client</th>
                     <th>Status</th>
                     <th>Files</th>
+                    <th>AI Report</th>
                     <th>Result</th>
                     <th>Submitted</th>
                     <th>Actions</th>
@@ -811,6 +812,8 @@ function renderEstimationsTab() {
                     const totalSize = est.uploadedFiles ?
                         est.uploadedFiles.reduce((sum, file) => sum + (file.size || 0), 0) : 0;
                     const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(1) + 'MB' : '';
+                    const hasAI = !!(est.aiEstimate);
+                    const amountDisplay = est.estimatedAmount ? '$' + Number(est.estimatedAmount).toLocaleString() : '';
 
                     return `
                         <tr>
@@ -830,12 +833,19 @@ function renderEstimationsTab() {
                             <td>
                                 ${fileCount > 0 ? `
                                     <div class="files-summary">
-                                        <i class="fas fa-file-pdf"></i>
-                                        <span class="file-count">${fileCount} PDF${fileCount > 1 ? 's' : ''}</span>
+                                        <i class="fas fa-file"></i>
+                                        <span class="file-count">${fileCount} file${fileCount > 1 ? 's' : ''}</span>
                                         ${totalSizeMB ? `<br><small class="file-size">${totalSizeMB}</small>` : ''}
                                         <button class="btn btn-xs" onclick="showEstimationFiles('${est._id}')">View</button>
                                     </div>
                                 ` : '<span class="no-files">No files</span>'}
+                            </td>
+                            <td>
+                                ${hasAI ? `
+                                    <span class="status completed" style="font-size:11px;">AI Ready</span>
+                                    ${amountDisplay ? `<br><small><strong>${amountDisplay}</strong></small>` : ''}
+                                    <br><button class="btn btn-xs" onclick="viewAIEstimate('${est._id}')"><i class="fas fa-eye"></i> View</button>
+                                ` : '<span class="pending-result">No AI</span>'}
                             </td>
                             <td>
                                 ${est.resultFile ? `
@@ -848,8 +858,13 @@ function renderEstimationsTab() {
                                 <small>${formatAdminDate(est.createdAt)}</small>
                             </td>
                             <td class="action-buttons">
+                                ${hasAI && est.status !== 'completed' ? `
+                                    <button class="btn btn-sm btn-success" onclick="sendAIReport('${est._id}')">
+                                        <i class="fas fa-robot"></i> Send AI Report
+                                    </button>
+                                ` : ''}
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
-                                    <i class="fas fa-upload"></i> Upload Result
+                                    <i class="fas fa-upload"></i> Upload Manual Result
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">
                                     <i class="fas fa-trash"></i> Delete
@@ -944,17 +959,84 @@ async function downloadAllEstimationFiles(estimationId) {
     showNotification(`${files.length} file(s) downloaded successfully.`, 'success');
 }
 
+function viewAIEstimate(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    if (!estimation || !estimation.aiEstimate) return showNotification('No AI estimate found.', 'error');
+
+    const ai = estimation.aiEstimate;
+    const s = ai.summary || {};
+    const curr = s.currencySymbol || '$';
+    const trades = ai.trades || ai.tradesSummary || [];
+
+    let tradesHTML = '';
+    trades.forEach(t => {
+        tradesHTML += `<tr><td>${t.tradeName || t.name || ''}</td><td>${curr}${Number(t.subtotal || t.amount || 0).toLocaleString()}</td><td>${(t.percentOfTotal || 0).toFixed(1)}%</td></tr>`;
+    });
+
+    const breakdown = ai.costBreakdown || {};
+    const assumptions = ai.assumptions || [];
+    const exclusions = ai.exclusions || [];
+
+    showModal(`
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+            <h3><i class="fas fa-robot"></i> AI Estimate - ${estimation.projectTitle || estimation.projectName}</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;">
+                <div style="background:#f0f9ff;padding:12px;border-radius:8px;text-align:center;">
+                    <small>Grand Total</small>
+                    <div style="font-size:24px;font-weight:700;color:#1e40af;">${curr}${Number(s.grandTotal || s.totalEstimate || 0).toLocaleString()}</div>
+                </div>
+                <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;">
+                    <small>Cost per Unit</small>
+                    <div style="font-size:24px;font-weight:700;color:#166534;">${curr}${Number(s.costPerUnit || 0).toLocaleString()}</div>
+                    <small>${s.unitLabel || 'per sq ft'}</small>
+                </div>
+            </div>
+            ${trades.length > 0 ? `
+                <h4>Trade Breakdown</h4>
+                <table style="width:100%;margin-bottom:16px;"><thead><tr><th>Trade</th><th>Cost</th><th>%</th></tr></thead><tbody>${tradesHTML}</tbody></table>
+            ` : ''}
+            ${breakdown.directCosts ? `
+                <h4>Cost Summary</h4>
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Direct Costs</span><span>${curr}${Number(breakdown.directCosts || 0).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>General Conditions (${breakdown.generalConditionsPercent || 0}%)</span><span>${curr}${Number(breakdown.generalConditions || 0).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Overhead (${breakdown.overheadPercent || 0}%)</span><span>${curr}${Number(breakdown.overhead || 0).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Contingency (${breakdown.contingencyPercent || 0}%)</span><span>${curr}${Number(breakdown.contingency || 0).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;border-top:2px solid #333;margin-top:8px;padding-top:8px;"><span>Total with Markups</span><span>${curr}${Number(breakdown.totalWithMarkups || 0).toLocaleString()}</span></div>
+                </div>
+            ` : ''}
+            ${assumptions.length > 0 ? `<h4>Assumptions</h4><ul>${assumptions.map(a => '<li>' + a + '</li>').join('')}</ul>` : ''}
+            ${exclusions.length > 0 ? `<h4>Exclusions</h4><ul>${exclusions.map(e => '<li>' + e + '</li>').join('')}</ul>` : ''}
+            <div class="modal-actions" style="margin-top:16px;">
+                <button class="btn btn-success" onclick="closeModal(); sendAIReport('${estimationId}')"><i class="fas fa-paper-plane"></i> Approve & Send to Contractor</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    `);
+}
+
+async function sendAIReport(estimationId) {
+    if (!confirm('Send the AI-generated estimate report to the contractor? This will mark the estimation as completed.')) return;
+    try {
+        const data = await apiCall(`/estimations/${estimationId}/send-ai-report`, 'POST');
+        showNotification(data.message || 'AI report sent to contractor.', 'success');
+        await loadEstimationsData();
+    } catch (error) {
+        showNotification('Failed to send AI report: ' + error.message, 'error');
+    }
+}
+
 function showUploadResultModal(estimationId) {
     showModal(`
         <div class="modal-body">
-            <h3>Upload Estimation Result</h3>
-            <p>This will mark the estimation as 'completed' and notify the user.</p>
+            <h3><i class="fas fa-upload"></i> Upload Manual Result</h3>
+            <p>Upload your own estimation result file. This will mark the estimation as 'completed' and notify the contractor.</p>
             <div class="form-group">
-                <label for="result-file-input">Result File (PDF, Excel, etc.):</label>
-                <input type="file" id="result-file-input">
+                <label for="result-file-input">Result File (PDF, Excel, Word, CSV):</label>
+                <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv">
             </div>
             <div class="modal-actions">
-                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">Upload & Complete</button>
+                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')"><i class="fas fa-upload"></i> Upload & Send to Contractor</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
