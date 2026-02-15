@@ -1019,6 +1019,7 @@ function viewAIEstimate(estimationId) {
     const trades = ai.trades || ai.tradesSummary || [];
     const structAnalysis = ai.structuralAnalysis || {};
     const matSummary = ai.materialSummary || {};
+    const drawingExtraction = ai.drawingExtraction || {};
 
     let tradesHTML = '';
     trades.forEach(t => {
@@ -1044,6 +1045,42 @@ function viewAIEstimate(estimationId) {
     const breakdown = ai.costBreakdown || {};
     const assumptions = ai.assumptions || [];
     const exclusions = ai.exclusions || [];
+
+    // Drawing Extraction section (Vision Analysis results)
+    let drawingHTML = '';
+    if (drawingExtraction.dimensionsFound && drawingExtraction.dimensionsFound.length > 0) {
+        drawingHTML = `<h4 style="margin-bottom:8px;"><i class="fas fa-ruler-combined"></i> Drawing Analysis - Extracted Data <span style="background:#10b981;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:600;margin-left:8px;">VISION ANALYZED</span></h4>`;
+        if (structAnalysis.analysisMethod) {
+            drawingHTML += `<div style="background:#ecfdf5;padding:8px 12px;border-radius:6px;font-size:0.82rem;color:#065f46;margin-bottom:10px;"><i class="fas fa-eye"></i> ${structAnalysis.analysisMethod}</div>`;
+        }
+        if (structAnalysis.filesAnalyzed && structAnalysis.filesAnalyzed.length > 0) {
+            drawingHTML += `<div style="font-size:0.8rem;color:#6b7280;margin-bottom:8px;"><i class="fas fa-file-pdf"></i> Files analyzed: ${structAnalysis.filesAnalyzed.join(', ')}</div>`;
+        }
+        drawingHTML += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">`;
+        if (drawingExtraction.dimensionsFound.length > 0) {
+            drawingHTML += `<div style="background:#f0fdf4;padding:10px;border-radius:6px;border:1px solid #bbf7d0;grid-column:span 2;"><strong style="color:#166534;font-size:0.85rem;"><i class="fas fa-ruler"></i> Dimensions</strong><ul style="margin:4px 0;padding-left:16px;font-size:0.82rem;">${drawingExtraction.dimensionsFound.map(d => `<li>${d}</li>`).join('')}</ul></div>`;
+        }
+        if (drawingExtraction.memberSizesFound && drawingExtraction.memberSizesFound.length > 0) {
+            drawingHTML += `<div style="background:#eff6ff;padding:10px;border-radius:6px;border:1px solid #bfdbfe;grid-column:span 2;"><strong style="color:#1e40af;font-size:0.85rem;"><i class="fas fa-columns"></i> Member Sizes</strong><ul style="margin:4px 0;padding-left:16px;font-size:0.82rem;">${drawingExtraction.memberSizesFound.map(m => `<li>${m}</li>`).join('')}</ul></div>`;
+        }
+        if (drawingExtraction.schedulesFound && drawingExtraction.schedulesFound.length > 0) {
+            drawingHTML += `<div style="background:#fef3c7;padding:10px;border-radius:6px;border:1px solid #fde68a;grid-column:span 2;"><strong style="color:#92400e;font-size:0.85rem;"><i class="fas fa-table"></i> Schedules</strong><ul style="margin:4px 0;padding-left:16px;font-size:0.82rem;">${drawingExtraction.schedulesFound.map(s => `<li>${s}</li>`).join('')}</ul></div>`;
+        }
+        if (drawingExtraction.materialsNoted && drawingExtraction.materialsNoted.length > 0) {
+            drawingHTML += `<div style="background:#f5f3ff;padding:10px;border-radius:6px;border:1px solid #ddd6fe;"><strong style="color:#5b21b6;font-size:0.85rem;"><i class="fas fa-flask"></i> Materials</strong><ul style="margin:4px 0;padding-left:16px;font-size:0.82rem;">${drawingExtraction.materialsNoted.map(m => `<li>${m}</li>`).join('')}</ul></div>`;
+        }
+        if (drawingExtraction.designLoads && drawingExtraction.designLoads.length > 0) {
+            drawingHTML += `<div style="background:#fef2f2;padding:10px;border-radius:6px;border:1px solid #fecaca;"><strong style="color:#991b1b;font-size:0.85rem;"><i class="fas fa-weight-hanging"></i> Design Loads</strong><ul style="margin:4px 0;padding-left:16px;font-size:0.82rem;">${drawingExtraction.designLoads.map(l => `<li>${l}</li>`).join('')}</ul></div>`;
+        }
+        if (drawingExtraction.totalMembersCount) {
+            const mc = drawingExtraction.totalMembersCount;
+            drawingHTML += `<div style="background:#f8fafc;padding:10px;border-radius:6px;border:1px solid #e2e8f0;"><strong style="font-size:0.85rem;"><i class="fas fa-calculator"></i> Member Count</strong><p style="font-size:0.82rem;margin:4px 0;">Beams: ${mc.beams || 0} | Columns: ${mc.columns || 0} | Bracing: ${mc.bracing || 0} | Joists: ${mc.joists || 0}</p></div>`;
+        }
+        if (drawingExtraction.scaleUsed) {
+            drawingHTML += `<div style="background:#f8fafc;padding:10px;border-radius:6px;border:1px solid #e2e8f0;"><strong style="font-size:0.85rem;"><i class="fas fa-expand-arrows-alt"></i> Scale</strong><p style="font-size:0.82rem;margin:4px 0;">${drawingExtraction.scaleUsed}</p></div>`;
+        }
+        drawingHTML += `</div>`;
+    }
 
     // Structural analysis section
     let structHTML = '';
@@ -1093,6 +1130,7 @@ function viewAIEstimate(estimationId) {
                     <small>${s.unitLabel || 'per sq ft'}</small>
                 </div>
             </div>
+            ${drawingHTML}
             ${structHTML}
             ${matSumHTML}
             ${trades.length > 0 ? `
