@@ -928,10 +928,10 @@ function showEstimationFiles(estimationId) {
                                     </div>
                                 </div>
                                 <div class="file-actions">
-                                    <a href="${file.url}" target="_blank" class="btn btn-sm btn-outline">
+                                    <button class="btn btn-sm btn-outline" onclick="viewEstimationFile('${estimationId}', ${index})">
                                         <i class="fas fa-external-link-alt"></i> View
-                                    </a>
-                                    <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.url}', '${fileName.replace(/'/g, "\\'")}')">
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="downloadEstimationFile('${estimationId}', ${index}, '${fileName.replace(/'/g, "\\'")}')">
                                         <i class="fas fa-download"></i> Download
                                     </button>
                                 </div>
@@ -965,10 +965,37 @@ async function downloadAllEstimationFiles(estimationId) {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const name = file.originalname || file.filename || `estimation_file_${i + 1}.pdf`;
-        await downloadFileSilent(file.url, name);
+        await downloadEstimationFile(estimationId, i, name);
         if (i < files.length - 1) await new Promise(r => setTimeout(r, 500));
     }
     showNotification(`${files.length} file(s) downloaded successfully.`, 'success');
+}
+
+// Fetch a fresh signed URL from the API and open/download an estimation file
+async function viewEstimationFile(estimationId, fileIndex) {
+    try {
+        const data = await apiCall(`/estimations/${estimationId}/download/${fileIndex}`);
+        if (data.file && data.file.url) {
+            window.open(data.file.url, '_blank');
+        } else {
+            showNotification('Could not generate file link.', 'error');
+        }
+    } catch (error) {
+        showNotification('Failed to load file: ' + error.message, 'error');
+    }
+}
+
+async function downloadEstimationFile(estimationId, fileIndex, fileName) {
+    try {
+        const data = await apiCall(`/estimations/${estimationId}/download/${fileIndex}`);
+        if (data.file && data.file.url) {
+            await downloadFileSilent(data.file.url, fileName || data.file.name || `file_${fileIndex}.pdf`);
+        } else {
+            showNotification('Could not generate download link.', 'error');
+        }
+    } catch (error) {
+        showNotification('Failed to download file: ' + error.message, 'error');
+    }
 }
 
 function viewAIEstimate(estimationId) {
