@@ -137,9 +137,13 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
         logout();
         throw new Error('No token');
     }
-    const options = { method, headers: { 'Authorization': `Bearer ${token}` } };
+    const controller = new AbortController();
+    const isFormData = isFileUpload || body instanceof FormData;
+    const timeout = isFormData ? 120000 : 30000;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const options = { method, headers: { 'Authorization': `Bearer ${token}` }, signal: controller.signal };
     if (body) {
-        if (isFileUpload || body instanceof FormData) {
+        if (isFormData) {
             options.body = body;
         } else {
             options.headers['Content-Type'] = 'application/json';
@@ -148,6 +152,7 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
     }
     try {
         const response = await fetch(`${API_BASE_URL}/api/admin${endpoint}`, options);
+        clearTimeout(timeoutId);
         if (response.status === 401) {
              logout();
              throw new Error('Session expired. Please log in again.');
@@ -158,6 +163,13 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
         }
         return responseData;
     } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            const msg = 'Request timed out. The file may be too large or the connection is slow. Please try again.';
+            console.error(`API Call Timeout (${endpoint})`);
+            showNotification(msg, 'error');
+            throw new Error(msg);
+        }
         console.error(`API Call Failed (${endpoint}):`, error);
         showNotification(error.message, 'error');
         throw error;
@@ -1045,15 +1057,36 @@ function showUploadResultModal(estimationId) {
 
 async function uploadEstimationResult(estimationId) {
     const fileInput = document.getElementById('result-file-input');
-    if (!fileInput.files[0]) return showNotification('Please select a file.', 'warning');
+    if (!fileInput || !fileInput.files[0]) return showNotification('Please select a file.', 'warning');
+    const file = fileInput.files[0];
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+        return showNotification('File size exceeds 50MB limit. Please select a smaller file.', 'error');
+    }
+    const allowedExts = ['.pdf', '.xls', '.xlsx', '.doc', '.docx', '.csv'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedExts.includes(ext)) {
+        return showNotification('Invalid file type. Allowed: PDF, Excel, Word, CSV.', 'error');
+    }
+    const uploadBtn = document.querySelector('.modal .btn-success');
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<div class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle;"></div> Uploading...';
+    }
     const formData = new FormData();
-    formData.append('resultFile', fileInput.files[0]);
+    formData.append('resultFile', file);
     try {
         const data = await apiCall(`/estimations/${estimationId}/result`, 'POST', formData, true);
-        showNotification(data.message, 'success');
+        showNotification(data.message || 'Result uploaded successfully', 'success');
         closeModal();
         await loadEstimationsData();
-    } catch (error) {}
+    } catch (error) {
+        console.error('[UPLOAD-RESULT] Error:', error);
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Send to Contractor';
+        }
+    }
 }
 
 async function deleteEstimation(estimationId) {
