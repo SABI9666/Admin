@@ -1133,13 +1133,40 @@ async function sendAIReport(estimationId) {
 async function retryAIEstimate(estimationId) {
     if (!confirm('Generate/retry AI estimate for this estimation? This may take 30-60 seconds.')) return;
     try {
-        showNotification('AI estimate generation started. Please wait...', 'info');
+        showNotification('AI estimate generation started. Please wait up to 60 seconds...', 'info');
         const data = await apiCall(`/estimations/${estimationId}/retry-ai`, 'POST');
-        showNotification(data.message || 'AI estimate generated successfully!', 'success');
-        await loadEstimationsData();
+        showNotification(data.message || 'AI generation started. Polling for status...', 'info');
+        // Poll for AI status since generation runs in background
+        pollAIStatus(estimationId);
     } catch (error) {
-        showNotification('Failed to generate AI estimate: ' + error.message, 'error');
+        showNotification('Failed to start AI estimate: ' + error.message, 'error');
     }
+}
+
+function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
+    if (attempts >= maxAttempts) {
+        showNotification('AI generation is taking longer than expected. Please refresh the page to check status.', 'warning');
+        return;
+    }
+    // Poll every 5 seconds
+    setTimeout(async () => {
+        try {
+            const data = await apiCall(`/estimations/${estimationId}/ai-status`);
+            if (data.aiStatus === 'completed') {
+                showNotification('AI estimate generated successfully!', 'success');
+                await loadEstimationsData();
+            } else if (data.aiStatus === 'failed') {
+                showNotification('AI generation failed: ' + (data.aiError || 'Unknown error'), 'error');
+                await loadEstimationsData();
+            } else {
+                // Still generating, poll again
+                pollAIStatus(estimationId, attempts + 1, maxAttempts);
+            }
+        } catch (error) {
+            // Network error during polling, try again
+            pollAIStatus(estimationId, attempts + 1, maxAttempts);
+        }
+    }, 5000);
 }
 
 function showUploadResultModal(estimationId) {
@@ -2810,89 +2837,8 @@ function initializeRealTimeUpdates() {
 }
 
 function connectWebSocket() {
-    if (typeof WebSocket === 'undefined') return;
-
-    try {
-        const ws = new WebSocket(`wss://steelconnect-backend.onrender.com/admin-updates`);
-        const wsTimeout = setTimeout(() => { try { ws.close(); } catch(e) {} }, 10000); // 10s connection timeout
-
-        ws.onopen = () => {
-            clearTimeout(wsTimeout);
-            console.log('WebSocket connected.');
-            _wsRetryCount = 0;
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const update = JSON.parse(event.data);
-                switch (update.type) {
-                    case 'new_support_ticket':
-                        showAdvancedNotification(
-                            'New support ticket received',
-                             'info',
-                             5000,
-                             [{ text: 'View', callback: () => showTab('support-messages') }]
-                        );
-                        if (document.getElementById('support-messages-tab').classList.contains('active')) {
-                            loadSupportMessagesData();
-                        }
-                        loadDashboardStats();
-                        break;
-                    case 'support_response':
-                        showAdvancedNotification(
-                            'Support ticket updated',
-                             'success',
-                             3000
-                        );
-                        break;
-                    case 'new_message':
-                        showAdvancedNotification(
-                            'New message received',
-                             'info',
-                             0,
-                             [{ text: 'View', callback: () => showTab('messages') }]
-                        );
-                        break;
-                    case 'profile_review':
-                        showAdvancedNotification(
-                            'New profile review pending',
-                             'warning',
-                             0,
-                             [{ text: 'Review', callback: () => showTab('profile-reviews') }]
-                        );
-                        break;
-                    case 'estimation_request':
-                        showAdvancedNotification(
-                            'New estimation request',
-                             'info',
-                             0,
-                             [{ text: 'View', callback: () => showTab('estimations') }]
-                        );
-                        break;
-                }
-            } catch (parseError) {
-                console.log('Error parsing WebSocket message:', parseError);
-            }
-        };
-
-        ws.onclose = () => {
-            if (_wsRetryCount < WS_MAX_RETRIES) {
-                const delay = WS_BASE_DELAY * Math.pow(2, _wsRetryCount);
-                _wsRetryCount++;
-                console.log(`WebSocket closed. Reconnecting in ${delay / 1000}s (attempt ${_wsRetryCount}/${WS_MAX_RETRIES})...`);
-                setTimeout(connectWebSocket, delay);
-            } else {
-                console.log('WebSocket reconnection limit reached. Using polling only.');
-            }
-        };
-
-        ws.onerror = (error) => {
-            console.log('WebSocket connection failed:', error);
-        };
-
-    } catch (error) {
-        console.log('WebSocket not available:', error);
-    }
+    // WebSocket server not implemented on backend - using polling for real-time updates instead
+    console.log('Using polling for real-time updates.');
 }
 
 
