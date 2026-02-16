@@ -1020,28 +1020,17 @@ function viewAIEstimate(estimationId) {
     const curr = s.currencySymbol || '$';
     const trades = ai.trades || ai.tradesSummary || [];
     const structAnalysis = ai.structuralAnalysis || {};
-    const matSummary = ai.materialSummary || {};
     const drawingExtraction = ai.drawingExtraction || {};
 
     let tradesHTML = '';
     trades.forEach(t => {
-        // Material schedule rows
-        let matRows = '';
-        if (t.materialSchedule && t.materialSchedule.length > 0) {
-            matRows = `<tr><td colspan="3" style="padding:8px;background:#f0f4ff;">
-                <strong style="color:#6366f1;font-size:0.85rem;"><i class="fas fa-boxes"></i> Material Schedule</strong>
-                <table style="width:100%;margin-top:6px;font-size:0.82rem;"><thead><tr><th>Material</th><th>Spec</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Cost</th></tr></thead><tbody>
-                ${t.materialSchedule.map(m => `<tr><td><strong>${m.material}</strong></td><td>${m.specification || '-'}</td><td>${Number(m.quantity || 0).toLocaleString()}</td><td>${m.unit}</td><td>${curr}${Number(m.unitRate || 0).toLocaleString()}</td><td>${curr}${Number(m.totalCost || 0).toLocaleString()}</td></tr>`).join('')}
-                </tbody></table></td></tr>`;
-        }
-        // Line items
+        // Line items with simplified format (quantity, unit rate, total)
         let lineRows = '';
         if (t.lineItems && t.lineItems.length > 0) {
-            lineRows = t.lineItems.map(li => `<tr><td>${li.description}${li.materialDetails ? `<div style="font-size:0.75rem;color:#8b5cf6;font-style:italic;">${li.materialDetails}</div>` : ''}</td><td>${curr}${Number(li.materialCost || 0).toLocaleString()}</td><td>${curr}${Number(li.laborCost || 0).toLocaleString()}</td><td>${curr}${Number(li.lineTotal || 0).toLocaleString()}</td></tr>`).join('');
+            lineRows = t.lineItems.map(li => `<tr><td>${li.description}${li.materialDetails ? `<div style="font-size:0.75rem;color:#8b5cf6;font-style:italic;">${li.materialDetails}</div>` : ''}</td><td>${Number(li.quantity || 0).toLocaleString()} ${li.unit || ''}</td><td>${curr}${Number(li.unitRate || li.unitTotal || 0).toLocaleString()}</td><td>${curr}${Number(li.lineTotal || 0).toLocaleString()}</td></tr>`).join('');
         }
         tradesHTML += `<tr style="background:#f8fafc;font-weight:600;"><td>${t.tradeName || t.name || ''} <span style="color:#94a3b8;font-weight:400;">(Div ${t.division || ''})</span></td><td>${curr}${Number(t.subtotal || t.amount || 0).toLocaleString()}</td><td>${(t.percentOfTotal || 0).toFixed(1)}%</td></tr>`;
-        if (matRows) tradesHTML += matRows;
-        if (lineRows) tradesHTML += `<tr><td colspan="3" style="padding:6px 8px;"><details><summary style="cursor:pointer;color:#3b82f6;font-size:0.85rem;">View ${t.lineItems.length} Line Items</summary><table style="width:100%;margin-top:6px;font-size:0.82rem;"><thead><tr><th>Description</th><th>Material</th><th>Labor</th><th>Total</th></tr></thead><tbody>${lineRows}</tbody></table></details></td></tr>`;
+        if (lineRows) tradesHTML += `<tr><td colspan="3" style="padding:6px 8px;"><details><summary style="cursor:pointer;color:#3b82f6;font-size:0.85rem;">View ${t.lineItems.length} Line Items</summary><table style="width:100%;margin-top:6px;font-size:0.82rem;"><thead><tr><th>Description</th><th>Qty</th><th>Unit Rate</th><th>Total</th></tr></thead><tbody>${lineRows}</tbody></table></details></td></tr>`;
     });
 
     const breakdown = ai.costBreakdown || {};
