@@ -1138,6 +1138,16 @@ function viewAIEstimate(estimationId) {
                     <div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;border-top:2px solid #333;margin-top:8px;padding-top:8px;"><span>Total with Markups</span><span>${curr}${Number(breakdown.totalWithMarkups || 0).toLocaleString()}</span></div>
                 </div>
             ` : ''}
+            ${ai.materialBOQ && ai.materialBOQ.length > 0 ? `
+                <h4 style="margin-top:16px;"><i class="fas fa-clipboard-list"></i> Material BOQ (${ai.materialBOQ.length} items)</h4>
+                <table style="width:100%;font-size:0.82rem;border-collapse:collapse;margin-top:6px;">
+                    <thead><tr style="background:#f1f5f9;"><th style="padding:6px;text-align:left;">#</th><th style="padding:6px;text-align:left;">Material</th><th style="padding:6px;text-align:left;">Spec</th><th style="padding:6px;text-align:right;">Qty</th><th style="padding:6px;text-align:left;">Unit</th><th style="padding:6px;text-align:right;">Rate</th><th style="padding:6px;text-align:right;">Amount</th></tr></thead>
+                    <tbody>
+                        ${ai.materialBOQ.map((m, i) => `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:4px 6px;">${m.sNo || i+1}</td><td style="padding:4px 6px;font-weight:600;">${m.material}</td><td style="padding:4px 6px;">${m.specification || '-'}</td><td style="padding:4px 6px;text-align:right;">${Number(m.quantity || 0).toLocaleString()}</td><td style="padding:4px 6px;">${m.unit || ''}</td><td style="padding:4px 6px;text-align:right;">${curr}${Number(m.unitRate || 0).toLocaleString()}</td><td style="padding:4px 6px;text-align:right;font-weight:600;">${curr}${Number(m.amount || 0).toLocaleString()}</td></tr>`).join('')}
+                        <tr style="font-weight:700;border-top:2px solid #333;"><td colspan="6" style="padding:6px;text-align:right;">Total Material Cost</td><td style="padding:6px;text-align:right;">${curr}${ai.materialBOQ.reduce((s, m) => s + Number(m.amount || 0), 0).toLocaleString()}</td></tr>
+                    </tbody>
+                </table>
+            ` : ''}
             ${assumptions.length > 0 ? `<h4>Assumptions</h4><ul>${assumptions.map(a => '<li>' + a + '</li>').join('')}</ul>` : ''}
             ${exclusions.length > 0 ? `<h4>Exclusions</h4><ul>${exclusions.map(e => '<li>' + e + '</li>').join('')}</ul>` : ''}
             <div class="modal-actions" style="margin-top:16px;">
