@@ -864,10 +864,12 @@ function renderEstimationsTab() {
                                 ` : aiStatus === 'failed' ? `
                                     <span class="status rejected" style="font-size:11px;">AI Failed</span>
                                     ${est.aiError ? `<br><small style="color:#ef4444;" title="${est.aiError}">Error</small>` : ''}
-                                    <br><button class="btn btn-xs btn-warning" onclick="retryAIEstimate('${est._id}')"><i class="fas fa-redo"></i> Retry</button>
+                                    <br><button class="btn btn-xs btn-warning" onclick="confirmGenerateAI('${est._id}')"><i class="fas fa-redo"></i> Retry</button>
                                 ` : `
-                                    <span class="pending-result">No AI</span>
-                                    <br><button class="btn btn-xs btn-warning" onclick="retryAIEstimate('${est._id}')"><i class="fas fa-robot"></i> Generate</button>
+                                    <span class="pending-result" style="font-size:11px; color:#f59e0b;"><i class="fas fa-clock"></i> Awaiting AI</span>
+                                    <br><button class="btn btn-xs btn-success" onclick="confirmGenerateAI('${est._id}')" style="margin-top:4px; background:#10b981; color:#fff; font-weight:600;">
+                                        <i class="fas fa-robot"></i> Generate AI Estimate
+                                    </button>
                                 `}
                             </td>
                             <td>
@@ -1168,17 +1170,49 @@ async function sendAIReport(estimationId) {
     }
 }
 
-async function retryAIEstimate(estimationId) {
-    if (!confirm('Generate/retry AI estimate for this estimation? This may take 30-60 seconds.')) return;
+function confirmGenerateAI(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    const projectName = estimation ? (estimation.projectName || estimation.projectTitle || 'Untitled Project') : 'this estimation';
+    const fileCount = estimation?.uploadedFiles?.length || 0;
+    const isRetry = estimation?.aiStatus === 'failed';
+
+    showModal(`
+        <div class="modal-body" style="text-align:center; padding:30px;">
+            <div style="font-size:48px; margin-bottom:16px; color:#f59e0b;">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h3 style="margin-bottom:8px;">${isRetry ? 'Retry AI Estimate?' : 'Generate AI Estimate?'}</h3>
+            <p style="color:#64748b; margin-bottom:20px; font-size:14px;">
+                <strong>${projectName}</strong><br>
+                ${fileCount > 0 ? `<span style="color:#3b82f6;"><i class="fas fa-file"></i> ${fileCount} file${fileCount > 1 ? 's' : ''} will be analyzed</span><br>` : ''}
+                <span style="color:#94a3b8; font-size:13px;">AI will analyze uploaded drawings and generate a detailed cost estimate.<br>This may take 30–60 seconds.</span>
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button class="btn btn-outline" onclick="closeModal()" style="padding:10px 24px; font-size:14px;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-success" onclick="closeModal(); executeAIGeneration('${estimationId}')" style="padding:10px 24px; font-size:14px; background:#10b981; color:#fff; font-weight:600;">
+                    <i class="fas fa-check"></i> Confirm & Generate
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+async function executeAIGeneration(estimationId) {
     try {
         showNotification('AI estimate generation started. Please wait up to 60 seconds...', 'info');
         const data = await apiCall(`/estimations/${estimationId}/retry-ai`, 'POST');
         showNotification(data.message || 'AI generation started. Polling for status...', 'info');
-        // Poll for AI status since generation runs in background
+        await loadEstimationsData();
         pollAIStatus(estimationId);
     } catch (error) {
         showNotification('Failed to start AI estimate: ' + error.message, 'error');
     }
+}
+
+async function retryAIEstimate(estimationId) {
+    confirmGenerateAI(estimationId);
 }
 
 function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
