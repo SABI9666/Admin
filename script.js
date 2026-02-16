@@ -827,6 +827,12 @@ function renderEstimationsTab() {
                     const hasAI = !!(est.aiEstimate);
                     const aiStatus = est.aiStatus || (hasAI ? 'completed' : null);
                     const amountDisplay = est.estimatedAmount ? '$' + Number(est.estimatedAmount).toLocaleString() : '';
+                    const confScore = est.aiEstimate?.validationReport?.confidenceScore;
+                    const confLevel = est.aiEstimate?.validationReport?.confidenceLevel;
+                    const passStatus = est.passStatus || {};
+                    const valIssues = est.aiEstimate?.validationReport?.issues || [];
+                    const critCount = valIssues.filter(i => i.severity === 'critical').length;
+                    const warnCount = valIssues.filter(i => i.severity === 'warning').length;
 
                     return `
                         <tr>
@@ -856,11 +862,13 @@ function renderEstimationsTab() {
                             <td>
                                 ${hasAI ? `
                                     <span class="status completed" style="font-size:11px;">AI Ready</span>
+                                    ${confScore ? `<span style="font-size:10px;margin-left:4px;padding:1px 6px;border-radius:8px;font-weight:700;background:${confScore >= 70 ? '#d1fae5' : confScore >= 40 ? '#fef3c7' : '#fee2e2'};color:${confScore >= 70 ? '#065f46' : confScore >= 40 ? '#92400e' : '#991b1b'}">${confScore}%</span>` : ''}
                                     ${amountDisplay ? `<br><small><strong>${amountDisplay}</strong></small>` : ''}
+                                    ${critCount > 0 ? `<br><small style="color:#dc2626;font-size:10px;">${critCount} critical</small>` : ''}${warnCount > 0 ? `<small style="color:#d97706;font-size:10px;margin-left:3px;">${warnCount} warnings</small>` : ''}
                                     <br><button class="btn btn-xs" onclick="viewAIEstimate('${est._id}')"><i class="fas fa-eye"></i> View</button>
                                 ` : aiStatus === 'generating' ? `
                                     <span class="status pending" style="font-size:11px;"><i class="fas fa-spinner fa-spin"></i> Generating...</span>
-                                    <br><small style="color:#64748b;">AI is processing</small>
+                                    <br><small style="color:#64748b;">${passStatus.pass5 ? 'Pass 5: Validating' : passStatus.pass4 ? 'Pass 4: Applying costs' : passStatus.pass3 ? 'Pass 3: Quantity takeoff' : passStatus.pass2 ? 'Pass 2: Extracting' : passStatus.pass1 ? 'Pass 1: Classifying' : 'AI multi-pass running'}</small>
                                 ` : aiStatus === 'failed' ? `
                                     <span class="status rejected" style="font-size:11px;">AI Failed</span>
                                     ${est.aiError ? `<br><small style="color:#ef4444;" title="${est.aiError}">Error</small>` : ''}
