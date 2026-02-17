@@ -1029,6 +1029,7 @@ function viewAIEstimate(estimationId) {
     const trades = ai.trades || ai.tradesSummary || [];
     const structAnalysis = ai.structuralAnalysis || {};
     const matSummary = ai.materialSummary || {};
+    const matSchedule = ai.materialSchedule || {};
     const drawingExtraction = ai.drawingExtraction || {};
     const validation = ai.validationReport || {};
     const confidenceScore = validation.finalConfidenceScore || validation.confidenceScore || s.confidenceScore || 0;
@@ -1186,6 +1187,83 @@ function viewAIEstimate(estimationId) {
         </div>`;
     }
 
+    // Material Schedule HTML - Complete BOQ with all trades and prices
+    const steelMbrs = matSchedule.steelMembers || [];
+    const concItems = matSchedule.concreteItems || [];
+    const mepItms = matSchedule.mepItems || [];
+    const archItms = matSchedule.architecturalItems || [];
+    const roofItms = matSchedule.roofingItems || [];
+    const siteItms = matSchedule.siteworkItems || [];
+    const otherMats = matSchedule.otherMaterials || [];
+    const stlSum = matSchedule.steelSummary || {};
+    const cncSum = matSchedule.concreteSummary || {};
+
+    // Admin helper: build a collapsible table for generic material items with prices
+    function adminMatTable(items, headerBg, cols) {
+        return `<div style="overflow-x:auto;"><table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+            <thead><tr style="background:${headerBg};">${cols.map(c => `<th style="padding:4px 6px;${c.align ? 'text-align:'+c.align : 'text-align:left'}">${c.label}</th>`).join('')}<th style="text-align:right;">Rate</th><th style="text-align:right;">Cost</th></tr></thead>
+            <tbody>${items.map(item => `<tr style="border-bottom:1px solid #f1f5f9;">${cols.map(c => `<td style="padding:3px 6px;${c.style || ''}">${c.render ? c.render(item) : (item[c.key] || '-')}</td>`).join('')}
+                <td style="text-align:right;">${curr}${Number(item.unitRate || 0).toLocaleString()}</td>
+                <td style="text-align:right;font-weight:600;">${curr}${Number(item.totalCost || 0).toLocaleString()}</td></tr>`).join('')}</tbody>
+            <tfoot><tr style="background:${headerBg};font-weight:700;"><td colspan="${cols.length}">Subtotal</td><td></td><td style="text-align:right;">${curr}${Number(items.reduce((s,i) => s + (Number(i.totalCost) || 0), 0)).toLocaleString()}</td></tr></tfoot>
+        </table></div>`;
+    }
+    const adminMatCols = [{label:'Item',key:'item',style:'font-weight:600;'},{label:'Spec',key:'specification',style:'font-size:0.72rem;'},{label:'Qty',key:'quantity',align:'right',render:i=>Number(i.quantity||0).toLocaleString()},{label:'Unit',key:'unit'}];
+    const adminMatColsWithCat = [{label:'Category',key:'category',style:'font-weight:600;'},...adminMatCols];
+
+    let matSchedHTML = '';
+    const hasAnyMatSched = steelMbrs.length > 0 || concItems.length > 0 || mepItms.length > 0 || archItms.length > 0 || roofItms.length > 0 || otherMats.length > 0;
+    if (hasAnyMatSched) {
+        const grandMatCost = matSchedule.grandTotalMaterialCost || 0;
+        matSchedHTML = `<h4 style="margin-top:16px;margin-bottom:8px;"><i class="fas fa-clipboard-list"></i> Complete Material Schedule (BOQ) ${grandMatCost ? `<span style="font-size:0.85rem;color:#1e40af;font-weight:700;float:right;">${curr}${Number(grandMatCost).toLocaleString()}</span>` : ''}</h4>`;
+        if (matSchedule.totalMaterialWeight) matSchedHTML += `<div style="font-size:0.75rem;color:#64748b;margin-bottom:8px;">${matSchedule.totalMaterialWeight}</div>`;
+
+        if (steelMbrs.length > 0) {
+            const stlCost = stlSum.totalSteelCost || steelMbrs.reduce((s,m) => s+(Number(m.totalCost)||0), 0);
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#1e40af;font-size:0.85rem;font-weight:600;"><i class="fas fa-i-cursor"></i> Steel (${steelMbrs.length} items, ${Number(stlSum.totalSteelTons||0).toLocaleString()} tons) <span style="float:right;">${curr}${Number(stlCost).toLocaleString()}</span></summary>
+            <div style="overflow-x:auto;"><table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+                <thead><tr style="background:#eff6ff;"><th style="padding:4px 6px;">Mark</th><th>Section</th><th>Count</th><th>Length</th><th style="text-align:right;">Tons</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Cost</th></tr></thead>
+                <tbody>${steelMbrs.map(m => `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:3px 6px;font-weight:600;">${m.mark||'-'}</td><td style="color:#6366f1;font-weight:600;">${m.section||'-'}</td>
+                    <td style="text-align:center;">${m.count||0}</td><td>${m.lengthEach||(m.lengthFt?m.lengthFt+"'":'-')}</td>
+                    <td style="text-align:right;">${Number(m.totalWeightTons||0).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+                    <td style="text-align:right;">${m.unitRate?curr+Number(m.unitRate).toLocaleString():'-'}</td>
+                    <td style="text-align:right;font-weight:600;">${m.totalCost?curr+Number(m.totalCost).toLocaleString():'-'}</td>
+                </tr>`).join('')}</tbody>
+            </table></div></details>`;
+        }
+        if (concItems.length > 0) {
+            const cncCost = cncSum.totalConcreteCost || concItems.reduce((s,c) => s+(Number(c.totalCost)||0), 0);
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#166534;font-size:0.85rem;font-weight:600;"><i class="fas fa-cube"></i> Concrete (${concItems.length} items, ${Number(cncSum.totalConcreteCY||0).toLocaleString()} CY) <span style="float:right;">${curr}${Number(cncCost).toLocaleString()}</span></summary>
+            <div style="overflow-x:auto;"><table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+                <thead><tr style="background:#f0fdf4;"><th style="padding:4px 6px;">Element</th><th>Dims</th><th>Count</th><th style="text-align:right;">CY</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Cost</th></tr></thead>
+                <tbody>${concItems.map(c => `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:3px 6px;font-weight:600;">${c.element||'-'}</td><td style="color:#059669;">${c.dimensions||'-'}</td>
+                    <td style="text-align:center;">${c.count||0}</td><td style="text-align:right;">${Number(c.totalCY||0).toLocaleString(undefined,{maximumFractionDigits:1})}</td>
+                    <td style="text-align:right;">${c.unitRate?curr+Number(c.unitRate).toLocaleString():'-'}</td>
+                    <td style="text-align:right;font-weight:600;">${c.totalCost?curr+Number(c.totalCost).toLocaleString():'-'}</td>
+                </tr>`).join('')}</tbody>
+            </table></div></details>`;
+        }
+        if (mepItms.length > 0) {
+            const mepCost = (matSchedule.mepSummary||{}).totalMEPCost || mepItms.reduce((s,i) => s+(Number(i.totalCost)||0), 0);
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#7c3aed;font-size:0.85rem;font-weight:600;"><i class="fas fa-plug"></i> MEP (${mepItms.length} items) <span style="float:right;">${curr}${Number(mepCost).toLocaleString()}</span></summary>${adminMatTable(mepItms, '#f5f3ff', adminMatColsWithCat)}</details>`;
+        }
+        if (archItms.length > 0) {
+            const archCost = (matSchedule.architecturalSummary||{}).totalArchitecturalCost || archItms.reduce((s,i) => s+(Number(i.totalCost)||0), 0);
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#b45309;font-size:0.85rem;font-weight:600;"><i class="fas fa-paint-roller"></i> Architectural (${archItms.length} items) <span style="float:right;">${curr}${Number(archCost).toLocaleString()}</span></summary>${adminMatTable(archItms, '#fef3c7', adminMatColsWithCat)}</details>`;
+        }
+        if (roofItms.length > 0) {
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#0369a1;font-size:0.85rem;font-weight:600;"><i class="fas fa-home"></i> Roofing (${roofItms.length} items) <span style="float:right;">${curr}${Number(roofItms.reduce((s,i) => s+(Number(i.totalCost)||0), 0)).toLocaleString()}</span></summary>${adminMatTable(roofItms, '#e0f2fe', adminMatCols)}</details>`;
+        }
+        if (siteItms.length > 0) {
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#65a30d;font-size:0.85rem;font-weight:600;"><i class="fas fa-tree"></i> Sitework (${siteItms.length} items) <span style="float:right;">${curr}${Number(siteItms.reduce((s,i) => s+(Number(i.totalCost)||0), 0)).toLocaleString()}</span></summary>${adminMatTable(siteItms, '#ecfccb', adminMatCols)}</details>`;
+        }
+        if (otherMats.length > 0) {
+            matSchedHTML += `<details style="margin-bottom:8px;"><summary style="cursor:pointer;color:#92400e;font-size:0.85rem;font-weight:600;"><i class="fas fa-boxes"></i> Other (${otherMats.length} items) <span style="float:right;">${curr}${Number(otherMats.reduce((s,i) => s+(Number(i.totalCost)||0), 0)).toLocaleString()}</span></summary>${adminMatTable(otherMats, '#fef3c7', [{label:'Material',key:'material',style:'font-weight:600;',render:i=>i.material||i.item||'-'},{label:'Spec',key:'specification',style:'font-size:0.72rem;'},{label:'Qty',key:'quantity',align:'right',render:i=>Number(i.quantity||0).toLocaleString()},{label:'Unit',key:'unit'}])}</details>`;
+        }
+    }
+
     showModal(`
         <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
             <h3><i class="fas fa-robot"></i> AI Estimate - ${estimation.projectTitle || estimation.projectName}</h3>
@@ -1230,6 +1308,7 @@ function viewAIEstimate(estimationId) {
             ${drawingHTML}
             ${structHTML}
             ${matSumHTML}
+            ${matSchedHTML}
             ${trades.length > 0 ? `
                 <h4>Trade Breakdown (with Material Quantities)</h4>
                 <table style="width:100%;margin-bottom:16px;"><thead><tr><th>Trade</th><th>Cost</th><th>%</th></tr></thead><tbody>${tradesHTML}</tbody></table>
