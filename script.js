@@ -1030,6 +1030,16 @@ function viewAIEstimate(estimationId) {
     const structAnalysis = ai.structuralAnalysis || {};
     const matSummary = ai.materialSummary || {};
     const drawingExtraction = ai.drawingExtraction || {};
+    const validation = ai.validationReport || {};
+    const confidenceScore = validation.finalConfidenceScore || validation.confidenceScore || s.confidenceScore || 0;
+    const confidenceLevel = validation.confidenceLevel || s.confidenceLevel || 'Medium';
+    const confidenceFactors = validation.confidenceFactors || [];
+    const benchmarkComp = validation.benchmarkComparison || {};
+    const rateSourceSummary = validation.rateSourceSummary || {};
+    const rateSourceBreakdown = structAnalysis.rateSourceBreakdown || {};
+    const validationIssues = validation.issues || [];
+    const passesCompleted = structAnalysis.passesCompleted || 0;
+    const multiPassMeta = ai._multiPassMeta || {};
 
     let tradesHTML = '';
     trades.forEach(t => {
@@ -1126,10 +1136,60 @@ function viewAIEstimate(estimationId) {
             </tbody></table>`;
     }
 
+    // Confidence score ring
+    const confPct = Math.min(100, Math.max(0, confidenceScore));
+    const confColor = confPct >= 70 ? '#10b981' : confPct >= 40 ? '#f59e0b' : '#ef4444';
+    const confDash = (confPct / 100) * 251.2;
+
+    // Validation issues
+    const criticalIssues = validationIssues.filter(i => i.severity === 'critical');
+    const warningIssues = validationIssues.filter(i => i.severity === 'warning');
+
+    // Rate source stats
+    const dbRates = rateSourceSummary.dbBacked || rateSourceBreakdown.database || 0;
+    const estRates = rateSourceSummary.aiEstimated || rateSourceBreakdown.estimated || 0;
+    const totalRates = dbRates + estRates;
+    const dbPct = totalRates > 0 ? Math.round((dbRates / totalRates) * 100) : 0;
+
+    // Confidence factors HTML
+    let confFactorsHTML = '';
+    if (confidenceFactors.length > 0) {
+        confFactorsHTML = `<div style="margin-top:10px;font-size:0.82rem;">
+            ${confidenceFactors.map(f => {
+                const fColor = f.score >= 70 ? '#10b981' : f.score >= 40 ? '#f59e0b' : '#ef4444';
+                return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="width:120px;color:#64748b;">${f.name}</span>
+                    <div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${f.score}%;background:${fColor};border-radius:3px;"></div></div>
+                    <span style="width:32px;text-align:right;font-weight:600;color:${fColor};">${f.score}</span>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    // Validation issues HTML for modal
+    let valIssuesHTML = '';
+    if (validationIssues.length > 0) {
+        valIssuesHTML = `<div style="margin-top:12px;">
+            <h4 style="margin-bottom:8px;"><i class="fas fa-shield-alt"></i> Validation Report
+                ${criticalIssues.length > 0 ? `<span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:8px;font-size:0.7rem;margin-left:4px;">${criticalIssues.length} Critical</span>` : ''}
+                ${warningIssues.length > 0 ? `<span style="background:#f59e0b;color:#fff;padding:1px 6px;border-radius:8px;font-size:0.7rem;margin-left:4px;">${warningIssues.length} Warning</span>` : ''}
+            </h4>
+            <div style="max-height:150px;overflow-y:auto;font-size:0.82rem;">
+                ${validationIssues.slice(0, 10).map(issue => `
+                    <div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid #f1f5f9;">
+                        <i class="fas ${issue.severity === 'critical' ? 'fa-exclamation-circle' : issue.severity === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}" style="color:${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'warning' ? '#f59e0b' : '#3b82f6'};margin-top:2px;"></i>
+                        <span>${issue.message}</span>
+                        ${issue.autoFixed ? '<span style="background:#10b981;color:#fff;padding:0 4px;border-radius:4px;font-size:0.7rem;margin-left:auto;white-space:nowrap;">Fixed</span>' : ''}
+                    </div>`).join('')}
+                ${validationIssues.length > 10 ? `<div style="color:#64748b;padding:4px 0;font-style:italic;">...and ${validationIssues.length - 10} more</div>` : ''}
+            </div>
+        </div>`;
+    }
+
     showModal(`
         <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
             <h3><i class="fas fa-robot"></i> AI Estimate - ${estimation.projectTitle || estimation.projectName}</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;">
+            <div style="display:grid;grid-template-columns:${confidenceScore > 0 ? '1fr 1fr auto' : '1fr 1fr'};gap:12px;margin:16px 0;align-items:center;">
                 <div style="background:#f0f9ff;padding:12px;border-radius:8px;text-align:center;">
                     <small>Grand Total</small>
                     <div style="font-size:24px;font-weight:700;color:#1e40af;">${curr}${Number(s.grandTotal || s.totalEstimate || 0).toLocaleString()}</div>
@@ -1139,7 +1199,34 @@ function viewAIEstimate(estimationId) {
                     <div style="font-size:24px;font-weight:700;color:#166534;">${curr}${Number(s.costPerUnit || 0).toLocaleString()}</div>
                     <small>${s.unitLabel || 'per sq ft'}</small>
                 </div>
+                ${confidenceScore > 0 ? `<div style="text-align:center;">
+                    <svg viewBox="0 0 90 90" style="width:80px;height:80px;">
+                        <circle cx="45" cy="45" r="40" fill="none" stroke="#e5e7eb" stroke-width="6"/>
+                        <circle cx="45" cy="45" r="40" fill="none" stroke="${confColor}" stroke-width="6" stroke-dasharray="${confDash} 251.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 45 45)"/>
+                        <text x="45" y="42" text-anchor="middle" font-size="18" font-weight="700" fill="${confColor}">${confPct}</text>
+                        <text x="45" y="56" text-anchor="middle" font-size="8" fill="#6b7280">${confidenceLevel}</text>
+                    </svg>
+                    <div style="font-size:0.7rem;color:#6b7280;">Confidence</div>
+                </div>` : ''}
             </div>
+            ${passesCompleted > 0 || multiPassMeta.engineVersion ? `
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;font-size:0.78rem;">
+                ${passesCompleted > 0 ? `<span style="background:#eff6ff;color:#1e40af;padding:3px 10px;border-radius:12px;"><i class="fas fa-layer-group"></i> ${passesCompleted}/5 Passes</span>` : ''}
+                ${multiPassMeta.totalDurationSeconds ? `<span style="background:#f0fdf4;color:#166534;padding:3px 10px;border-radius:12px;"><i class="fas fa-clock"></i> ${multiPassMeta.totalDurationSeconds}s</span>` : ''}
+                ${totalRates > 0 ? `<span style="background:#f5f3ff;color:#6d28d9;padding:3px 10px;border-radius:12px;"><i class="fas fa-database"></i> ${dbPct}% DB Rates (${dbRates}/${totalRates})</span>` : ''}
+                ${multiPassMeta.engineVersion ? `<span style="background:#f8fafc;color:#64748b;padding:3px 10px;border-radius:12px;">${multiPassMeta.engineVersion}</span>` : ''}
+            </div>` : ''}
+            ${confFactorsHTML}
+            ${benchmarkComp.benchmarkLow ? `
+            <div style="background:#f8fafc;padding:10px 12px;border-radius:8px;margin-bottom:12px;">
+                <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;"><i class="fas fa-chart-bar"></i> Benchmark: ${curr}${Number(benchmarkComp.benchmarkLow || 0).toLocaleString()} - ${curr}${Number(benchmarkComp.benchmarkHigh || 0).toLocaleString()} ${benchmarkComp.unit ? '/' + benchmarkComp.unit : ''}</div>
+                <div style="height:8px;background:#e5e7eb;border-radius:4px;position:relative;">
+                    <div style="height:100%;background:linear-gradient(90deg,#fecaca 0%,#bbf7d0 30%,#bbf7d0 70%,#fecaca 100%);border-radius:4px;"></div>
+                    ${benchmarkComp.costPerUnit && benchmarkComp.benchmarkHigh ? `<div style="position:absolute;top:-2px;left:${Math.min(100, Math.max(0, ((benchmarkComp.costPerUnit - benchmarkComp.benchmarkLow) / (benchmarkComp.benchmarkHigh - benchmarkComp.benchmarkLow)) * 100))}%;width:12px;height:12px;background:${benchmarkComp.status === 'within' ? '#10b981' : '#ef4444'};border-radius:50%;border:2px solid #fff;transform:translateX(-50%);"></div>` : ''}
+                </div>
+                <div style="font-size:0.78rem;color:${benchmarkComp.status === 'within' ? '#059669' : '#dc2626'};margin-top:4px;">${benchmarkComp.status === 'within' ? 'Within typical range' : benchmarkComp.status === 'above' ? 'Above typical range' : benchmarkComp.status === 'below' ? 'Below typical range' : ''}</div>
+            </div>` : ''}
+            ${valIssuesHTML}
             ${drawingHTML}
             ${structHTML}
             ${matSumHTML}
