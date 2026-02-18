@@ -5866,11 +5866,15 @@ function renderProspectOutreachTab() {
                                 <div class="po-item-info">
                                     <span class="po-item-email">${p.email}</span>
                                     <span class="po-item-meta">
-                                        <span style="background:${p.source === 'popup' ? '#eff6ff' : p.source === 'scroll-bar' ? '#fef3c7' : '#f0fdf4'};color:${p.source === 'popup' ? '#2563eb' : p.source === 'scroll-bar' ? '#d97706' : '#16a34a'};padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">${p.source || 'inline'}</span>
+                                        <span style="background:${p.source === 'content-gate' ? '#fef2f2' : p.source === 'mini-estimator' ? '#f5f3ff' : p.source === 'popup' ? '#eff6ff' : p.source === 'scroll-bar' ? '#fef3c7' : '#f0fdf4'};color:${p.source === 'content-gate' ? '#dc2626' : p.source === 'mini-estimator' ? '#7c3aed' : p.source === 'popup' ? '#2563eb' : p.source === 'scroll-bar' ? '#d97706' : '#16a34a'};padding:1px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">${p.source || 'inline'}</span>
                                         ${p.scrollDepth ? `<span style="color:#94a3b8;font-size:0.7rem;" title="Page scroll depth at capture">${p.scrollDepth}% scrolled</span>` : ''}
                                         &middot; ${new Date(p.capturedAt).toLocaleDateString()}
                                         ${p.inviteSent ? ' &middot; <span style="color:#16a34a;font-weight:600;">Invited' + (p.inviteCount > 1 ? ' (' + p.inviteCount + 'x)' : '') + '</span>' : ''}
                                     </span>
+                                    ${p.estimateData ? `<span class="po-item-meta" style="margin-top:2px;">
+                                        <i class="fas fa-calculator" style="color:#7c3aed;font-size:0.7rem;"></i>
+                                        <span style="font-size:0.7rem;color:#475569;">${p.estimateData.projectType} &middot; ${Number(p.estimateData.area || 0).toLocaleString()} ${p.estimateData.unit === 'sqm' ? 'sq m' : 'sq ft'} &middot; ${p.estimateData.region}</span>
+                                    </span>` : ''}
                                 </div>
                                 <button class="po-delete-btn" onclick="poDeleteProspect('${p._id}')" title="Remove">
                                     <i class="fas fa-trash-alt"></i>
