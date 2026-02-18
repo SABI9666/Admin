@@ -5698,12 +5698,13 @@ async function meSendMarketingEmail() {
 // ============================================================
 
 async function loadProspectData() {
-    const container = document.getElementById('tabContent');
-    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading prospects...</p></div>`;
+    const container = document.getElementById('prospect-outreach-tab');
+    if (!container) return;
+    showLoader(container);
     try {
         const [prospectRes, campaignRes] = await Promise.all([
-            apiCall('/admin/prospects'),
-            apiCall('/admin/prospects/campaigns'),
+            apiCall('/prospects'),
+            apiCall('/prospects/campaigns').catch(() => ({ campaigns: [] })),
         ]);
         state.prospects = prospectRes.prospects || [];
         state.prospectStats = prospectRes.stats || {};
@@ -5721,7 +5722,8 @@ async function loadProspectData() {
 }
 
 function renderProspectOutreachTab() {
-    const container = document.getElementById('tabContent');
+    const container = document.getElementById('prospect-outreach-tab');
+    if (!container) return;
     const stats = state.prospectStats;
     const prospects = state.prospects;
 
@@ -5857,7 +5859,7 @@ async function poSendInvites() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
 
     try {
-        const result = await apiCall('/admin/prospects/send-invite', 'POST', {
+        const result = await apiCall('/prospects/send-invite', 'POST', {
             prospectIds: state.prospectSelectedIds,
         });
         const sent = result.results?.sent || 0;
@@ -5880,7 +5882,7 @@ async function poSendInvites() {
 async function poDeleteProspect(id) {
     if (!confirm('Remove this prospect?')) return;
     try {
-        await apiCall(`/admin/prospects/${id}`, 'DELETE');
+        await apiCall(`/prospects/${id}`, 'DELETE');
         showNotification('Prospect removed.', 'success');
         state.prospects = [];
         loadProspectData();
