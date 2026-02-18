@@ -1602,8 +1602,19 @@ function viewAIEstimate(estimationId) {
             ` : ''}
             ${assumptions.length > 0 ? `<h4>Assumptions</h4><ul>${assumptions.map(a => '<li>' + a + '</li>').join('')}</ul>` : ''}
             ${exclusions.length > 0 ? `<h4>Exclusions</h4><ul>${exclusions.map(e => '<li>' + e + '</li>').join('')}</ul>` : ''}
+            ${estimation.accuracyFeedback ? `
+            <div style="margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                <h4 style="margin:0 0 6px;color:#166534;font-size:0.85rem;"><i class="fas fa-check-circle"></i> Accuracy Feedback Recorded</h4>
+                <div style="font-size:0.82rem;color:#475569;">
+                    <strong>Rating:</strong> ${estimation.accuracyFeedback.rating}/5 |
+                    <strong>Actual Cost:</strong> ${estimation.accuracyFeedback.actualCost ? curr + Number(estimation.accuracyFeedback.actualCost).toLocaleString() : 'Not provided'} |
+                    <strong>Variance:</strong> ${estimation.accuracyFeedback.variancePercent ? estimation.accuracyFeedback.variancePercent + '%' : 'N/A'}
+                    ${estimation.accuracyFeedback.notes ? `<br><strong>Notes:</strong> ${estimation.accuracyFeedback.notes}` : ''}
+                </div>
+            </div>` : ''}
             <div class="modal-actions" style="margin-top:16px;">
                 <button class="btn btn-success" onclick="closeModal(); sendAIReport('${estimationId}')"><i class="fas fa-paper-plane"></i> Approve & Send to Contractor</button>
+                <button class="btn" style="background:#8b5cf6;color:#fff;" onclick="closeModal(); showAccuracyFeedback('${estimationId}')"><i class="fas fa-chart-line"></i> Accuracy Feedback</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Close</button>
             </div>
         </div>
@@ -1618,6 +1629,74 @@ async function sendAIReport(estimationId) {
         await loadEstimationsData();
     } catch (error) {
         showNotification('Failed to send AI report: ' + error.message, 'error');
+    }
+}
+
+function showAccuracyFeedback(estimationId) {
+    const estimation = state.estimations.find(e => e._id === estimationId);
+    if (!estimation || !estimation.aiEstimate) return showNotification('No AI estimate found.', 'error');
+    const s = estimation.aiEstimate.summary || {};
+    const curr = s.currencySymbol || '$';
+    const grandTotal = s.grandTotal || 0;
+    const existing = estimation.accuracyFeedback || {};
+
+    showModal(`
+        <div class="modal-body" style="max-width:500px;">
+            <h3 style="margin-bottom:16px;"><i class="fas fa-chart-line" style="color:#8b5cf6;"></i> Accuracy Feedback</h3>
+            <p style="color:#64748b;font-size:0.85rem;margin-bottom:16px;">Record actual project costs to calibrate future AI estimates.</p>
+            <div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:16px;text-align:center;">
+                <small style="color:#64748b;">AI Estimated Total</small>
+                <div style="font-size:22px;font-weight:700;color:#1e40af;">${curr}${Number(grandTotal).toLocaleString()}</div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Accuracy Rating</label>
+                <div id="afRatingStars" style="display:flex;gap:6px;font-size:24px;cursor:pointer;">
+                    ${[1,2,3,4,5].map(i => `<span onclick="setAccuracyRating(${i})" data-star="${i}" style="color:${existing.rating >= i ? '#f59e0b' : '#d1d5db'};transition:color 0.15s;"><i class="fas fa-star"></i></span>`).join('')}
+                </div>
+                <input type="hidden" id="afRating" value="${existing.rating || 0}">
+                <small style="color:#94a3b8;">1 = Very inaccurate, 5 = Highly accurate</small>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Actual Project Cost (optional)</label>
+                <input type="number" id="afActualCost" value="${existing.actualCost || ''}" placeholder="Enter actual total cost" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:4px;">Notes (optional)</label>
+                <textarea id="afNotes" rows="3" placeholder="What was accurate? What was off? Any specific trades over/under estimated?" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;resize:vertical;">${existing.notes || ''}</textarea>
+            </div>
+            <div class="modal-actions" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn" style="background:#8b5cf6;color:#fff;font-weight:600;" onclick="submitAccuracyFeedback('${estimationId}', ${grandTotal})"><i class="fas fa-save"></i> Save Feedback</button>
+            </div>
+        </div>
+    `);
+}
+
+function setAccuracyRating(rating) {
+    document.getElementById('afRating').value = rating;
+    document.querySelectorAll('#afRatingStars span').forEach(el => {
+        el.style.color = parseInt(el.dataset.star) <= rating ? '#f59e0b' : '#d1d5db';
+    });
+}
+
+async function submitAccuracyFeedback(estimationId, aiTotal) {
+    const rating = parseInt(document.getElementById('afRating').value) || 0;
+    if (rating === 0) return showNotification('Please select an accuracy rating.', 'error');
+    const actualCost = parseFloat(document.getElementById('afActualCost').value) || null;
+    const notes = document.getElementById('afNotes').value.trim();
+    let variancePercent = null;
+    if (actualCost && aiTotal > 0) {
+        variancePercent = Math.round(((actualCost - aiTotal) / aiTotal) * 10000) / 100;
+    }
+    try {
+        await apiCall(`/estimations/${estimationId}/accuracy-feedback`, 'POST', {
+            rating, actualCost, notes, variancePercent, aiTotal
+        });
+        showNotification('Accuracy feedback saved successfully.', 'success');
+        closeModal();
+        await loadEstimationsData();
+    } catch (error) {
+        showNotification('Failed to save feedback: ' + error.message, 'error');
     }
 }
 
