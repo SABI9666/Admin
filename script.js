@@ -106,6 +106,10 @@ const state = {
     marketingRecipientStats: {},
     marketingCampaigns: [],
     marketingSelectedIds: [],
+    prospects: [],
+    prospectStats: {},
+    prospectCampaigns: [],
+    prospectSelectedIds: [],
 };
 
 // --- INITIALIZATION ---
@@ -334,6 +338,7 @@ function showTab(tabName) {
         'announcements': { title: 'News & Updates', subtitle: 'Manage announcements, offers, and maintenance notices' },
         'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
         'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
+        'prospect-outreach': { title: 'Prospect Outreach', subtitle: 'Manage captured leads and send invitation emails' },
         'marketing-email': { title: 'Marketing Email', subtitle: 'Send professional marketing emails to approved users' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
@@ -361,6 +366,7 @@ function showTab(tabName) {
         'announcements': { data: state.announcements, loader: loadAnnouncementsData },
         'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
         'system-admin': { data: [], loader: loadSystemAdminOverview },
+        'prospect-outreach': { data: state.prospects || [], loader: loadProspectData },
         'marketing-email': { data: state.marketingRecipients || [], loader: loadMarketingEmailData },
     };
 
@@ -5684,5 +5690,201 @@ async function meSendMarketingEmail() {
             sendBtn.disabled = false;
             sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Send`;
         }
+    }
+}
+
+// ============================================================
+// PROSPECT OUTREACH
+// ============================================================
+
+async function loadProspectData() {
+    const container = document.getElementById('tabContent');
+    container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div><p>Loading prospects...</p></div>`;
+    try {
+        const [prospectRes, campaignRes] = await Promise.all([
+            apiCall('/admin/prospects'),
+            apiCall('/admin/prospects/campaigns'),
+        ]);
+        state.prospects = prospectRes.prospects || [];
+        state.prospectStats = prospectRes.stats || {};
+        state.prospectCampaigns = campaignRes.campaigns || [];
+        state.prospectSelectedIds = [];
+
+        // Update badge
+        const badge = document.getElementById('prospectBadge');
+        if (badge) badge.textContent = state.prospectStats.pending || '';
+
+        renderProspectOutreachTab();
+    } catch (error) {
+        container.innerHTML = `<div class="empty-state"><h3>Error loading prospects</h3><p>${error.message}</p></div>`;
+    }
+}
+
+function renderProspectOutreachTab() {
+    const container = document.getElementById('tabContent');
+    const stats = state.prospectStats;
+    const prospects = state.prospects;
+
+    container.innerHTML = `
+        <div class="po-layout">
+            <!-- Stats Row -->
+            <div class="po-stats-row">
+                <div class="po-stat-card">
+                    <div class="po-stat-icon" style="background:#eff6ff; color:#2563eb;"><i class="fas fa-users"></i></div>
+                    <div class="po-stat-info">
+                        <span class="po-stat-num">${stats.total || 0}</span>
+                        <span class="po-stat-label">Total Prospects</span>
+                    </div>
+                </div>
+                <div class="po-stat-card">
+                    <div class="po-stat-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-clock"></i></div>
+                    <div class="po-stat-info">
+                        <span class="po-stat-num">${stats.pending || 0}</span>
+                        <span class="po-stat-label">Pending Invite</span>
+                    </div>
+                </div>
+                <div class="po-stat-card">
+                    <div class="po-stat-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-paper-plane"></i></div>
+                    <div class="po-stat-info">
+                        <span class="po-stat-num">${stats.invited || 0}</span>
+                        <span class="po-stat-label">Invited</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Section -->
+            <div class="po-main">
+                <!-- Prospect List -->
+                <div class="po-panel">
+                    <div class="po-panel-header">
+                        <h3><i class="fas fa-list"></i> Captured Emails</h3>
+                        <div class="po-actions">
+                            <label class="po-select-all">
+                                <input type="checkbox" id="poSelectAll" onchange="poToggleSelectAll()">
+                                <span>Select All</span>
+                            </label>
+                            <button class="btn btn-sm btn-primary" onclick="poSendInvites()" id="poSendBtn" disabled>
+                                <i class="fas fa-paper-plane"></i> Send Invite (<span id="poSelectedCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="po-list" id="poList">
+                        ${prospects.length === 0 ? `
+                            <div class="empty-state" style="padding:40px 20px;">
+                                <i class="fas fa-bullseye" style="font-size:32px; color:#94a3b8; margin-bottom:12px;"></i>
+                                <h3>No prospects yet</h3>
+                                <p>Prospects will appear here once visitors enter their email on your landing page.</p>
+                            </div>
+                        ` : prospects.map(p => `
+                            <div class="po-item ${p.inviteSent ? 'po-item-invited' : ''}" data-id="${p._id}">
+                                <label class="po-checkbox">
+                                    <input type="checkbox" value="${p._id}" onchange="poToggleProspect('${p._id}')">
+                                </label>
+                                <div class="po-item-info">
+                                    <span class="po-item-email">${p.email}</span>
+                                    <span class="po-item-meta">
+                                        ${p.source || 'landing-page'} &middot; ${new Date(p.capturedAt).toLocaleDateString()}
+                                        ${p.inviteSent ? ' &middot; <span style="color:#16a34a;font-weight:600;">Invited' + (p.inviteCount > 1 ? ' (' + p.inviteCount + 'x)' : '') + '</span>' : ''}
+                                    </span>
+                                </div>
+                                <button class="po-delete-btn" onclick="poDeleteProspect('${p._id}')" title="Remove">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Campaign History -->
+                ${state.prospectCampaigns.length > 0 ? `
+                <div class="po-panel">
+                    <div class="po-panel-header">
+                        <h3><i class="fas fa-history"></i> Outreach History</h3>
+                    </div>
+                    <div class="po-campaigns">
+                        ${state.prospectCampaigns.slice(0, 8).map(c => `
+                            <div class="po-campaign-item">
+                                <div class="po-campaign-info">
+                                    <span class="po-campaign-subject">${c.subject}</span>
+                                    <span class="po-campaign-meta">${new Date(c.sentAt).toLocaleDateString()} &middot; by ${c.sentBy}</span>
+                                </div>
+                                <div class="po-campaign-stats">
+                                    <span class="po-campaign-sent">${c.sent} sent</span>
+                                    ${c.failed > 0 ? `<span class="po-campaign-fail">${c.failed} failed</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function poToggleProspect(id) {
+    const idx = state.prospectSelectedIds.indexOf(id);
+    if (idx >= 0) state.prospectSelectedIds.splice(idx, 1);
+    else state.prospectSelectedIds.push(id);
+    poUpdateUI();
+}
+
+function poToggleSelectAll() {
+    const allCheckbox = document.getElementById('poSelectAll');
+    if (allCheckbox.checked) {
+        state.prospectSelectedIds = state.prospects.map(p => p._id);
+    } else {
+        state.prospectSelectedIds = [];
+    }
+    // Sync checkboxes
+    document.querySelectorAll('#poList input[type="checkbox"]').forEach(cb => {
+        cb.checked = state.prospectSelectedIds.includes(cb.value);
+    });
+    poUpdateUI();
+}
+
+function poUpdateUI() {
+    const count = state.prospectSelectedIds.length;
+    const countEl = document.getElementById('poSelectedCount');
+    const btn = document.getElementById('poSendBtn');
+    if (countEl) countEl.textContent = count;
+    if (btn) btn.disabled = count === 0;
+}
+
+async function poSendInvites() {
+    if (state.prospectSelectedIds.length === 0) return;
+    const btn = document.getElementById('poSendBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+
+    try {
+        const result = await apiCall('/admin/prospects/send-invite', 'POST', {
+            prospectIds: state.prospectSelectedIds,
+        });
+        const sent = result.results?.sent || 0;
+        const failed = result.results?.failed || 0;
+        if (failed === 0) {
+            showNotification(`Invitation sent to ${sent} prospect${sent !== 1 ? 's' : ''}!`, 'success');
+        } else {
+            showNotification(`Sent ${sent}, failed ${failed}.`, 'warning');
+        }
+        state.prospectSelectedIds = [];
+        state.prospects = [];
+        loadProspectData();
+    } catch (error) {
+        showNotification('Failed to send invitations.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Invite (<span id="poSelectedCount">0</span>)'; }
+    }
+}
+
+async function poDeleteProspect(id) {
+    if (!confirm('Remove this prospect?')) return;
+    try {
+        await apiCall(`/admin/prospects/${id}`, 'DELETE');
+        showNotification('Prospect removed.', 'success');
+        state.prospects = [];
+        loadProspectData();
+    } catch (error) {
+        showNotification('Failed to remove prospect.', 'error');
     }
 }
