@@ -625,6 +625,17 @@ function renderIncompleteUsersTab(filter = 'all', search = '') {
             </div>
         </div>
 
+        <!-- Manual Email Send Section -->
+        <div class="iu-manual-email" style="display:flex;align-items:center;gap:12px;padding:16px 20px;margin:0 0 16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;flex-wrap:wrap;">
+            <div style="font-size:14px;font-weight:600;color:#334155;white-space:nowrap;"><i class="fas fa-plus-circle" style="color:#2563eb;margin-right:6px;"></i>Send Invite Manually</div>
+            <input type="email" id="iuManualEmail" placeholder="Enter email address..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;outline:none;" />
+            <select id="iuManualType" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;outline:none;">
+                <option value="contractor">Contractor</option>
+                <option value="designer">Designer</option>
+            </select>
+            <button class="btn btn-sm" onclick="iuSendManualEmail()" style="white-space:nowrap;"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+
         <div class="iu-stats-row">
             <div class="iu-stat-card iu-stat-total">
                 <div class="iu-stat-value">${stats.total || 0}</div>
@@ -747,9 +758,30 @@ async function sendReminderEmail(userId, email) {
     if (!confirm(`Send a profile completion reminder to ${email}?`)) return;
     try {
         await apiCall(`/users/${userId}/send-reminder`, 'POST', { email });
-        alert('Reminder email sent successfully!');
+        showNotification(`Reminder sent to ${email}`, 'success');
     } catch (error) {
-        alert('Failed to send reminder. The email feature may not be configured.');
+        showNotification('Failed to send reminder.', 'error');
+    }
+}
+
+async function iuSendManualEmail() {
+    const emailInput = document.getElementById('iuManualEmail');
+    const typeSelect = document.getElementById('iuManualType');
+    const email = emailInput?.value?.trim();
+    const userType = typeSelect?.value || 'contractor';
+
+    if (!email || !email.includes('@')) {
+        showNotification('Please enter a valid email address.', 'warning');
+        return;
+    }
+    if (!confirm(`Send profile completion invite to ${email} (${userType})?`)) return;
+
+    try {
+        await apiCall('/send-manual-invite', 'POST', { email, userType });
+        showNotification(`Invite sent to ${email}`, 'success');
+        emailInput.value = '';
+    } catch (error) {
+        showNotification('Failed to send invite email.', 'error');
     }
 }
 
