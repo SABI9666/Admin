@@ -3343,7 +3343,9 @@ function initializeRealTimeUpdates() {
         _pollingInitialized = true;
         setInterval(async () => {
             try {
-                const currentActiveTab = document.querySelector('.tab-content.active').id;
+                const activeEl = document.querySelector('.tab-content.active');
+                if (!activeEl) return;
+                const currentActiveTab = activeEl.id;
 
                 if (currentActiveTab === 'support-messages-tab') {
                     loadSupportMessagesData();
