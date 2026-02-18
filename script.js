@@ -5476,9 +5476,9 @@ function renderMarketingEmailTab(filter = 'all', search = '') {
                                     <div class="me-history-info">
                                         <div class="me-history-subject">${c.subject || 'No subject'}</div>
                                         <div class="me-history-meta">
-                                            <span><i class="fas fa-users"></i> ${c.recipientCount || 0} recipients</span>
-                                            <span><i class="fas fa-check"></i> ${c.successCount || 0} delivered</span>
-                                            ${c.failCount > 0 ? `<span class="me-history-fail"><i class="fas fa-times"></i> ${c.failCount} failed</span>` : ''}
+                                            <span><i class="fas fa-users"></i> ${c.totalRecipients || 0} recipients</span>
+                                            <span><i class="fas fa-check"></i> ${c.sent || 0} delivered</span>
+                                            ${c.failed > 0 ? `<span class="me-history-fail"><i class="fas fa-times"></i> ${c.failed} failed</span>` : ''}
                                         </div>
                                     </div>
                                     <div class="me-history-date">${formatAdminDate(c.sentAt)}</div>
@@ -5657,21 +5657,14 @@ async function meSendMarketingEmail() {
     }
 
     try {
-        const recipients = selectedRecipients.map(u => ({
-            email: u.email,
-            name: u.name || 'User',
-            type: u.type || 'user',
-            companyName: u.companyName || ''
-        }));
-
         const result = await apiCall('/marketing/send', 'POST', {
-            recipients,
+            recipientIds: selectedIds,
             subject,
-            htmlBody: body
+            emailBody: body
         });
 
-        const successCount = result.results?.filter(r => r.success)?.length || 0;
-        const failCount = result.results?.filter(r => !r.success)?.length || 0;
+        const successCount = result.results?.sent || 0;
+        const failCount = result.results?.failed || 0;
 
         if (failCount === 0) {
             showNotification(`Marketing email sent successfully to ${successCount} recipient${successCount !== 1 ? 's' : ''}!`, 'success');
