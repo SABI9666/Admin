@@ -84,6 +84,8 @@ function initAdminInactivityTimer() {
 const API_BASE_URL = 'https://steelconnect-backend.onrender.com';
 const state = {
     users: [],
+    incompleteUsers: [],
+    incompleteUsersStats: {},
     profileReviews: [],
     estimations: [],
     jobs: [],
@@ -316,6 +318,7 @@ function showTab(tabName) {
     const titleMap = {
         'dashboard': { title: 'Dashboard', subtitle: 'Overview of your admin portal' },
         'users': { title: 'Users', subtitle: 'Manage all registered users' },
+        'incomplete-users': { title: 'Incomplete Profiles', subtitle: 'Users who registered but haven\'t completed their profile' },
         'profile-reviews': { title: 'Profile Reviews', subtitle: 'Review pending profile submissions' },
         'conversations': { title: 'Conversations', subtitle: 'Monitor user conversations' },
         'estimations': { title: 'Estimations', subtitle: 'Manage estimation requests' },
@@ -342,6 +345,7 @@ function showTab(tabName) {
 
     // Lazy load data
     const manualLoadMap = {
+        'incomplete-users': { data: state.incompleteUsers, loader: loadIncompleteUsersData },
         'estimations': { data: state.estimations, loader: loadEstimationsData },
         'jobs': { data: state.jobs, loader: () => loadGenericData('jobs') },
         'quotes': { data: state.quotes, loader: () => loadGenericData('quotes') },
@@ -375,6 +379,10 @@ async function loadDashboardStats() {
             reviewsBadge.textContent = stats.pendingProfileReviews;
         }
 
+        // Update incomplete profiles badge
+        const incBadge = document.getElementById('incompleteUsersBadge');
+        if (incBadge) incBadge.textContent = (stats.incompleteProfileUsers || 0) > 0 ? stats.incompleteProfileUsers : '';
+
         // Update community feed badge in sidebar
         const communityBadge = document.getElementById('communityPendingBadge');
         if (communityBadge) {
@@ -396,6 +404,14 @@ async function loadDashboardStats() {
                     <div class="stat-number">${stats.pendingProfileReviews || 0}</div>
                     <div class="stat-label">Pending Reviews</div>
                     <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('profile-reviews')"><i class="fas fa-arrow-right"></i> Review</button></div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid #f59e0b">
+                <div class="stat-icon" style="background:rgba(245,158,11,0.1)"><i class="fas fa-user-clock" style="color:#f59e0b"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.incompleteProfileUsers || 0}</div>
+                    <div class="stat-label">Incomplete Profiles</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('incomplete-users')"><i class="fas fa-arrow-right"></i> View</button></div>
                 </div>
             </div>
             <div class="stat-card stat-card-blue">
@@ -548,6 +564,181 @@ async function confirmBlockUser(email, block) {
             await loadMessagesData();
         }
     } catch (error) {}
+}
+
+// --- INCOMPLETE PROFILE USERS ---
+async function loadIncompleteUsersData() {
+    const container = document.getElementById('incomplete-users-tab');
+    showLoader(container);
+    try {
+        const { incompleteUsers, stats } = await apiCall('/incomplete-users');
+        state.incompleteUsers = incompleteUsers;
+        state.incompleteUsersStats = stats;
+        renderIncompleteUsersTab();
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load incomplete users.</p><button class="btn" onclick="loadIncompleteUsersData()">Retry</button>`;
+    }
+}
+
+function renderIncompleteUsersTab(filter = 'all', search = '') {
+    const container = document.getElementById('incomplete-users-tab');
+    const stats = state.incompleteUsersStats || {};
+    const searchLower = search.toLowerCase();
+
+    let filtered = state.incompleteUsers;
+    if (filter === 'never-logged') filtered = filtered.filter(u => !u.lastLogin);
+    else if (filter === 'logged-no-profile') filtered = filtered.filter(u => u.lastLogin);
+    else if (filter === 'designer') filtered = filtered.filter(u => u.type === 'designer');
+    else if (filter === 'contractor') filtered = filtered.filter(u => u.type === 'contractor');
+    else if (filter === 'blocked') filtered = filtered.filter(u => u.isBlocked);
+
+    if (searchLower) {
+        filtered = filtered.filter(u =>
+            (u.name || '').toLowerCase().includes(searchLower) ||
+            (u.email || '').toLowerCase().includes(searchLower)
+        );
+    }
+
+    container.innerHTML = `
+        <div class="iu-header">
+            <div class="iu-header-left">
+                <div class="iu-icon-wrap"><i class="fas fa-user-clock"></i></div>
+                <div>
+                    <h2>Incomplete Profile Users</h2>
+                    <p>Users who registered but haven't completed their profile. These users can login but have limited platform access until profile completion.</p>
+                </div>
+            </div>
+            <div>
+                <button class="btn" onclick="loadIncompleteUsersData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+
+        <div class="iu-stats-row">
+            <div class="iu-stat-card iu-stat-total">
+                <div class="iu-stat-value">${stats.total || 0}</div>
+                <div class="iu-stat-label">Total Incomplete</div>
+            </div>
+            <div class="iu-stat-card iu-stat-never">
+                <div class="iu-stat-value">${stats.neverLoggedIn || 0}</div>
+                <div class="iu-stat-label">Never Logged In</div>
+            </div>
+            <div class="iu-stat-card iu-stat-logged">
+                <div class="iu-stat-value">${stats.loggedInNoProfile || 0}</div>
+                <div class="iu-stat-label">Logged In, No Profile</div>
+            </div>
+            <div class="iu-stat-card iu-stat-designer">
+                <div class="iu-stat-value">${stats.designers || 0}</div>
+                <div class="iu-stat-label">Designers</div>
+            </div>
+            <div class="iu-stat-card iu-stat-contractor">
+                <div class="iu-stat-value">${stats.contractors || 0}</div>
+                <div class="iu-stat-label">Contractors</div>
+            </div>
+        </div>
+
+        <div class="iu-search-bar">
+            <input type="text" placeholder="Search by name or email..." value="${search}" oninput="renderIncompleteUsersTab(document.getElementById('iuFilterSelect').value, this.value)" />
+            <select id="iuFilterSelect" onchange="renderIncompleteUsersTab(this.value, document.querySelector('.iu-search-bar input').value)">
+                <option value="all" ${filter === 'all' ? 'selected' : ''}>All Users</option>
+                <option value="never-logged" ${filter === 'never-logged' ? 'selected' : ''}>Never Logged In</option>
+                <option value="logged-no-profile" ${filter === 'logged-no-profile' ? 'selected' : ''}>Logged In, No Profile</option>
+                <option value="designer" ${filter === 'designer' ? 'selected' : ''}>Designers Only</option>
+                <option value="contractor" ${filter === 'contractor' ? 'selected' : ''}>Contractors Only</option>
+                <option value="blocked" ${filter === 'blocked' ? 'selected' : ''}>Blocked Users</option>
+            </select>
+        </div>
+
+        ${filtered.length === 0 ? `
+            <div class="iu-empty">
+                <i class="fas fa-check-circle"></i>
+                <h3>No incomplete profiles found</h3>
+                <p>${filter !== 'all' ? 'Try changing the filter.' : 'All users have completed their profiles.'}</p>
+            </div>
+        ` : `
+            <div class="iu-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Registered</th>
+                            <th>Last Login</th>
+                            <th>IP Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(u => {
+                            const initials = (u.name || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                            const typeClass = u.type === 'designer' ? 'designer' : u.type === 'contractor' ? 'contractor' : 'unknown';
+                            const statusBadge = u.isBlocked ? 'iu-badge-blocked' : u.profileStatus === 'pending' ? 'iu-badge-pending' : 'iu-badge-incomplete';
+                            const statusText = u.isBlocked ? 'Blocked' : u.profileStatus === 'pending' ? 'Pending Review' : 'Incomplete';
+                            const regDate = u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown';
+                            const regTime = u.createdAt ? new Date(u.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+                            const lastLogin = u.lastLogin ? formatTimeAgo(u.lastLogin) : null;
+
+                            return `<tr>
+                                <td>
+                                    <div class="iu-user-cell">
+                                        <div class="iu-avatar ${typeClass}">${initials}</div>
+                                        <div class="iu-user-info">
+                                            <span class="iu-user-name">${u.name || 'Not provided'}</span>
+                                            <span class="iu-user-email">${u.email}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="iu-badge iu-badge-${typeClass}">${(u.type || 'Unknown').charAt(0).toUpperCase() + (u.type || 'unknown').slice(1)}</span></td>
+                                <td><span class="iu-badge ${statusBadge}"><i class="fas fa-${u.isBlocked ? 'ban' : 'clock'}"></i> ${statusText}</span></td>
+                                <td>
+                                    <div>${regDate}</div>
+                                    <div class="iu-time-ago">${regTime}</div>
+                                </td>
+                                <td>
+                                    ${lastLogin ? `
+                                        <div class="iu-login-status"><span class="iu-login-dot active"></span> ${lastLogin}</div>
+                                    ` : `
+                                        <div class="iu-login-status"><span class="iu-login-dot never"></span> Never</div>
+                                    `}
+                                </td>
+                                <td><span class="iu-ip">${u.lastLoginIP || '-'}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline" onclick="sendReminderEmail('${u._id}', '${u.email}')" title="Send reminder email"><i class="fas fa-envelope"></i></button>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:12px 16px;font-size:0.82rem;color:var(--gray-400)">Showing ${filtered.length} of ${state.incompleteUsers.length} users</div>
+        `}
+    `;
+}
+
+function formatTimeAgo(dateStr) {
+    if (!dateStr) return 'Never';
+    const now = new Date();
+    const then = new Date(dateStr);
+    const diffMs = now - then;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}d ago`;
+    if (days < 30) return `${Math.floor(days / 7)}w ago`;
+    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function sendReminderEmail(userId, email) {
+    if (!confirm(`Send a profile completion reminder to ${email}?`)) return;
+    try {
+        await apiCall(`/users/${userId}/send-reminder`, 'POST', { email });
+        alert('Reminder email sent successfully!');
+    } catch (error) {
+        alert('Failed to send reminder. The email feature may not be configured.');
+    }
 }
 
 // --- PROFILE REVIEWS ---

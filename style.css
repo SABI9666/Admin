@@ -3595,3 +3595,69 @@ table tbody tr:last-child td {
     .form-row { flex-direction: column; gap: 0; }
     .announcements-header { flex-direction: column; gap: 1rem; text-align: center; }
 }
+
+/* ============ INCOMPLETE PROFILES SECTION ============ */
+.nav-badge-amber { background: #f59e0b !important; display: inline-block !important; }
+
+.iu-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.iu-header-left { display: flex; align-items: flex-start; gap: 16px; }
+.iu-icon-wrap { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.iu-header-left h2 { font-size: 1.3rem; color: var(--gray-800); margin: 0; }
+.iu-header-left p { font-size: 0.85rem; color: var(--gray-500); margin: 4px 0 0; max-width: 500px; }
+
+.iu-stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.iu-stat-card { background: white; border: 1px solid var(--gray-200); border-radius: 12px; padding: 16px; text-align: center; }
+.iu-stat-value { font-size: 1.6rem; font-weight: 800; color: var(--gray-800); }
+.iu-stat-label { font-size: 0.75rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.iu-stat-card.iu-stat-total { border-left: 3px solid #f59e0b; }
+.iu-stat-card.iu-stat-never { border-left: 3px solid #ef4444; }
+.iu-stat-card.iu-stat-logged { border-left: 3px solid #3b82f6; }
+.iu-stat-card.iu-stat-designer { border-left: 3px solid #8b5cf6; }
+.iu-stat-card.iu-stat-contractor { border-left: 3px solid #10b981; }
+
+.iu-table-wrap { background: white; border: 1px solid var(--gray-200); border-radius: 12px; overflow: hidden; }
+.iu-table-wrap table { margin: 0; border: none; }
+.iu-table-wrap table thead th { background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); padding: 14px 16px; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+.iu-table-wrap table tbody td { padding: 14px 16px; border-bottom: 1px solid var(--gray-100); font-size: 0.88rem; vertical-align: middle; }
+.iu-table-wrap table tbody tr:hover { background: #f8fafc; }
+.iu-table-wrap table tbody tr:last-child td { border-bottom: none; }
+
+.iu-user-cell { display: flex; align-items: center; gap: 12px; }
+.iu-avatar { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: white; flex-shrink: 0; }
+.iu-avatar.designer { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.iu-avatar.contractor { background: linear-gradient(135deg, #10b981, #059669); }
+.iu-avatar.unknown { background: linear-gradient(135deg, #6b7280, #4b5563); }
+.iu-user-info { display: flex; flex-direction: column; }
+.iu-user-name { font-weight: 600; color: var(--gray-800); }
+.iu-user-email { font-size: 0.78rem; color: var(--gray-500); }
+
+.iu-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.iu-badge-incomplete { background: #fef3c7; color: #92400e; }
+.iu-badge-pending { background: #dbeafe; color: #1e40af; }
+.iu-badge-blocked { background: #fee2e2; color: #991b1b; }
+.iu-badge-designer { background: #ede9fe; color: #5b21b6; }
+.iu-badge-contractor { background: #d1fae5; color: #065f46; }
+
+.iu-login-status { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+.iu-login-dot { width: 8px; height: 8px; border-radius: 50%; }
+.iu-login-dot.active { background: #10b981; }
+.iu-login-dot.never { background: #ef4444; }
+
+.iu-time-ago { font-size: 0.78rem; color: var(--gray-500); }
+.iu-ip { font-size: 0.75rem; color: var(--gray-400); font-family: monospace; }
+
+.iu-empty { text-align: center; padding: 60px 20px; }
+.iu-empty i { font-size: 3rem; color: var(--gray-300); margin-bottom: 16px; }
+.iu-empty h3 { color: var(--gray-600); margin: 0 0 8px; }
+.iu-empty p { color: var(--gray-400); font-size: 0.88rem; }
+
+.iu-search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.iu-search-bar input { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 0.88rem; outline: none; transition: border 0.2s; }
+.iu-search-bar input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+.iu-search-bar select { padding: 10px 14px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 0.88rem; background: white; cursor: pointer; }
+
+@media (max-width: 768px) {
+    .iu-stats-row { grid-template-columns: repeat(2, 1fr); }
+    .iu-header { flex-direction: column; }
+    .iu-search-bar { flex-direction: column; }
+}
