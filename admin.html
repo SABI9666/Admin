@@ -38,6 +38,11 @@
                 <i class="fas fa-users"></i>
                 <span>Users</span>
             </button>
+            <button class="sidebar-link" onclick="showTab('incomplete-users')" data-tab="incomplete-users">
+                <i class="fas fa-user-clock"></i>
+                <span>Incomplete Profiles</span>
+                <span class="nav-badge nav-badge-amber" id="incompleteUsersBadge"></span>
+            </button>
             <button class="sidebar-link" onclick="showTab('profile-reviews')" data-tab="profile-reviews">
                 <i class="fas fa-user-check"></i>
                 <span>Profile Reviews</span>
@@ -166,6 +171,7 @@
                 <div id="statsGrid" class="stats-grid"></div>
             </div>
             <div id="users-tab" class="tab-content"></div>
+            <div id="incomplete-users-tab" class="tab-content"></div>
             <div id="profile-reviews-tab" class="tab-content"></div>
             <div id="conversations-tab" class="tab-content"></div>
             <div id="estimations-tab" class="tab-content"></div>
