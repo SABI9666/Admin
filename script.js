@@ -5304,72 +5304,36 @@ const ME_TEMPLATES = {
     'platform-update': {
         name: 'Platform Update',
         icon: 'fa-rocket',
-        subject: 'Exciting New Features on SteelConnect!',
-        body: `<div style="text-align:center;margin-bottom:24px;">
-    <div style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
-        <span style="color:white;font-size:28px;">&#128640;</span>
-    </div>
-    <h2 style="margin:0;color:#1f2937;font-size:22px;">New Features Just Landed!</h2>
-</div>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">We've been working hard to make SteelConnect even better for you. Here's what's new:</p>
-<div style="background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
-    <p style="margin:0;color:#0c4a6e;font-weight:600;">&#10024; AI-Powered Cost Estimation — Get accurate project estimates in minutes</p>
-</div>
-<div style="background:#ecfdf5;border-left:4px solid #059669;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
-    <p style="margin:0;color:#064e3b;font-weight:600;">&#128200; Enhanced Dashboard — Track all your projects in one place</p>
-</div>
-<div style="text-align:center;margin:32px 0;">
-    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Explore Now</a>
-</div>
-<p style="color:#6b7280;font-size:13px;text-align:center;">Thank you for being part of the SteelConnect community!</p>`
+        subject: 'SteelConnect platform update for you',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">Platform Update</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We have a couple of updates on SteelConnect that you may find useful:</p>
+<p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>AI-Powered Cost Estimation</strong> — You can now get accurate project estimates in minutes directly from your dashboard.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Enhanced Dashboard</strong> — Track all your projects and quotes in one place.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
     },
     'welcome-back': {
         name: 'Welcome Back',
         icon: 'fa-hand-wave',
-        subject: 'We Miss You at SteelConnect!',
-        body: `<div style="text-align:center;margin-bottom:24px;">
-    <div style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
-        <span style="color:white;font-size:28px;">&#128075;</span>
-    </div>
-    <h2 style="margin:0;color:#1f2937;font-size:22px;">We've Been Missing You!</h2>
-</div>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">It's been a while since you visited SteelConnect. We've made some exciting improvements and there are new opportunities waiting for you!</p>
-<div style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:24px;border-radius:12px;margin:24px 0;text-align:center;">
-    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#92400e;">Special Offer Just For You</p>
-    <p style="margin:0;color:#78350f;font-size:14px;">Log in today and explore the latest projects & features on the platform.</p>
-</div>
-<div style="text-align:center;margin:32px 0;">
-    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Come Back & Explore</a>
-</div>
-<p style="color:#6b7280;font-size:13px;text-align:center;">We're always here to help you succeed in your construction projects.</p>`
+        subject: 'Quick update from SteelConnect',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">We wanted to check in</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. We have made some improvements to the platform and there are new projects that may be relevant to you.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Log in to see what is new and explore the latest opportunities.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you need help with anything, just reply to this email.</p>`
     },
     'new-opportunity': {
         name: 'New Opportunities',
         icon: 'fa-briefcase',
-        subject: 'New Projects Available on SteelConnect!',
-        body: `<div style="text-align:center;margin-bottom:24px;">
-    <div style="display:inline-block;background:linear-gradient(135deg,#059669,#047857);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
-        <span style="color:white;font-size:28px;">&#128188;</span>
-    </div>
-    <h2 style="margin:0;color:#1f2937;font-size:22px;">Fresh Opportunities Await!</h2>
-</div>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
-<p style="color:#4b5563;font-size:15px;line-height:1.7;">Great news! New construction projects have been posted on SteelConnect that match your expertise. Don't miss out on these opportunities.</p>
-<div style="display:flex;gap:12px;margin:24px 0;flex-wrap:wrap;">
-    <div style="flex:1;min-width:200px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:20px;text-align:center;">
-        <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#059669;">New</p>
-        <p style="margin:0;font-size:13px;color:#065f46;">Projects Listed</p>
-    </div>
-    <div style="flex:1;min-width:200px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;">
-        <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#2563eb;">Growing</p>
-        <p style="margin:0;font-size:13px;color:#1e40af;">Active Community</p>
-    </div>
-</div>
-<div style="text-align:center;margin:32px 0;">
-    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#059669,#047857);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">View Opportunities</a>
-</div>`
+        subject: 'New projects available on SteelConnect',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">New projects posted</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New construction projects have been posted on SteelConnect that may match your expertise. You can review them and submit quotes directly from your dashboard.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Log in to view the available projects and respond before the deadlines.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">View Projects</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
     },
     'custom': {
         name: 'Custom Email',
