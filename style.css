@@ -3663,6 +3663,75 @@ table tbody tr:last-child td {
 }
 
 /* ============================================
+   PROSPECT OUTREACH SECTION
+   ============================================ */
+.po-layout { display: flex; flex-direction: column; gap: 20px; }
+.po-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.po-stat-card {
+    display: flex; align-items: center; gap: 14px;
+    background: #ffffff; padding: 20px; border-radius: 12px;
+    border: 1px solid var(--border-color); transition: all 0.2s;
+}
+.po-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.po-stat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.po-stat-info { display: flex; flex-direction: column; }
+.po-stat-num { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.po-stat-label { font-size: 13px; color: var(--text-secondary); }
+.po-main { display: flex; flex-direction: column; gap: 20px; }
+.po-panel {
+    background: #ffffff; border-radius: 12px;
+    border: 1px solid var(--border-color); overflow: hidden;
+}
+.po-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+    background: #fafbfc;
+}
+.po-panel-header h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+.po-panel-header h3 i { color: #6366f1; font-size: 14px; }
+.po-actions { display: flex; align-items: center; gap: 12px; }
+.po-select-all { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+.po-select-all input { cursor: pointer; }
+.po-list { max-height: 480px; overflow-y: auto; }
+.po-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+.po-item:last-child { border-bottom: none; }
+.po-item:hover { background: #f8fafc; }
+.po-item-invited { opacity: 0.7; }
+.po-checkbox { flex-shrink: 0; }
+.po-checkbox input { width: 16px; height: 16px; cursor: pointer; }
+.po-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.po-item-email { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.po-item-meta { font-size: 12px; color: var(--text-secondary); }
+.po-delete-btn {
+    flex-shrink: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border: none; background: none; color: #94a3b8; border-radius: 8px; cursor: pointer; transition: all 0.15s;
+}
+.po-delete-btn:hover { background: #fef2f2; color: #ef4444; }
+.po-campaigns { padding: 8px 0; }
+.po-campaign-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; border-bottom: 1px solid #f8fafc;
+}
+.po-campaign-item:last-child { border-bottom: none; }
+.po-campaign-info { display: flex; flex-direction: column; gap: 2px; }
+.po-campaign-subject { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.po-campaign-meta { font-size: 12px; color: var(--text-secondary); }
+.po-campaign-stats { display: flex; gap: 10px; }
+.po-campaign-sent { font-size: 13px; color: #16a34a; font-weight: 600; }
+.po-campaign-fail { font-size: 13px; color: #ef4444; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .po-stats-row { grid-template-columns: 1fr; }
+    .po-panel-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+    .po-actions { width: 100%; justify-content: space-between; }
+    .po-campaign-item { flex-direction: column; gap: 8px; align-items: flex-start; }
+}
+
+/* ============================================
    MARKETING EMAIL SECTION
    ============================================ */
 .me-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
