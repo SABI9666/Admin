@@ -102,6 +102,10 @@ const state = {
     systemAdminActiveCollection: null,
     systemAdminView: 'live', // 'live' or 'trash'
     systemAdminSelectedIds: [],
+    marketingRecipients: [],
+    marketingRecipientStats: {},
+    marketingCampaigns: [],
+    marketingSelectedIds: [],
 };
 
 // --- INITIALIZATION ---
@@ -330,6 +334,7 @@ function showTab(tabName) {
         'announcements': { title: 'News & Updates', subtitle: 'Manage announcements, offers, and maintenance notices' },
         'analysis-portal': { title: 'Analysis Portal', subtitle: 'Business analytics management' },
         'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
+        'marketing-email': { title: 'Marketing Email', subtitle: 'Send professional marketing emails to approved users' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -356,6 +361,7 @@ function showTab(tabName) {
         'announcements': { data: state.announcements, loader: loadAnnouncementsData },
         'analysis-portal': { data: state.contractorRequests, loader: loadAnalysisPortalData },
         'system-admin': { data: [], loader: loadSystemAdminOverview },
+        'marketing-email': { data: state.marketingRecipients || [], loader: loadMarketingEmailData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -5200,5 +5206,490 @@ async function deleteAnnouncement(id) {
         loadAnnouncementsData();
     } catch (error) {
         showNotification('Failed to delete announcement.', 'error');
+    }
+}
+
+// =============================================
+// MARKETING EMAIL SECTION
+// =============================================
+
+const ME_TEMPLATES = {
+    'platform-update': {
+        name: 'Platform Update',
+        icon: 'fa-rocket',
+        subject: 'Exciting New Features on SteelConnect!',
+        body: `<div style="text-align:center;margin-bottom:24px;">
+    <div style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
+        <span style="color:white;font-size:28px;">&#128640;</span>
+    </div>
+    <h2 style="margin:0;color:#1f2937;font-size:22px;">New Features Just Landed!</h2>
+</div>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">We've been working hard to make SteelConnect even better for you. Here's what's new:</p>
+<div style="background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
+    <p style="margin:0;color:#0c4a6e;font-weight:600;">&#10024; AI-Powered Cost Estimation — Get accurate project estimates in minutes</p>
+</div>
+<div style="background:#ecfdf5;border-left:4px solid #059669;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
+    <p style="margin:0;color:#064e3b;font-weight:600;">&#128200; Enhanced Dashboard — Track all your projects in one place</p>
+</div>
+<div style="text-align:center;margin:32px 0;">
+    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Explore Now</a>
+</div>
+<p style="color:#6b7280;font-size:13px;text-align:center;">Thank you for being part of the SteelConnect community!</p>`
+    },
+    'welcome-back': {
+        name: 'Welcome Back',
+        icon: 'fa-hand-wave',
+        subject: 'We Miss You at SteelConnect!',
+        body: `<div style="text-align:center;margin-bottom:24px;">
+    <div style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
+        <span style="color:white;font-size:28px;">&#128075;</span>
+    </div>
+    <h2 style="margin:0;color:#1f2937;font-size:22px;">We've Been Missing You!</h2>
+</div>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">It's been a while since you visited SteelConnect. We've made some exciting improvements and there are new opportunities waiting for you!</p>
+<div style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:24px;border-radius:12px;margin:24px 0;text-align:center;">
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#92400e;">Special Offer Just For You</p>
+    <p style="margin:0;color:#78350f;font-size:14px;">Log in today and explore the latest projects & features on the platform.</p>
+</div>
+<div style="text-align:center;margin:32px 0;">
+    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Come Back & Explore</a>
+</div>
+<p style="color:#6b7280;font-size:13px;text-align:center;">We're always here to help you succeed in your construction projects.</p>`
+    },
+    'new-opportunity': {
+        name: 'New Opportunities',
+        icon: 'fa-briefcase',
+        subject: 'New Projects Available on SteelConnect!',
+        body: `<div style="text-align:center;margin-bottom:24px;">
+    <div style="display:inline-block;background:linear-gradient(135deg,#059669,#047857);width:64px;height:64px;border-radius:16px;line-height:64px;margin-bottom:12px;">
+        <span style="color:white;font-size:28px;">&#128188;</span>
+    </div>
+    <h2 style="margin:0;color:#1f2937;font-size:22px;">Fresh Opportunities Await!</h2>
+</div>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">Hi {{name}},</p>
+<p style="color:#4b5563;font-size:15px;line-height:1.7;">Great news! New construction projects have been posted on SteelConnect that match your expertise. Don't miss out on these opportunities.</p>
+<div style="display:flex;gap:12px;margin:24px 0;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:20px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#059669;">New</p>
+        <p style="margin:0;font-size:13px;color:#065f46;">Projects Listed</p>
+    </div>
+    <div style="flex:1;min-width:200px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#2563eb;">Growing</p>
+        <p style="margin:0;font-size:13px;color:#1e40af;">Active Community</p>
+    </div>
+</div>
+<div style="text-align:center;margin:32px 0;">
+    <a href="https://www.steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#059669,#047857);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">View Opportunities</a>
+</div>`
+    },
+    'custom': {
+        name: 'Custom Email',
+        icon: 'fa-pen-fancy',
+        subject: '',
+        body: ''
+    }
+};
+
+async function loadMarketingEmailData() {
+    const container = document.getElementById('marketing-email-tab');
+    showLoader(container);
+    try {
+        const [recipientData, campaignData] = await Promise.all([
+            apiCall('/marketing/recipients'),
+            apiCall('/marketing/campaigns').catch(() => ({ campaigns: [] }))
+        ]);
+        state.marketingRecipients = recipientData.recipients || [];
+        state.marketingRecipientStats = recipientData.stats || {};
+        state.marketingCampaigns = campaignData.campaigns || [];
+        state.marketingSelectedIds = [];
+        renderMarketingEmailTab();
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load marketing data.</p><button class="btn" onclick="loadMarketingEmailData()">Retry</button>`;
+    }
+}
+
+function renderMarketingEmailTab(filter = 'all', search = '') {
+    const container = document.getElementById('marketing-email-tab');
+    const stats = state.marketingRecipientStats || {};
+    const searchLower = search.toLowerCase();
+
+    let filtered = state.marketingRecipients.filter(u => !u.isBlocked);
+    if (filter === 'designer') filtered = filtered.filter(u => u.type === 'designer');
+    else if (filter === 'contractor') filtered = filtered.filter(u => u.type === 'contractor');
+
+    if (searchLower) {
+        filtered = filtered.filter(u =>
+            (u.name || '').toLowerCase().includes(searchLower) ||
+            (u.email || '').toLowerCase().includes(searchLower) ||
+            (u.companyName || '').toLowerCase().includes(searchLower)
+        );
+    }
+
+    const selectedCount = state.marketingSelectedIds.length;
+    const allFilteredIds = filtered.map(u => u._id);
+    const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => state.marketingSelectedIds.includes(id));
+
+    container.innerHTML = `
+        <div class="me-layout">
+            <!-- LEFT: Recipients Panel -->
+            <div class="me-recipients-panel">
+                <div class="me-header">
+                    <div class="me-header-left">
+                        <div class="me-icon-wrap"><i class="fas fa-paper-plane"></i></div>
+                        <div>
+                            <h2>Marketing Email</h2>
+                            <p>Send professional emails to approved platform users</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm" onclick="loadMarketingEmailData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+
+                <div class="me-stats-row">
+                    <div class="me-stat-card me-stat-total">
+                        <div class="me-stat-icon"><i class="fas fa-users"></i></div>
+                        <div>
+                            <div class="me-stat-value">${stats.total || 0}</div>
+                            <div class="me-stat-label">Total Recipients</div>
+                        </div>
+                    </div>
+                    <div class="me-stat-card me-stat-designer">
+                        <div class="me-stat-icon"><i class="fas fa-drafting-compass"></i></div>
+                        <div>
+                            <div class="me-stat-value">${stats.designers || 0}</div>
+                            <div class="me-stat-label">Designers</div>
+                        </div>
+                    </div>
+                    <div class="me-stat-card me-stat-contractor">
+                        <div class="me-stat-icon"><i class="fas fa-hard-hat"></i></div>
+                        <div>
+                            <div class="me-stat-value">${stats.contractors || 0}</div>
+                            <div class="me-stat-label">Contractors</div>
+                        </div>
+                    </div>
+                    <div class="me-stat-card me-stat-selected">
+                        <div class="me-stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div>
+                            <div class="me-stat-value" id="meSelectedCount">${selectedCount}</div>
+                            <div class="me-stat-label">Selected</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="me-toolbar">
+                    <div class="me-search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="meSearchInput" placeholder="Search by name, email, or company..." value="${search}" oninput="renderMarketingEmailTab(document.getElementById('meFilterSelect').value, this.value)" />
+                    </div>
+                    <select id="meFilterSelect" onchange="renderMarketingEmailTab(this.value, document.getElementById('meSearchInput').value)">
+                        <option value="all" ${filter === 'all' ? 'selected' : ''}>All Users</option>
+                        <option value="designer" ${filter === 'designer' ? 'selected' : ''}>Designers Only</option>
+                        <option value="contractor" ${filter === 'contractor' ? 'selected' : ''}>Contractors Only</option>
+                    </select>
+                    <button class="btn btn-sm ${allSelected ? 'btn-primary' : 'btn-outline'}" onclick="meToggleSelectAll()">
+                        <i class="fas ${allSelected ? 'fa-check-square' : 'fa-square'}"></i> ${allSelected ? 'Deselect All' : 'Select All'}
+                    </button>
+                </div>
+
+                ${filtered.length === 0 ? `
+                    <div class="me-empty">
+                        <i class="fas fa-inbox"></i>
+                        <h3>No recipients found</h3>
+                        <p>No approved users match your search criteria.</p>
+                    </div>
+                ` : `
+                    <div class="me-recipients-list">
+                        ${filtered.map(u => {
+                            const initials = (u.name || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                            const typeClass = u.type === 'designer' ? 'designer' : 'contractor';
+                            const isSelected = state.marketingSelectedIds.includes(u._id);
+                            return `
+                                <div class="me-recipient-card ${isSelected ? 'selected' : ''}" onclick="meToggleRecipient('${u._id}')">
+                                    <div class="me-recipient-check">
+                                        <i class="fas ${isSelected ? 'fa-check-square' : 'fa-square'}"></i>
+                                    </div>
+                                    <div class="me-recipient-avatar ${typeClass}">${initials}</div>
+                                    <div class="me-recipient-info">
+                                        <div class="me-recipient-name">${u.name || 'User'}</div>
+                                        <div class="me-recipient-email">${u.email}</div>
+                                        ${u.companyName ? `<div class="me-recipient-company"><i class="fas fa-building"></i> ${u.companyName}</div>` : ''}
+                                    </div>
+                                    <div class="me-recipient-type">
+                                        <span class="me-type-badge ${typeClass}">${u.type === 'designer' ? 'Designer' : 'Contractor'}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+
+            <!-- RIGHT: Email Composer Panel -->
+            <div class="me-composer-panel">
+                <div class="me-composer-header">
+                    <h3><i class="fas fa-envelope-open-text"></i> Compose Email</h3>
+                    <span class="me-selected-badge" id="meComposerBadge">${selectedCount} recipient${selectedCount !== 1 ? 's' : ''} selected</span>
+                </div>
+
+                <div class="me-templates-section">
+                    <label class="me-label">Choose a Template</label>
+                    <div class="me-template-grid">
+                        ${Object.entries(ME_TEMPLATES).map(([key, tpl]) => `
+                            <div class="me-template-card" onclick="meSelectTemplate('${key}')">
+                                <div class="me-template-icon"><i class="fas ${tpl.icon}"></i></div>
+                                <div class="me-template-name">${tpl.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="me-form-group">
+                    <label class="me-label">Subject Line</label>
+                    <input type="text" id="meSubjectInput" class="me-input" placeholder="Enter email subject..." />
+                </div>
+
+                <div class="me-form-group">
+                    <label class="me-label">Email Body <span class="me-hint">Use {{name}}, {{email}}, {{type}}, {{company}} for personalization</span></label>
+                    <textarea id="meBodyInput" class="me-textarea" rows="12" placeholder="Write your email content here... HTML is supported."></textarea>
+                </div>
+
+                <div class="me-preview-toggle">
+                    <button class="btn btn-sm btn-outline" onclick="meTogglePreview()"><i class="fas fa-eye"></i> Preview Email</button>
+                </div>
+                <div id="mePreviewBox" class="me-preview-box" style="display:none;"></div>
+
+                <div class="me-send-section">
+                    <button class="btn btn-lg me-send-btn" onclick="meSendMarketingEmail()" id="meSendBtn">
+                        <i class="fas fa-paper-plane"></i> Send to ${selectedCount} Recipient${selectedCount !== 1 ? 's' : ''}
+                    </button>
+                    <p class="me-send-note"><i class="fas fa-info-circle"></i> Emails will be sent in batches with personalization applied automatically.</p>
+                </div>
+
+                <!-- Campaign History -->
+                ${state.marketingCampaigns.length > 0 ? `
+                    <div class="me-history-section">
+                        <h4><i class="fas fa-history"></i> Recent Campaigns</h4>
+                        <div class="me-history-list">
+                            ${state.marketingCampaigns.slice(0, 5).map(c => `
+                                <div class="me-history-card">
+                                    <div class="me-history-info">
+                                        <div class="me-history-subject">${c.subject || 'No subject'}</div>
+                                        <div class="me-history-meta">
+                                            <span><i class="fas fa-users"></i> ${c.recipientCount || 0} recipients</span>
+                                            <span><i class="fas fa-check"></i> ${c.successCount || 0} delivered</span>
+                                            ${c.failCount > 0 ? `<span class="me-history-fail"><i class="fas fa-times"></i> ${c.failCount} failed</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="me-history-date">${formatAdminDate(c.sentAt)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function meToggleRecipient(userId) {
+    const idx = state.marketingSelectedIds.indexOf(userId);
+    if (idx === -1) {
+        state.marketingSelectedIds.push(userId);
+    } else {
+        state.marketingSelectedIds.splice(idx, 1);
+    }
+    meUpdateSelectionUI();
+}
+
+function meToggleSelectAll() {
+    const filter = document.getElementById('meFilterSelect')?.value || 'all';
+    const search = document.getElementById('meSearchInput')?.value || '';
+    const searchLower = search.toLowerCase();
+
+    let filtered = state.marketingRecipients.filter(u => !u.isBlocked);
+    if (filter === 'designer') filtered = filtered.filter(u => u.type === 'designer');
+    else if (filter === 'contractor') filtered = filtered.filter(u => u.type === 'contractor');
+    if (searchLower) {
+        filtered = filtered.filter(u =>
+            (u.name || '').toLowerCase().includes(searchLower) ||
+            (u.email || '').toLowerCase().includes(searchLower) ||
+            (u.companyName || '').toLowerCase().includes(searchLower)
+        );
+    }
+
+    const allFilteredIds = filtered.map(u => u._id);
+    const allSelected = allFilteredIds.every(id => state.marketingSelectedIds.includes(id));
+
+    if (allSelected) {
+        state.marketingSelectedIds = state.marketingSelectedIds.filter(id => !allFilteredIds.includes(id));
+    } else {
+        const newIds = allFilteredIds.filter(id => !state.marketingSelectedIds.includes(id));
+        state.marketingSelectedIds.push(...newIds);
+    }
+    meUpdateSelectionUI();
+}
+
+function meUpdateSelectionUI() {
+    const count = state.marketingSelectedIds.length;
+
+    // Update all recipient cards
+    document.querySelectorAll('.me-recipient-card').forEach(card => {
+        const userId = card.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (userId) {
+            const isSelected = state.marketingSelectedIds.includes(userId);
+            card.classList.toggle('selected', isSelected);
+            const icon = card.querySelector('.me-recipient-check i');
+            if (icon) {
+                icon.className = isSelected ? 'fas fa-check-square' : 'fas fa-square';
+            }
+        }
+    });
+
+    // Update counts
+    const countEl = document.getElementById('meSelectedCount');
+    if (countEl) countEl.textContent = count;
+
+    const badgeEl = document.getElementById('meComposerBadge');
+    if (badgeEl) badgeEl.textContent = `${count} recipient${count !== 1 ? 's' : ''} selected`;
+
+    const sendBtn = document.getElementById('meSendBtn');
+    if (sendBtn) sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Send to ${count} Recipient${count !== 1 ? 's' : ''}`;
+
+    // Update select all button
+    const filter = document.getElementById('meFilterSelect')?.value || 'all';
+    const search = document.getElementById('meSearchInput')?.value || '';
+    const searchLower = search.toLowerCase();
+    let filtered = state.marketingRecipients.filter(u => !u.isBlocked);
+    if (filter === 'designer') filtered = filtered.filter(u => u.type === 'designer');
+    else if (filter === 'contractor') filtered = filtered.filter(u => u.type === 'contractor');
+    if (searchLower) {
+        filtered = filtered.filter(u =>
+            (u.name || '').toLowerCase().includes(searchLower) ||
+            (u.email || '').toLowerCase().includes(searchLower) ||
+            (u.companyName || '').toLowerCase().includes(searchLower)
+        );
+    }
+    const allFilteredIds = filtered.map(u => u._id);
+    const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => state.marketingSelectedIds.includes(id));
+    const selectAllBtn = document.querySelector('.me-toolbar .btn-sm:last-child');
+    if (selectAllBtn) {
+        selectAllBtn.className = `btn btn-sm ${allSelected ? 'btn-primary' : 'btn-outline'}`;
+        selectAllBtn.innerHTML = `<i class="fas ${allSelected ? 'fa-check-square' : 'fa-square'}"></i> ${allSelected ? 'Deselect All' : 'Select All'}`;
+    }
+}
+
+function meSelectTemplate(key) {
+    const tpl = ME_TEMPLATES[key];
+    if (!tpl) return;
+
+    // Highlight the selected template card
+    document.querySelectorAll('.me-template-card').forEach(c => c.classList.remove('active'));
+    const cards = document.querySelectorAll('.me-template-card');
+    const keys = Object.keys(ME_TEMPLATES);
+    const idx = keys.indexOf(key);
+    if (idx >= 0 && cards[idx]) cards[idx].classList.add('active');
+
+    const subjectInput = document.getElementById('meSubjectInput');
+    const bodyInput = document.getElementById('meBodyInput');
+    if (subjectInput) subjectInput.value = tpl.subject;
+    if (bodyInput) bodyInput.value = tpl.body;
+
+    // Hide preview if open
+    const previewBox = document.getElementById('mePreviewBox');
+    if (previewBox) previewBox.style.display = 'none';
+}
+
+function meTogglePreview() {
+    const previewBox = document.getElementById('mePreviewBox');
+    if (!previewBox) return;
+
+    if (previewBox.style.display === 'none') {
+        const body = document.getElementById('meBodyInput')?.value || '';
+        const subject = document.getElementById('meSubjectInput')?.value || '';
+        // Replace placeholders with sample data
+        const previewHtml = body
+            .replace(/\{\{name\}\}/g, 'John Doe')
+            .replace(/\{\{email\}\}/g, 'john@example.com')
+            .replace(/\{\{type\}\}/g, 'Contractor')
+            .replace(/\{\{company\}\}/g, 'Doe Construction Ltd.');
+        previewBox.innerHTML = `
+            <div class="me-preview-header">
+                <strong>Subject:</strong> ${subject || '(No subject)'}
+            </div>
+            <div class="me-preview-body">${previewHtml || '<p style="color:#999;">No content to preview</p>'}</div>
+        `;
+        previewBox.style.display = 'block';
+    } else {
+        previewBox.style.display = 'none';
+    }
+}
+
+async function meSendMarketingEmail() {
+    const selectedIds = state.marketingSelectedIds;
+    if (selectedIds.length === 0) {
+        showNotification('Please select at least one recipient.', 'warning');
+        return;
+    }
+
+    const subject = document.getElementById('meSubjectInput')?.value?.trim();
+    const body = document.getElementById('meBodyInput')?.value?.trim();
+
+    if (!subject) {
+        showNotification('Please enter an email subject.', 'warning');
+        return;
+    }
+    if (!body) {
+        showNotification('Please enter email content.', 'warning');
+        return;
+    }
+
+    const selectedRecipients = state.marketingRecipients.filter(u => selectedIds.includes(u._id));
+
+    if (!confirm(`Send marketing email to ${selectedRecipients.length} recipient${selectedRecipients.length !== 1 ? 's' : ''}?\n\nSubject: ${subject}`)) {
+        return;
+    }
+
+    const sendBtn = document.getElementById('meSendBtn');
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Sending...`;
+    }
+
+    try {
+        const recipients = selectedRecipients.map(u => ({
+            email: u.email,
+            name: u.name || 'User',
+            type: u.type || 'user',
+            companyName: u.companyName || ''
+        }));
+
+        const result = await apiCall('/marketing/send', 'POST', {
+            recipients,
+            subject,
+            htmlBody: body
+        });
+
+        const successCount = result.results?.filter(r => r.success)?.length || 0;
+        const failCount = result.results?.filter(r => !r.success)?.length || 0;
+
+        if (failCount === 0) {
+            showNotification(`Marketing email sent successfully to ${successCount} recipient${successCount !== 1 ? 's' : ''}!`, 'success');
+        } else {
+            showNotification(`Sent to ${successCount}, failed for ${failCount} recipient${failCount !== 1 ? 's' : ''}.`, 'warning');
+        }
+
+        // Clear selections and reload
+        state.marketingSelectedIds = [];
+        state.marketingCampaigns = [];
+        loadMarketingEmailData();
+
+    } catch (error) {
+        showNotification('Failed to send marketing emails. Please try again.', 'error');
+    } finally {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Send`;
+        }
     }
 }
