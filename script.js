@@ -5301,36 +5301,70 @@ async function deleteAnnouncement(id) {
 // =============================================
 
 const ME_TEMPLATES = {
-    'platform-update': {
-        name: 'Platform Update',
+    'update-contractor': {
+        name: 'Update (Contractor)',
         icon: 'fa-rocket',
         subject: 'SteelConnect platform update for you',
         body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">Platform Update</h2>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We have a couple of updates on SteelConnect that you may find useful:</p>
-<p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>AI-Powered Cost Estimation</strong> — You can now get accurate project estimates in minutes directly from your dashboard.</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Enhanced Dashboard</strong> — Track all your projects and quotes in one place.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We have a couple of updates on SteelConnect that are relevant to you as a contractor:</p>
+<p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>AI-Powered Cost Estimation</strong> — Get accurate cost estimates for your steel construction projects in minutes, right from your dashboard.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Project Management</strong> — Post projects, receive competitive quotes from verified designers, and manage everything from one place.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
     },
-    'welcome-back': {
-        name: 'Welcome Back',
+    'update-designer': {
+        name: 'Update (Designer)',
+        icon: 'fa-rocket',
+        subject: 'SteelConnect platform update for you',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">Platform Update</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We have a couple of updates on SteelConnect that are relevant to you as a designer:</p>
+<p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>More Projects Available</strong> — Contractors are posting new steel construction projects regularly. Browse and submit your quotes to win work.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Enhanced Profile</strong> — Your profile is now more visible to contractors looking for qualified engineers and designers.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
+    },
+    'welcome-contractor': {
+        name: 'Welcome (Contractor)',
         icon: 'fa-hand-wave',
         subject: 'Quick update from SteelConnect',
         body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">We wanted to check in</h2>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. We have made some improvements to the platform and there are new projects that may be relevant to you.</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Log in to see what is new and explore the latest opportunities.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. Since your last visit, we have improved our AI cost estimation tool and several new designers have joined the platform.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">You can post your project requirements and start receiving quotes from verified structural engineers and designers.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you need help with anything, just reply to this email.</p>`
     },
-    'new-opportunity': {
-        name: 'New Opportunities',
+    'welcome-designer': {
+        name: 'Welcome (Designer)',
+        icon: 'fa-hand-wave',
+        subject: 'Quick update from SteelConnect',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">We wanted to check in</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. Since your last visit, new construction projects have been posted by contractors looking for qualified designers like you.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Log in to browse available projects, submit quotes, and connect with clients directly through the platform.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you need help with anything, just reply to this email.</p>`
+    },
+    'opportunity-contractor': {
+        name: 'Opportunity (Contractor)',
+        icon: 'fa-briefcase',
+        subject: 'New designers available on SteelConnect',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">New designers joined the platform</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New structural engineers and designers have joined SteelConnect recently. If you have upcoming steel construction projects, now is a good time to post them and get competitive quotes.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">You can also use our AI estimation tool to get an instant cost estimate before posting your project.</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Post a Project</a></p>
+<p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
+    },
+    'opportunity-designer': {
+        name: 'Opportunity (Designer)',
         icon: 'fa-briefcase',
         subject: 'New projects available on SteelConnect',
         body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">New projects posted</h2>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New construction projects have been posted on SteelConnect that may match your expertise. You can review them and submit quotes directly from your dashboard.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New steel construction projects have been posted on SteelConnect by contractors looking for qualified designers. You can review the project details and submit your quotes directly from your dashboard.</p>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Log in to view the available projects and respond before the deadlines.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">View Projects</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
