@@ -6243,31 +6243,35 @@ async function crSendReply(email, reportIdx) {
 // 5. High text-to-HTML ratio
 // 6. No "Get Started Free", "Transform", "Unlock" — use natural language
 // 7. Short paragraphs, like writing to a colleague
-const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Hi,</p>
+const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Good afternoon,</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I wanted to reach out because I thought you might find SteelConnect useful for your construction projects.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">My name is Smith Johnson and I am the Director of Business Development at SteelConnect, Inc. I am reaching out to introduce our platform, which we developed specifically for construction industry professionals across the United States and internationally.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">We built a platform that helps contractors, structural engineers, and steel designers work together more efficiently. Here is what it does:</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">SteelConnect is an AI-powered construction management platform that streamlines how contractors, structural engineers, and steel designers collaborate on projects. We are headquartered in the U.S. and currently serve professionals in over 50 countries.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>AI Cost Estimation</strong> — Upload your PDF drawings and our AI generates a detailed cost breakdown in minutes. It covers structural steel, concrete, MEP, finishes, and gives you a trade-by-trade Bill of Quantities. We have processed over 12,000 estimates so far with 95%+ accuracy.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I wanted to highlight a few capabilities that our clients have found particularly valuable:</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Find Verified Professionals</strong> — We have 2,500+ PE-licensed engineers and designers across 50+ countries. Every professional is verified with credential checks before they join the platform.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>AI-Powered Cost Estimation</strong> — Our proprietary AI engine analyzes PDF construction drawings and delivers comprehensive cost breakdowns within minutes. The output includes trade-by-trade estimates covering structural steel, concrete, MEP systems, and finishes, along with a procurement-ready Bill of Quantities. To date, we have processed over 12,000 estimates with a verified accuracy rate above 95%.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Project Management</strong> — Post projects, receive competitive quotes, communicate through encrypted messaging, share files, and track everything from one dashboard.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Vetted Professional Network</strong> — Our marketplace includes over 2,500 PE-licensed structural engineers, detailers, and certified designers. Every professional undergoes credential verification, license checks, and insurance validation before being approved on the platform.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Business Analytics</strong> — Real-time dashboards that track revenue, project performance, market benchmarks, and give you AI-powered forecasting.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Integrated Project Management</strong> — Manage your entire project lifecycle from a single dashboard. Post project requirements, receive competitive bids, communicate through encrypted channels, share documents securely, and track milestones and deliverables in real time.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;"><strong>Security</strong> — SOC 2 compliant, end-to-end encryption, built-in NDA management, and escrow payment protection.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Business Intelligence Suite</strong> — Our analytics dashboard provides real-time revenue tracking, project performance metrics, regional market benchmarks, and AI-driven forecasting to support data-informed decision making.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">We have helped manage 850+ projects across commercial, industrial, residential, healthcare, and infrastructure sectors. The platform is free to sign up — no credit card needed.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;"><strong>Enterprise-Grade Security</strong> — The platform is SOC 2 compliant with end-to-end encryption, built-in NDA management, and escrow-protected payments to ensure your data and transactions are fully secure.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">You can take a look here: <a href="https://steelconnectapp.com" style="color:#2563eb;">https://steelconnectapp.com</a></p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">We have supported over 850 projects across commercial, industrial, residential, healthcare, and infrastructure sectors. Registration is complimentary and does not require a credit card.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">If you have any questions or want a walkthrough, just reply to this email — I am happy to help.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I would be happy to arrange a brief call or provide a personalized demonstration. In the meantime, you are welcome to explore the platform at <a href="https://steelconnectapp.com" style="color:#2563eb;">steelconnectapp.com</a></p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 4px;">Best regards,</p>
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 2px;"><strong>Sabi</strong></p>
-<p style="font-size:13px;color:#666666;line-height:1.5;margin:0;">SteelConnect | support@steelconnectapp.com</p>`;
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Please do not hesitate to reply to this email with any questions. I look forward to hearing from you.</p>
+
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 4px;">Respectfully,</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 0;"><strong>Smith Johnson</strong></p>
+<p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">Director of Business Development</p>
+<p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">SteelConnect, Inc.</p>
+<p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">support@steelconnectapp.com</p>`;
 
 function renderBulkEmailTab() {
     const container = document.getElementById('bulk-email-tab');
@@ -6317,7 +6321,7 @@ function renderBulkEmailTab() {
 
                     <div style="margin-bottom:14px;">
                         <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Subject Line</label>
-                        <input type="text" id="beSubject" value="Quick question about your construction projects"
+                        <input type="text" id="beSubject" value="Introduction — SteelConnect AI Construction Platform"
                             style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;"
                             onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'" />
                     </div>
