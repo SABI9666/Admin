@@ -110,6 +110,9 @@ const state = {
     prospectStats: {},
     prospectCampaigns: [],
     prospectSelectedIds: [],
+    chatbotReports: [],
+    chatbotReportsStats: {},
+    bulkEmailHistory: [],
 };
 
 // --- INITIALIZATION ---
@@ -340,6 +343,8 @@ function showTab(tabName) {
         'system-admin': { title: 'System Admin', subtitle: 'Master data control — delete, restore, and manage all portal data' },
         'prospect-outreach': { title: 'Prospect Outreach', subtitle: 'Manage captured leads and send invitation emails' },
         'marketing-email': { title: 'Marketing Email', subtitle: 'Send professional marketing emails to approved users' },
+        'chatbot-reports': { title: 'Chatbot Reports', subtitle: 'View chatbot conversations, email leads, and send draft replies' },
+        'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -368,6 +373,8 @@ function showTab(tabName) {
         'system-admin': { data: [], loader: loadSystemAdminOverview },
         'prospect-outreach': { data: state.prospects || [], loader: loadProspectData },
         'marketing-email': { data: state.marketingRecipients || [], loader: loadMarketingEmailData },
+        'chatbot-reports': { data: state.chatbotReports || [], loader: loadChatbotReportsData },
+        'bulk-email': { data: [], loader: renderBulkEmailTab },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -6005,5 +6012,532 @@ async function poDeleteProspect(id) {
         loadProspectData();
     } catch (error) {
         showNotification('Failed to remove prospect.', 'error');
+    }
+}
+
+// ================================================================
+// CHATBOT REPORTS - View conversations, emails, draft replies
+// ================================================================
+
+async function loadChatbotReportsData() {
+    const container = document.getElementById('chatbot-reports-tab');
+    showLoader(container);
+    try {
+        const data = await apiCall('/chatbot/reports');
+        state.chatbotReports = data.reports || [];
+        state.chatbotReportsStats = data.stats || { total: 0, withEmail: 0, today: 0 };
+        // Update sidebar badge
+        const badge = document.getElementById('chatbotReportsBadge');
+        if (badge && state.chatbotReportsStats.withEmail > 0) {
+            badge.textContent = state.chatbotReportsStats.withEmail;
+            badge.style.display = 'inline-flex';
+        }
+        renderChatbotReportsTab();
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load chatbot reports.</p><button class="btn" onclick="loadChatbotReportsData()">Retry</button>`;
+    }
+}
+
+function renderChatbotReportsTab(filterType = 'all', searchTerm = '') {
+    const container = document.getElementById('chatbot-reports-tab');
+    const stats = state.chatbotReportsStats;
+    const searchLower = searchTerm.toLowerCase();
+
+    let reports = [...state.chatbotReports];
+    if (filterType === 'with-email') reports = reports.filter(r => r.email);
+    if (filterType === 'no-email') reports = reports.filter(r => !r.email);
+    if (filterType === 'replied') reports = reports.filter(r => r.replied);
+    if (filterType === 'unreplied') reports = reports.filter(r => r.email && !r.replied);
+    if (searchLower) {
+        reports = reports.filter(r =>
+            (r.email || '').toLowerCase().includes(searchLower) ||
+            (r.messages || []).some(m => (m.text || '').toLowerCase().includes(searchLower))
+        );
+    }
+
+    container.innerHTML = `
+        <div class="cr-layout">
+            <!-- Stats Bar -->
+            <div class="me-stats-row" style="margin-bottom:20px;">
+                <div class="me-stat-card">
+                    <div class="me-stat-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;"><i class="fas fa-comments"></i></div>
+                    <div class="me-stat-info"><div class="me-stat-value">${stats.total || 0}</div><div class="me-stat-label">Total Chats</div></div>
+                </div>
+                <div class="me-stat-card">
+                    <div class="me-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i class="fas fa-envelope"></i></div>
+                    <div class="me-stat-info"><div class="me-stat-value">${stats.withEmail || 0}</div><div class="me-stat-label">With Email</div></div>
+                </div>
+                <div class="me-stat-card">
+                    <div class="me-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i class="fas fa-clock"></i></div>
+                    <div class="me-stat-info"><div class="me-stat-value">${stats.today || 0}</div><div class="me-stat-label">Today</div></div>
+                </div>
+                <div class="me-stat-card">
+                    <div class="me-stat-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;"><i class="fas fa-reply"></i></div>
+                    <div class="me-stat-info"><div class="me-stat-value">${stats.unreplied || 0}</div><div class="me-stat-label">Unreplied</div></div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+                <div style="flex:1;min-width:200px;">
+                    <input type="text" placeholder="Search by email or message..." value="${searchTerm}" onkeyup="renderChatbotReportsTab(document.getElementById('crFilterSelect').value, this.value)"
+                        style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;" />
+                </div>
+                <select id="crFilterSelect" onchange="renderChatbotReportsTab(this.value, '')" style="padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer;">
+                    <option value="all" ${filterType === 'all' ? 'selected' : ''}>All Conversations</option>
+                    <option value="with-email" ${filterType === 'with-email' ? 'selected' : ''}>With Email</option>
+                    <option value="no-email" ${filterType === 'no-email' ? 'selected' : ''}>Without Email</option>
+                    <option value="unreplied" ${filterType === 'unreplied' ? 'selected' : ''}>Unreplied</option>
+                    <option value="replied" ${filterType === 'replied' ? 'selected' : ''}>Replied</option>
+                </select>
+                <button class="btn" onclick="state.chatbotReports=[];loadChatbotReportsData()" style="padding:10px 16px;border-radius:10px;font-size:13px;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <!-- Reports List -->
+            <div class="cr-list">
+                ${reports.length === 0 ? `
+                    <div style="text-align:center;padding:60px 20px;color:#64748b;">
+                        <i class="fas fa-robot" style="font-size:48px;opacity:0.3;margin-bottom:16px;display:block;"></i>
+                        <h3 style="font-size:18px;font-weight:600;color:#475569;margin:0 0 8px;">No chatbot conversations yet</h3>
+                        <p style="font-size:14px;">Conversations from the landing page chatbot will appear here.</p>
+                    </div>
+                ` : reports.map((r, idx) => `
+                    <div class="cr-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:16px;transition:all 0.2s;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:44px;height:44px;border-radius:12px;background:${r.email ? 'linear-gradient(135deg,#4338ca,#6366f1)' : 'linear-gradient(135deg,#94a3b8,#64748b)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;">
+                                    <i class="fas ${r.email ? 'fa-user' : 'fa-user-secret'}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700;font-size:14px;color:#0f172a;">${r.email ? sanitizeInput(r.email) : 'Anonymous Visitor'}</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                                        <i class="fas fa-clock" style="margin-right:4px;"></i>${formatAdminDate(r.capturedAt || r.createdAt)}
+                                        ${r.source ? ` &middot; <span style="color:#6366f1;font-weight:500;">${sanitizeInput(r.source)}</span>` : ''}
+                                        &middot; ${(r.messages || []).length} messages
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                ${r.email && !r.replied ? `<button class="btn" onclick="crShowDraftReply('${sanitizeInput(r.email)}', ${idx})" style="padding:8px 14px;border-radius:8px;font-size:12px;background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;border:none;cursor:pointer;">
+                                    <i class="fas fa-reply"></i> Draft Reply
+                                </button>` : ''}
+                                ${r.replied ? `<span style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.2);"><i class="fas fa-check"></i> Replied</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="cr-messages" style="background:#f8fafc;border-radius:12px;padding:14px;max-height:200px;overflow-y:auto;">
+                            ${(r.messages || []).map(m => `
+                                <div style="margin-bottom:8px;display:flex;gap:8px;align-items:flex-start;">
+                                    <span style="width:22px;height:22px;border-radius:50%;background:${m.role === 'user' ? '#e0e7ff' : '#f1f5f9'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;color:${m.role === 'user' ? '#4338ca' : '#64748b'};">
+                                        <i class="fas ${m.role === 'user' ? 'fa-user' : 'fa-robot'}"></i>
+                                    </span>
+                                    <div style="font-size:12.5px;color:#334155;line-height:1.5;">${sanitizeInput(m.text || '').substring(0, 300)}${(m.text || '').length > 300 ? '...' : ''}</div>
+                                </div>
+                            `).join('')}
+                            ${(r.messages || []).length === 0 ? '<p style="font-size:12px;color:#94a3b8;text-align:center;margin:8px 0;">No messages recorded</p>' : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// Draft Reply Modal for Chatbot Reports
+function crShowDraftReply(email, reportIdx) {
+    const report = state.chatbotReports[reportIdx];
+    const lastUserMsg = [...(report.messages || [])].reverse().find(m => m.role === 'user');
+    const context = lastUserMsg ? lastUserMsg.text : '';
+
+    const draftBody = `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">Thank You for Your Interest in SteelConnect</h2>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi there,</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Thank you for reaching out through our chat assistant! We noticed you were asking about our platform and wanted to provide you with some additional information.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>What SteelConnect Offers:</strong></p>
+<ul style="font-size:14px;color:#334155;line-height:1.8;padding-left:20px;margin:0 0 14px 0;">
+<li><strong>AI-Powered Cost Estimation</strong> — Upload PDF drawings and get instant, detailed cost breakdowns</li>
+<li><strong>Global Marketplace</strong> — Connect with 2,500+ verified structural engineers across 50+ countries</li>
+<li><strong>Business Analytics</strong> — Real-time dashboards, predictive forecasting, and KPI tracking</li>
+<li><strong>Secure Collaboration</strong> — End-to-end encrypted messaging and file sharing</li>
+<li><strong>Project Management</strong> — Track milestones, deliverables, and payments in one place</li>
+</ul>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We'd love to give you a personalized walkthrough. Simply click the button below to get started with a free account:</p>
+<p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#4338ca,#6366f1);color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Get Started Free →</a></p>
+<p style="font-size:13px;color:#64748b;margin-top:20px;">If you have any questions, simply reply to this email. Our team is available 24/7.</p>
+<p style="font-size:13px;color:#64748b;">Best regards,<br><strong>The SteelConnect Team</strong></p>`;
+
+    const modalContent = `
+        <div style="max-width:700px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#4338ca,#6366f1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;">
+                    <i class="fas fa-reply"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0;">Draft Reply</h3>
+                    <p style="font-size:13px;color:#64748b;margin:2px 0 0;">Sending to: <strong style="color:#4338ca;">${sanitizeInput(email)}</strong></p>
+                </div>
+            </div>
+
+            ${context ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+                <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Their last question:</div>
+                <p style="font-size:13px;color:#334155;margin:0;font-style:italic;">"${sanitizeInput(context).substring(0, 200)}"</p>
+            </div>` : ''}
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Subject</label>
+                <input type="text" id="crReplySubject" value="Welcome to SteelConnect — Here's What We Can Do For You"
+                    style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;" />
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Email Body (HTML)</label>
+                <textarea id="crReplyBody" rows="14" style="width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;font-family:monospace;outline:none;resize:vertical;line-height:1.5;box-sizing:border-box;">${draftBody}</textarea>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button onclick="closeModal()" class="btn" style="padding:10px 20px;border-radius:10px;font-size:13px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">Cancel</button>
+                <button onclick="crSendReply('${sanitizeInput(email)}', ${reportIdx})" class="btn" id="crSendReplyBtn" style="padding:10px 24px;border-radius:10px;font-size:13px;background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;border:none;cursor:pointer;">
+                    <i class="fas fa-paper-plane"></i> Send Reply
+                </button>
+            </div>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+async function crSendReply(email, reportIdx) {
+    const subject = document.getElementById('crReplySubject')?.value?.trim();
+    const body = document.getElementById('crReplyBody')?.value?.trim();
+    if (!subject || !body) {
+        showNotification('Subject and body are required.', 'error');
+        return;
+    }
+    const btn = document.getElementById('crSendReplyBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+
+    try {
+        await apiCall('/chatbot/reply', 'POST', { email, subject, body, reportIndex: reportIdx });
+        showNotification('Reply sent successfully!', 'success');
+        // Mark as replied locally
+        if (state.chatbotReports[reportIdx]) {
+            state.chatbotReports[reportIdx].replied = true;
+        }
+        closeModal();
+        renderChatbotReportsTab();
+    } catch (error) {
+        showNotification('Failed to send reply: ' + (error.message || 'Unknown error'), 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reply'; }
+    }
+}
+
+// ================================================================
+// BULK EMAIL CAMPAIGN - Send to 1000 emails via BCC
+// ================================================================
+
+const BULK_EMAIL_TEMPLATE = `<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<div style="background:linear-gradient(135deg,#312e81 0%,#4338ca 50%,#6366f1 100%);padding:40px 32px;border-radius:16px 16px 0 0;text-align:center;">
+    <div style="width:64px;height:64px;background:rgba(255,255,255,0.15);border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:28px;color:#fff;font-weight:900;">SC</span>
+    </div>
+    <h1 style="color:#ffffff;font-size:26px;font-weight:800;margin:0 0 8px;letter-spacing:-0.5px;">SteelConnect</h1>
+    <p style="color:rgba(255,255,255,0.8);font-size:14px;margin:0;">The Premier AI-Powered Construction Platform</p>
+</div>
+
+<div style="background:#ffffff;padding:36px 32px;border:1px solid #e2e8f0;border-top:none;">
+    <h2 style="font-size:22px;font-weight:700;color:#0f172a;margin:0 0 20px;line-height:1.3;">Transform Your Construction Business with AI</h2>
+
+    <p style="font-size:15px;color:#334155;line-height:1.7;margin:0 0 20px;">We'd like to introduce you to <strong>SteelConnect</strong> — the world's most advanced platform for construction professionals. Whether you're a contractor looking for qualified engineers or a designer seeking high-value projects, SteelConnect has everything you need.</p>
+
+    <div style="background:#f8fafc;border-radius:12px;padding:24px;margin:24px 0;border:1px solid #e2e8f0;">
+        <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 16px;">What You Get with SteelConnect:</h3>
+        <table style="width:100%;border-collapse:collapse;">
+            <tr>
+                <td style="padding:8px 12px 8px 0;vertical-align:top;width:28px;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#4338ca,#6366f1);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🤖</span></td>
+                <td style="padding:8px 0;"><strong style="color:#0f172a;">AI-Powered Cost Estimation</strong><br><span style="font-size:13px;color:#64748b;">Upload PDF drawings and get instant, detailed cost breakdowns with 95%+ accuracy</span></td>
+            </tr>
+            <tr>
+                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🌍</span></td>
+                <td style="padding:8px 0;"><strong style="color:#0f172a;">Global Marketplace</strong><br><span style="font-size:13px;color:#64748b;">Connect with 2,500+ verified professionals across 50+ countries</span></td>
+            </tr>
+            <tr>
+                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">📊</span></td>
+                <td style="padding:8px 0;"><strong style="color:#0f172a;">AI Business Analytics</strong><br><span style="font-size:13px;color:#64748b;">Predictive dashboards, revenue tracking, and KPI monitoring</span></td>
+            </tr>
+            <tr>
+                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">💬</span></td>
+                <td style="padding:8px 0;"><strong style="color:#0f172a;">Real-Time Collaboration</strong><br><span style="font-size:13px;color:#64748b;">Encrypted messaging, file sharing, and project management tools</span></td>
+            </tr>
+            <tr>
+                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🔒</span></td>
+                <td style="padding:8px 0;"><strong style="color:#0f172a;">Enterprise Security</strong><br><span style="font-size:13px;color:#64748b;">SOC 2 compliant, end-to-end encryption, NDA management, escrow payments</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-radius:12px;padding:24px;margin:24px 0;text-align:center;border:1px solid #c7d2fe;">
+        <p style="font-size:16px;font-weight:700;color:#312e81;margin:0 0 6px;">Trusted by 2,500+ professionals worldwide</p>
+        <p style="font-size:13px;color:#4338ca;margin:0;">850+ projects completed &middot; 12,000+ AI estimates generated &middot; 50+ countries</p>
+    </div>
+
+    <p style="font-size:15px;color:#334155;line-height:1.7;margin:0 0 24px;">Join thousands of construction professionals who are already using SteelConnect to find projects, collaborate with experts, and grow their business.</p>
+
+    <div style="text-align:center;margin:32px 0;">
+        <a href="https://steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#4338ca,#6366f1);color:#ffffff;padding:16px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:0.3px;">Get Started Free →</a>
+    </div>
+
+    <p style="font-size:13px;color:#64748b;text-align:center;margin:0;">No credit card required &middot; Free forever tier available</p>
+</div>
+
+<div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;text-align:center;">
+    <p style="font-size:12px;color:#94a3b8;margin:0 0 8px;">© 2026 SteelConnect. All rights reserved.</p>
+    <p style="font-size:11px;color:#94a3b8;margin:0;">You received this email because you were identified as a construction professional who may benefit from our platform.</p>
+</div>
+</div>`;
+
+function renderBulkEmailTab() {
+    const container = document.getElementById('bulk-email-tab');
+    container.innerHTML = `
+        <div class="be-layout" style="max-width:960px;">
+            <!-- Info Banner -->
+            <div style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #c7d2fe;border-radius:16px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+                <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#4338ca,#6366f1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0;">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:16px;font-weight:700;color:#312e81;margin:0 0 4px;">Bulk Email Campaign</h3>
+                    <p style="font-size:13px;color:#4338ca;margin:0;">Send professional emails to up to 1,000 recipients. All emails are sent as BCC — no recipient can see other email addresses.</p>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                <!-- LEFT: Email Input -->
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
+                    <h4 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 4px;"><i class="fas fa-users" style="color:#6366f1;margin-right:8px;"></i>Recipients</h4>
+                    <p style="font-size:12px;color:#64748b;margin:0 0 16px;">Paste email addresses below — one per line, comma-separated, or space-separated. Max 1,000.</p>
+
+                    <textarea id="beEmailList" rows="12" placeholder="john@example.com&#10;sarah@company.co&#10;mike@builder.net&#10;&#10;Or paste comma-separated:&#10;john@example.com, sarah@company.co, mike@builder.net"
+                        style="width:100%;padding:14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;font-family:'Courier New',monospace;outline:none;resize:vertical;line-height:1.6;box-sizing:border-box;transition:border-color 0.2s;"
+                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'" oninput="beUpdateCount()"></textarea>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span id="beEmailCount" style="font-size:13px;font-weight:600;color:#475569;">0 emails</span>
+                            <span id="beEmailStatus" style="font-size:11px;color:#94a3b8;"></span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="beValidateEmails()" style="padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;cursor:pointer;">
+                                <i class="fas fa-check-double"></i> Validate
+                            </button>
+                            <button onclick="beClearEmails()" style="padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;cursor:pointer;">
+                                <i class="fas fa-trash-alt"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div id="beValidationResult" style="margin-top:12px;display:none;"></div>
+                </div>
+
+                <!-- RIGHT: Compose -->
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
+                    <h4 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 16px;"><i class="fas fa-pen-fancy" style="color:#6366f1;margin-right:8px;"></i>Compose Email</h4>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Subject Line</label>
+                        <input type="text" id="beSubject" value="Discover SteelConnect — The AI-Powered Construction Platform"
+                            style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'" />
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <label style="font-size:12px;font-weight:600;color:#475569;">Email Body (HTML)</label>
+                            <button onclick="beTogglePreview()" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;cursor:pointer;">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                        </div>
+                        <textarea id="beBody" rows="10" style="width:100%;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:11.5px;font-family:'Courier New',monospace;outline:none;resize:vertical;line-height:1.4;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'">${BULK_EMAIL_TEMPLATE.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+
+                    <div id="bePreviewArea" style="display:none;margin-bottom:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;max-height:300px;overflow-y:auto;"></div>
+
+                    <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;margin-bottom:16px;">
+                        <i class="fas fa-shield-alt" style="color:#d97706;"></i>
+                        <span style="font-size:12px;color:#92400e;">All emails sent as BCC — recipients cannot see each other's email addresses.</span>
+                    </div>
+
+                    <button onclick="beSendCampaign()" id="beSendBtn" class="btn" style="width:100%;padding:14px;border-radius:12px;font-size:14px;font-weight:600;background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                        <i class="fas fa-paper-plane"></i> Send Bulk Email
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campaign History -->
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;margin-top:24px;">
+                <h4 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 16px;"><i class="fas fa-history" style="color:#6366f1;margin-right:8px;"></i>Campaign History</h4>
+                <div id="beCampaignHistory" style="color:#64748b;font-size:13px;">
+                    <p style="text-align:center;padding:20px;"><i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>No campaigns sent yet.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    beLoadHistory();
+}
+
+// Parse email list from textarea
+function beParseEmails() {
+    const raw = (document.getElementById('beEmailList')?.value || '').trim();
+    if (!raw) return [];
+    // Split by newline, comma, semicolon, space, or tab
+    const parts = raw.split(/[\n,;\s\t]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return [...new Set(parts.filter(e => emailRegex.test(e)))];
+}
+
+function beUpdateCount() {
+    const emails = beParseEmails();
+    const countEl = document.getElementById('beEmailCount');
+    const statusEl = document.getElementById('beEmailStatus');
+    if (countEl) countEl.textContent = `${emails.length} valid email${emails.length !== 1 ? 's' : ''}`;
+    if (statusEl) {
+        if (emails.length > 1000) {
+            statusEl.textContent = '⚠ Max 1,000 allowed';
+            statusEl.style.color = '#ef4444';
+        } else if (emails.length > 0) {
+            statusEl.textContent = '✓ Ready';
+            statusEl.style.color = '#10b981';
+        } else {
+            statusEl.textContent = '';
+        }
+    }
+}
+
+function beValidateEmails() {
+    const raw = (document.getElementById('beEmailList')?.value || '').trim();
+    const parts = raw.split(/[\n,;\s\t]+/).map(e => e.trim()).filter(Boolean);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const valid = [];
+    const invalid = [];
+    const seen = new Set();
+    let duplicates = 0;
+
+    parts.forEach(e => {
+        const lower = e.toLowerCase();
+        if (seen.has(lower)) { duplicates++; return; }
+        seen.add(lower);
+        if (emailRegex.test(lower)) valid.push(lower);
+        else invalid.push(e);
+    });
+
+    const resultEl = document.getElementById('beValidationResult');
+    if (resultEl) {
+        resultEl.style.display = '';
+        resultEl.innerHTML = `
+            <div style="padding:12px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:12px;">
+                <div style="color:#16a34a;font-weight:600;margin-bottom:4px;"><i class="fas fa-check-circle"></i> ${valid.length} valid emails</div>
+                ${duplicates > 0 ? `<div style="color:#d97706;margin-top:4px;"><i class="fas fa-clone"></i> ${duplicates} duplicates removed</div>` : ''}
+                ${invalid.length > 0 ? `<div style="color:#dc2626;margin-top:4px;"><i class="fas fa-times-circle"></i> ${invalid.length} invalid: ${invalid.slice(0, 5).join(', ')}${invalid.length > 5 ? '...' : ''}</div>` : ''}
+            </div>
+        `;
+    }
+    // Replace textarea with cleaned list
+    if (valid.length > 0) {
+        document.getElementById('beEmailList').value = valid.join('\n');
+        beUpdateCount();
+    }
+}
+
+function beClearEmails() {
+    const el = document.getElementById('beEmailList');
+    if (el) el.value = '';
+    beUpdateCount();
+    const resultEl = document.getElementById('beValidationResult');
+    if (resultEl) resultEl.style.display = 'none';
+}
+
+function beTogglePreview() {
+    const preview = document.getElementById('bePreviewArea');
+    const body = document.getElementById('beBody');
+    if (!preview || !body) return;
+    if (preview.style.display === 'none') {
+        // Decode HTML entities from textarea
+        const tempEl = document.createElement('textarea');
+        tempEl.innerHTML = body.value;
+        preview.innerHTML = tempEl.value;
+        preview.style.display = '';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+async function beSendCampaign() {
+    const emails = beParseEmails();
+    const subject = (document.getElementById('beSubject')?.value || '').trim();
+    const bodyEl = document.getElementById('beBody');
+    // Decode HTML entities
+    const tempEl = document.createElement('textarea');
+    tempEl.innerHTML = bodyEl?.value || '';
+    const body = tempEl.value.trim();
+
+    if (emails.length === 0) {
+        showNotification('Please paste at least one email address.', 'error');
+        return;
+    }
+    if (emails.length > 1000) {
+        showNotification('Maximum 1,000 emails allowed per campaign.', 'error');
+        return;
+    }
+    if (!subject) {
+        showNotification('Subject line is required.', 'error');
+        return;
+    }
+    if (!body) {
+        showNotification('Email body is required.', 'error');
+        return;
+    }
+
+    if (!confirm(`Send this email to ${emails.length} recipient${emails.length !== 1 ? 's' : ''} via BCC?\n\nSubject: ${subject}\n\nNo recipient will see other email addresses.`)) return;
+
+    const btn = document.getElementById('beSendBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending... This may take a moment'; }
+
+    try {
+        const result = await apiCall('/bulk-email/send', 'POST', {
+            emails: emails,
+            subject: subject,
+            body: body
+        });
+        showNotification(`Campaign sent! ${result.sent || emails.length} delivered, ${result.failed || 0} failed.`, 'success');
+        beLoadHistory();
+    } catch (error) {
+        showNotification('Failed to send campaign: ' + (error.message || 'Unknown error'), 'error');
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Bulk Email'; }
+}
+
+async function beLoadHistory() {
+    const historyEl = document.getElementById('beCampaignHistory');
+    if (!historyEl) return;
+    try {
+        const data = await apiCall('/bulk-email/campaigns');
+        const campaigns = data.campaigns || [];
+        state.bulkEmailHistory = campaigns;
+        if (campaigns.length === 0) {
+            historyEl.innerHTML = '<p style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-inbox" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>No campaigns sent yet.</p>';
+            return;
+        }
+        historyEl.innerHTML = campaigns.map(c => `
+            <div style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:8px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:${c.failed > 0 ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)'};display:flex;align-items:center;justify-content:center;color:${c.failed > 0 ? '#f59e0b' : '#10b981'};flex-shrink:0;">
+                    <i class="fas ${c.failed > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:600;color:#0f172a;">${sanitizeInput(c.subject || 'No subject')}</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:3px;">${formatAdminDate(c.sentAt)} &middot; ${c.sent || 0} sent, ${c.failed || 0} failed &middot; ${c.totalRecipients || 0} recipients</div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        historyEl.innerHTML = '<p style="text-align:center;padding:20px;color:#94a3b8;">Could not load campaign history.</p>';
     }
 }
