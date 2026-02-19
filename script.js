@@ -6234,65 +6234,40 @@ async function crSendReply(email, reportIdx) {
 // BULK EMAIL CAMPAIGN - Send to 1000 emails via BCC
 // ================================================================
 
-const BULK_EMAIL_TEMPLATE = `<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-<div style="background:linear-gradient(135deg,#312e81 0%,#4338ca 50%,#6366f1 100%);padding:40px 32px;border-radius:16px 16px 0 0;text-align:center;">
-    <div style="width:64px;height:64px;background:rgba(255,255,255,0.15);border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
-        <span style="font-size:28px;color:#fff;font-weight:900;">SC</span>
-    </div>
-    <h1 style="color:#ffffff;font-size:26px;font-weight:800;margin:0 0 8px;letter-spacing:-0.5px;">SteelConnect</h1>
-    <p style="color:rgba(255,255,255,0.8);font-size:14px;margin:0;">The Premier AI-Powered Construction Platform</p>
-</div>
+// INBOX-OPTIMIZED TEMPLATE
+// Key rules to land in inbox (not promotions):
+// 1. NO images, gradients, background colors, or heavy CSS
+// 2. Looks like a personal email from a real person
+// 3. Conversational tone, not marketing speak
+// 4. Only ONE link (the login/site link)
+// 5. High text-to-HTML ratio
+// 6. No "Get Started Free", "Transform", "Unlock" — use natural language
+// 7. Short paragraphs, like writing to a colleague
+const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Hi,</p>
 
-<div style="background:#ffffff;padding:36px 32px;border:1px solid #e2e8f0;border-top:none;">
-    <h2 style="font-size:22px;font-weight:700;color:#0f172a;margin:0 0 20px;line-height:1.3;">Transform Your Construction Business with AI</h2>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I wanted to reach out because I thought you might find SteelConnect useful for your construction projects.</p>
 
-    <p style="font-size:15px;color:#334155;line-height:1.7;margin:0 0 20px;">We'd like to introduce you to <strong>SteelConnect</strong> — the world's most advanced platform for construction professionals. Whether you're a contractor looking for qualified engineers or a designer seeking high-value projects, SteelConnect has everything you need.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">We built a platform that helps contractors, structural engineers, and steel designers work together more efficiently. Here is what it does:</p>
 
-    <div style="background:#f8fafc;border-radius:12px;padding:24px;margin:24px 0;border:1px solid #e2e8f0;">
-        <h3 style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 16px;">What You Get with SteelConnect:</h3>
-        <table style="width:100%;border-collapse:collapse;">
-            <tr>
-                <td style="padding:8px 12px 8px 0;vertical-align:top;width:28px;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#4338ca,#6366f1);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🤖</span></td>
-                <td style="padding:8px 0;"><strong style="color:#0f172a;">AI-Powered Cost Estimation</strong><br><span style="font-size:13px;color:#64748b;">Upload PDF drawings and get instant, detailed cost breakdowns with 95%+ accuracy</span></td>
-            </tr>
-            <tr>
-                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🌍</span></td>
-                <td style="padding:8px 0;"><strong style="color:#0f172a;">Global Marketplace</strong><br><span style="font-size:13px;color:#64748b;">Connect with 2,500+ verified professionals across 50+ countries</span></td>
-            </tr>
-            <tr>
-                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">📊</span></td>
-                <td style="padding:8px 0;"><strong style="color:#0f172a;">AI Business Analytics</strong><br><span style="font-size:13px;color:#64748b;">Predictive dashboards, revenue tracking, and KPI monitoring</span></td>
-            </tr>
-            <tr>
-                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">💬</span></td>
-                <td style="padding:8px 0;"><strong style="color:#0f172a;">Real-Time Collaboration</strong><br><span style="font-size:13px;color:#64748b;">Encrypted messaging, file sharing, and project management tools</span></td>
-            </tr>
-            <tr>
-                <td style="padding:8px 12px 8px 0;vertical-align:top;"><span style="display:inline-block;width:28px;height:28px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:8px;text-align:center;line-height:28px;color:#fff;font-size:12px;">🔒</span></td>
-                <td style="padding:8px 0;"><strong style="color:#0f172a;">Enterprise Security</strong><br><span style="font-size:13px;color:#64748b;">SOC 2 compliant, end-to-end encryption, NDA management, escrow payments</span></td>
-            </tr>
-        </table>
-    </div>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>AI Cost Estimation</strong> — Upload your PDF drawings and our AI generates a detailed cost breakdown in minutes. It covers structural steel, concrete, MEP, finishes, and gives you a trade-by-trade Bill of Quantities. We have processed over 12,000 estimates so far with 95%+ accuracy.</p>
 
-    <div style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-radius:12px;padding:24px;margin:24px 0;text-align:center;border:1px solid #c7d2fe;">
-        <p style="font-size:16px;font-weight:700;color:#312e81;margin:0 0 6px;">Trusted by 2,500+ professionals worldwide</p>
-        <p style="font-size:13px;color:#4338ca;margin:0;">850+ projects completed &middot; 12,000+ AI estimates generated &middot; 50+ countries</p>
-    </div>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Find Verified Professionals</strong> — We have 2,500+ PE-licensed engineers and designers across 50+ countries. Every professional is verified with credential checks before they join the platform.</p>
 
-    <p style="font-size:15px;color:#334155;line-height:1.7;margin:0 0 24px;">Join thousands of construction professionals who are already using SteelConnect to find projects, collaborate with experts, and grow their business.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Project Management</strong> — Post projects, receive competitive quotes, communicate through encrypted messaging, share files, and track everything from one dashboard.</p>
 
-    <div style="text-align:center;margin:32px 0;">
-        <a href="https://steelconnectapp.com" style="display:inline-block;background:linear-gradient(135deg,#4338ca,#6366f1);color:#ffffff;padding:16px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:0.3px;">Get Started Free →</a>
-    </div>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 6px;"><strong>Business Analytics</strong> — Real-time dashboards that track revenue, project performance, market benchmarks, and give you AI-powered forecasting.</p>
 
-    <p style="font-size:13px;color:#64748b;text-align:center;margin:0;">No credit card required &middot; Free forever tier available</p>
-</div>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;"><strong>Security</strong> — SOC 2 compliant, end-to-end encryption, built-in NDA management, and escrow payment protection.</p>
 
-<div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 16px 16px;border:1px solid #e2e8f0;border-top:none;text-align:center;">
-    <p style="font-size:12px;color:#94a3b8;margin:0 0 8px;">© 2026 SteelConnect. All rights reserved.</p>
-    <p style="font-size:11px;color:#94a3b8;margin:0;">You received this email because you were identified as a construction professional who may benefit from our platform.</p>
-</div>
-</div>`;
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">We have helped manage 850+ projects across commercial, industrial, residential, healthcare, and infrastructure sectors. The platform is free to sign up — no credit card needed.</p>
+
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">You can take a look here: <a href="https://steelconnectapp.com" style="color:#2563eb;">https://steelconnectapp.com</a></p>
+
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">If you have any questions or want a walkthrough, just reply to this email — I am happy to help.</p>
+
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 4px;">Best regards,</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 2px;"><strong>Sabi</strong></p>
+<p style="font-size:13px;color:#666666;line-height:1.5;margin:0;">SteelConnect | support@steelconnectapp.com</p>`;
 
 function renderBulkEmailTab() {
     const container = document.getElementById('bulk-email-tab');
@@ -6342,7 +6317,7 @@ function renderBulkEmailTab() {
 
                     <div style="margin-bottom:14px;">
                         <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Subject Line</label>
-                        <input type="text" id="beSubject" value="Discover SteelConnect — The AI-Powered Construction Platform"
+                        <input type="text" id="beSubject" value="Quick question about your construction projects"
                             style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;"
                             onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'" />
                     </div>
@@ -6360,9 +6335,12 @@ function renderBulkEmailTab() {
 
                     <div id="bePreviewArea" style="display:none;margin-bottom:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;max-height:300px;overflow-y:auto;"></div>
 
-                    <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;margin-bottom:16px;">
+                    <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;margin-bottom:10px;">
                         <i class="fas fa-shield-alt" style="color:#d97706;"></i>
                         <span style="font-size:12px;color:#92400e;">All emails sent as BCC — recipients cannot see each other's email addresses.</span>
+                    </div>
+                    <div style="padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:16px;font-size:11px;color:#166534;line-height:1.6;">
+                        <strong><i class="fas fa-inbox"></i> Inbox delivery tips:</strong> Emails are sent from a personal name, with minimal HTML, to maximize inbox placement. Avoid adding images, heavy formatting, or promotional words like "FREE", "BUY NOW" in the subject line. Keep it conversational.
                     </div>
 
                     <button onclick="beSendCampaign()" id="beSendBtn" class="btn" style="width:100%;padding:14px;border-radius:12px;font-size:14px;font-weight:600;background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
