@@ -97,6 +97,15 @@
                 <i class="fas fa-paper-plane"></i>
                 <span>Marketing Email</span>
             </button>
+            <button class="sidebar-link" onclick="showTab('chatbot-reports')" data-tab="chatbot-reports">
+                <i class="fas fa-robot"></i>
+                <span>Chatbot Reports</span>
+                <span class="nav-badge" id="chatbotReportsBadge"></span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('bulk-email')" data-tab="bulk-email">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Bulk Email</span>
+            </button>
 
             <div class="nav-section-label">Analytics</div>
             <button class="sidebar-link" onclick="showTab('analysis-portal')" data-tab="analysis-portal">
@@ -195,6 +204,8 @@
             <div id="marketing-email-tab" class="tab-content"></div>
             <div id="prospect-outreach-tab" class="tab-content"></div>
             <div id="announcements-tab" class="tab-content"></div>
+            <div id="chatbot-reports-tab" class="tab-content"></div>
+            <div id="bulk-email-tab" class="tab-content"></div>
             <div id="system-admin-tab" class="tab-content"></div>
         </div>
     </main>
