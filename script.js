@@ -6245,15 +6245,15 @@ async function crSendReply(email, reportIdx) {
 // 7. Short paragraphs, like writing to a colleague
 const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Good afternoon,</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">My name is Smith Johnson and I am the Director of Business Development at SteelConnect, Inc. I am reaching out to introduce our platform, which we developed specifically for construction industry professionals across the United States and internationally.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">My name is Smith and I am the Director of Business Development at SteelConnectApp. I am reaching out to introduce our platform, which we developed specifically for construction industry professionals worldwide.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">SteelConnect is an AI-powered construction management platform that streamlines how contractors, structural engineers, and steel designers collaborate on projects. We are headquartered in the U.S. and currently serve professionals in over 50 countries.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">SteelConnectApp is an AI-powered construction management platform that streamlines how contractors, structural engineers, and steel designers collaborate on projects. We serve professionals across the USA, United Kingdom, Australia, GCC countries, Asia, and Europe — over 50 countries and growing.</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I wanted to highlight a few capabilities that our clients have found particularly valuable:</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>AI-Powered Cost Estimation</strong> — Our proprietary AI engine analyzes PDF construction drawings and delivers comprehensive cost breakdowns within minutes. The output includes trade-by-trade estimates covering structural steel, concrete, MEP systems, and finishes, along with a procurement-ready Bill of Quantities. To date, we have processed over 12,000 estimates with a verified accuracy rate above 95%.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Vetted Professional Network</strong> — Our marketplace includes over 2,500 PE-licensed structural engineers, detailers, and certified designers. Every professional undergoes credential verification, license checks, and insurance validation before being approved on the platform.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Vetted Professional Network</strong> — Our marketplace includes over 2,500 PE-licensed structural engineers, detailers, and certified designers across the USA, UK, Australia, GCC, Asia, and Europe. Every professional undergoes credential verification, license checks, and insurance validation before being approved on the platform.</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Integrated Project Management</strong> — Manage your entire project lifecycle from a single dashboard. Post project requirements, receive competitive bids, communicate through encrypted channels, share documents securely, and track milestones and deliverables in real time.</p>
 
@@ -6268,9 +6268,9 @@ const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">Please do not hesitate to reply to this email with any questions. I look forward to hearing from you.</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 4px;">Respectfully,</p>
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 0;"><strong>Smith Johnson</strong></p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 0;"><strong>Smith</strong></p>
 <p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">Director of Business Development</p>
-<p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">SteelConnect, Inc.</p>
+<p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">SteelConnectApp</p>
 <p style="font-size:13px;color:#555555;line-height:1.5;margin:0;">support@steelconnectapp.com</p>`;
 
 function renderBulkEmailTab() {
