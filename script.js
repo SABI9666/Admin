@@ -113,6 +113,7 @@ const state = {
     chatbotReports: [],
     chatbotReportsStats: {},
     bulkEmailHistory: [],
+    activityLogs: [],
 };
 
 // --- INITIALIZATION ---
@@ -345,6 +346,7 @@ function showTab(tabName) {
         'marketing-email': { title: 'Marketing Email', subtitle: 'Send professional marketing emails to approved users' },
         'chatbot-reports': { title: 'Chatbot Reports', subtitle: 'View chatbot conversations, email leads, and send draft replies' },
         'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
+        'activity-logs': { title: 'Activity Logs', subtitle: 'Track all admin actions — hourly PDF reports sent to sabincn676@gmail.com' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -375,6 +377,7 @@ function showTab(tabName) {
         'marketing-email': { data: state.marketingRecipients || [], loader: loadMarketingEmailData },
         'chatbot-reports': { data: state.chatbotReports || [], loader: loadChatbotReportsData },
         'bulk-email': { data: [], loader: renderBulkEmailTab },
+        'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -6606,3 +6609,227 @@ initializeAdminPanel = async function() {
     await _origInitAdmin();
     loadOperationsPortalStatus();
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ██  ADMIN ACTIVITY LOGS TAB
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ACTIVITY_CATEGORY_COLORS = {
+    'User Management':    { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
+    'Profile Review':     { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+    'Estimation':         { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
+    'Support':            { bg: '#fce7f3', text: '#9d174d', border: '#f9a8d4' },
+    'Marketing':          { bg: '#e0e7ff', text: '#3730a3', border: '#a5b4fc' },
+    'Community':          { bg: '#f3e8ff', text: '#6b21a8', border: '#c084fc' },
+    'Announcements':      { bg: '#ecfdf5', text: '#065f46', border: '#6ee7b7' },
+    'Business Analytics': { bg: '#fff7ed', text: '#9a3412', border: '#fdba74' },
+    'System Admin':       { bg: '#fef2f2', text: '#991b1b', border: '#fca5a5' },
+    'Operations Portal':  { bg: '#f0f9ff', text: '#075985', border: '#7dd3fc' },
+    'Dashboard':          { bg: '#f5f3ff', text: '#5b21b6', border: '#a78bfa' },
+    'Bulk Email':         { bg: '#fdf4ff', text: '#86198f', border: '#e879f9' },
+    'Messaging':          { bg: '#f0fdfa', text: '#134e4a', border: '#5eead4' },
+    'Chatbot':            { bg: '#fffbeb', text: '#78350f', border: '#fbbf24' },
+    'Jobs':               { bg: '#f1f5f9', text: '#334155', border: '#94a3b8' },
+    'Quotes':             { bg: '#f8fafc', text: '#475569', border: '#cbd5e1' },
+};
+
+let activityLogsHoursFilter = 1;
+
+async function loadActivityLogsData() {
+    const container = document.getElementById('activity-logs-tab');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading activity logs...</div>';
+
+    try {
+        const response = await apiCall(`/activity-logs?hours=${activityLogsHoursFilter}`);
+        if (response.success) {
+            state.activityLogs = response.data || [];
+            renderActivityLogsTab();
+        } else {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load activity logs</p></div>';
+        }
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: ' + error.message + '</p></div>';
+    }
+}
+
+function renderActivityLogsTab() {
+    const container = document.getElementById('activity-logs-tab');
+    if (!container) return;
+
+    const logs = state.activityLogs || [];
+
+    // Build category summary
+    const catSummary = {};
+    logs.forEach(l => {
+        const cat = l.category || 'Other';
+        catSummary[cat] = (catSummary[cat] || 0) + 1;
+    });
+    const sortedCats = Object.entries(catSummary).sort((a, b) => b[1] - a[1]);
+
+    // Group logs by category
+    const grouped = {};
+    logs.forEach(l => {
+        const cat = l.category || 'Other';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(l);
+    });
+
+    let html = `
+    <!-- Controls Bar -->
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-size:14px; color:#64748b; font-weight:500;">Period:</label>
+            <select id="activityHoursFilter" onchange="changeActivityLogsPeriod(this.value)" style="padding:8px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; background:#fff; cursor:pointer;">
+                <option value="1" ${activityLogsHoursFilter === 1 ? 'selected' : ''}>Last 1 Hour</option>
+                <option value="3" ${activityLogsHoursFilter === 3 ? 'selected' : ''}>Last 3 Hours</option>
+                <option value="6" ${activityLogsHoursFilter === 6 ? 'selected' : ''}>Last 6 Hours</option>
+                <option value="12" ${activityLogsHoursFilter === 12 ? 'selected' : ''}>Last 12 Hours</option>
+                <option value="24" ${activityLogsHoursFilter === 24 ? 'selected' : ''}>Last 24 Hours</option>
+            </select>
+        </div>
+        <button onclick="loadActivityLogsData()" style="padding:8px 16px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button onclick="sendActivityReportNow()" style="padding:8px 16px; background:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-paper-plane"></i> Send Report Now
+        </button>
+        <button onclick="downloadActivityReport()" style="padding:8px 16px; background:#059669; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-file-pdf"></i> Download PDF
+        </button>
+    </div>
+
+    <!-- Info Banner -->
+    <div style="padding:14px 18px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+        <i class="fas fa-info-circle" style="color:#0284c7; font-size:18px;"></i>
+        <div style="font-size:13px; color:#0369a1; line-height:1.6;">
+            <strong>Hourly reports</strong> are automatically sent to <strong>sabincn676@gmail.com</strong> as a PDF email every 1 hour.
+            All admin actions (create, update, delete, approve, reject, etc.) are tracked and categorized.
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
+        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:#1e293b;">${logs.length}</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Total Activities</div>
+        </div>
+        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:#2563eb;">${sortedCats.length}</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Categories</div>
+        </div>
+        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:28px; font-weight:800; color:#059669;">${[...new Set(logs.map(l => l.adminEmail))].length}</div>
+            <div style="font-size:13px; color:#64748b; margin-top:4px;">Active Admins</div>
+        </div>
+    </div>`;
+
+    // Category Breakdown
+    if (sortedCats.length > 0) {
+        html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:24px;">
+            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;">Activity Breakdown</h3>`;
+        sortedCats.forEach(([cat, count]) => {
+            const colors = ACTIVITY_CATEGORY_COLORS[cat] || { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
+            const pct = logs.length > 0 ? Math.round((count / logs.length) * 100) : 0;
+            html += `<div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                <span style="display:inline-block; min-width:160px; padding:4px 12px; border-radius:20px; background:${colors.bg}; color:${colors.text}; font-size:12px; font-weight:600; text-align:center; border:1px solid ${colors.border};">${cat}</span>
+                <div style="flex:1; height:8px; background:#f1f5f9; border-radius:4px; overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:${colors.border}; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+                <span style="min-width:40px; text-align:right; font-size:14px; font-weight:700; color:#1e293b;">${count}</span>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // Detailed Activities by Category
+    if (logs.length === 0) {
+        html += `<div style="text-align:center; padding:60px 20px; background:white; border:1px solid #e2e8f0; border-radius:12px;">
+            <i class="fas fa-clipboard-check" style="font-size:48px; color:#cbd5e1; margin-bottom:16px;"></i>
+            <p style="font-size:16px; color:#64748b;">No admin activities recorded in this period.</p>
+        </div>`;
+    } else {
+        const sortedGroups = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
+        for (const [category, items] of sortedGroups) {
+            const colors = ACTIVITY_CATEGORY_COLORS[category] || { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
+            html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:16px; overflow:hidden;">
+                <div style="padding:14px 20px; background:${colors.bg}; border-bottom:2px solid ${colors.border}; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:15px; font-weight:700; color:${colors.text};">${category}</span>
+                    <span style="background:${colors.border}; color:white; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:700;">${items.length}</span>
+                </div>
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f8fafc;">
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Time</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Admin</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Action</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            items.forEach(item => {
+                const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '—';
+                const admin = item.adminEmail ? item.adminEmail.split('@')[0] : 'system';
+                const action = item.action || '—';
+                const desc = item.description || '—';
+                html += `<tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:10px 16px; font-size:13px; color:#64748b; white-space:nowrap;">${time}</td>
+                    <td style="padding:10px 16px; font-size:13px; color:#334155; font-weight:500;">${admin}</td>
+                    <td style="padding:10px 16px;">
+                        <span style="display:inline-block; padding:3px 10px; border-radius:6px; background:${colors.bg}; color:${colors.text}; font-size:12px; font-weight:600;">${action}</span>
+                    </td>
+                    <td style="padding:10px 16px; font-size:13px; color:#475569; max-width:400px; word-break:break-word;">${desc}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div></div>`;
+        }
+    }
+
+    container.innerHTML = html;
+}
+
+function changeActivityLogsPeriod(hours) {
+    activityLogsHoursFilter = parseInt(hours);
+    state.activityLogs = []; // Force reload
+    loadActivityLogsData();
+}
+
+async function sendActivityReportNow() {
+    try {
+        showNotification('Sending activity report...', 'info');
+        const response = await apiCall('/activity-report/send-now', 'POST');
+        if (response.success) {
+            showNotification('Activity report sent to sabincn676@gmail.com', 'success');
+        } else {
+            showNotification('Failed to send report: ' + (response.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error sending report: ' + error.message, 'error');
+    }
+}
+
+async function downloadActivityReport() {
+    try {
+        showNotification('Generating PDF...', 'info');
+        const token = getToken();
+        const response = await fetch(`${API_BASE_URL}/api/admin/activity-report/download?hours=${activityLogsHoursFilter}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Download failed');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SteelConnect_Admin_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotification('PDF downloaded successfully', 'success');
+    } catch (error) {
+        showNotification('Error downloading report: ' + error.message, 'error');
+    }
+}
