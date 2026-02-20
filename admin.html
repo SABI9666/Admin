@@ -106,6 +106,11 @@
                 <i class="fas fa-envelope-open-text"></i>
                 <span>Bulk Email</span>
             </button>
+            <button class="sidebar-link" onclick="showTab('email-collection')" data-tab="email-collection">
+                <i class="fas fa-globe-americas"></i>
+                <span>Email Collection</span>
+                <span class="nav-badge nav-badge-amber" id="emailCollectionBadge"></span>
+            </button>
 
             <div class="nav-section-label">Analytics</div>
             <button class="sidebar-link" onclick="showTab('analysis-portal')" data-tab="analysis-portal">
@@ -232,6 +237,7 @@
             <div id="announcements-tab" class="tab-content"></div>
             <div id="chatbot-reports-tab" class="tab-content"></div>
             <div id="bulk-email-tab" class="tab-content"></div>
+            <div id="email-collection-tab" class="tab-content"></div>
             <div id="activity-logs-tab" class="tab-content"></div>
             <div id="system-admin-tab" class="tab-content"></div>
         </div>
