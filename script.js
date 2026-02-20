@@ -6523,3 +6523,86 @@ async function beLoadHistory() {
         historyEl.innerHTML = '<p style="text-align:center;padding:20px;color:#94a3b8;">Could not load campaign history.</p>';
     }
 }
+
+// --- OPERATIONS PORTAL TOGGLE ---
+let opsPortalEnabled = false;
+
+async function loadOperationsPortalStatus() {
+    try {
+        const data = await apiCall('/operations-portal/status');
+        if (data.success) {
+            opsPortalEnabled = data.enabled;
+            updateOpsPortalUI(data.enabled);
+        }
+    } catch (error) {
+        console.warn('Could not load operations portal status:', error);
+    }
+}
+
+function updateOpsPortalUI(enabled) {
+    const toggle = document.getElementById('opsPortalToggle');
+    const statusContainer = document.getElementById('opsPortalStatus');
+    const link = document.getElementById('opsPortalLink');
+    
+    if (toggle) toggle.checked = enabled;
+    
+    if (statusContainer) {
+        const dot = statusContainer.querySelector('.ops-status-dot');
+        const text = statusContainer.querySelector('.ops-status-text');
+        if (dot) {
+            dot.className = 'ops-status-dot ' + (enabled ? 'ops-status-on' : 'ops-status-off');
+        }
+        if (text) {
+            text.textContent = enabled ? 'Online' : 'Offline';
+        }
+    }
+    
+    if (link) {
+        if (enabled) {
+            link.classList.remove('ops-disabled');
+        } else {
+            link.classList.add('ops-disabled');
+        }
+    }
+}
+
+async function toggleOperationsPortal(enabled) {
+    try {
+        const data = await apiCall('/operations-portal/toggle', 'POST', { enabled });
+        if (data.success) {
+            opsPortalEnabled = data.enabled;
+            updateOpsPortalUI(data.enabled);
+            showNotification(
+                `Operations Portal ${data.enabled ? 'enabled' : 'disabled'} successfully`,
+                data.enabled ? 'success' : 'warning'
+            );
+        } else {
+            // Revert toggle
+            updateOpsPortalUI(!enabled);
+            showNotification('Failed to toggle operations portal', 'error');
+        }
+    } catch (error) {
+        updateOpsPortalUI(!enabled);
+        showNotification('Error toggling operations portal: ' + error.message, 'error');
+    }
+}
+
+function openOperationsPortal(event) {
+    event.preventDefault();
+    if (!opsPortalEnabled) {
+        showNotification('Operations Portal is currently disabled. Turn it on first.', 'warning');
+        return;
+    }
+    // Open the operations portal in a new tab
+    // The operations portal URL - adjust to your deployment
+    const opsUrl = window.location.origin.replace('admin', 'steelconnect-operations') 
+        || 'https://steelconnect-operations.vercel.app';
+    window.open(opsUrl, '_blank');
+}
+
+// Load operations portal status on init
+const _origInitAdmin = initializeAdminPanel;
+initializeAdminPanel = async function() {
+    await _origInitAdmin();
+    loadOperationsPortalStatus();
+};
