@@ -113,6 +113,28 @@
                 <span>Analysis Portal</span>
             </button>
 
+            <div class="nav-section-label">Operations Portal</div>
+            <div class="ops-portal-toggle-container">
+                <div class="ops-portal-toggle-row">
+                    <div class="ops-portal-toggle-info">
+                        <i class="fas fa-hard-hat"></i>
+                        <span>Operations Portal</span>
+                    </div>
+                    <label class="ops-toggle-switch" title="Toggle Operations Portal On/Off">
+                        <input type="checkbox" id="opsPortalToggle" onchange="toggleOperationsPortal(this.checked)">
+                        <span class="ops-toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="ops-portal-status" id="opsPortalStatus">
+                    <span class="ops-status-dot ops-status-off"></span>
+                    <span class="ops-status-text">Offline</span>
+                </div>
+                <a href="#" id="opsPortalLink" class="ops-portal-open-link ops-disabled" onclick="openOperationsPortal(event)">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>Open Operations Portal</span>
+                </a>
+            </div>
+
             <div class="nav-section-label">Administration</div>
             <button class="sidebar-link" onclick="showTab('system-admin')" data-tab="system-admin">
                 <i class="fas fa-skull-crossbones"></i>
