@@ -4562,7 +4562,113 @@ table tbody tr:last-child td {
     color: #dc2626;
 }
 
+/* Advanced Search Card */
+.ec-adv-search-card {
+    background: #fff;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
+}
+.ec-adv-search-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+.ec-adv-desc {
+    font-size: 12.5px;
+    color: #64748b;
+    margin: 0 0 16px;
+}
+.ec-adv-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.ec-adv-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.ec-adv-field select,
+.ec-adv-field input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.ec-adv-field select:focus,
+.ec-adv-field input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.ec-adv-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Role Tags */
+.ec-role-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.ec-role-ceo { background: #fef2f2; color: #dc2626; }
+.ec-role-owner { background: #eff6ff; color: #2563eb; }
+.ec-role-manager { background: #f0fdf4; color: #16a34a; }
+.ec-role-director { background: #faf5ff; color: #7c3aed; }
+.ec-role-president { background: #fef3c7; color: #d97706; }
+.ec-role-vp { background: #f0f9ff; color: #0284c7; }
+
+.ec-contact-name {
+    font-size: 11px;
+    color: #475569;
+    font-weight: 500;
+}
+
+/* Copy single button */
+.ec-copy-single {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.ec-copy-single:hover {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+    .ec-adv-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 @media (max-width: 768px) {
     .ec-banner {
         flex-direction: column;
@@ -4585,5 +4691,8 @@ table tbody tr:last-child td {
         flex-direction: column;
         gap: 2px;
         align-items: flex-start;
+    }
+    .ec-adv-grid {
+        grid-template-columns: 1fr;
     }
 }
