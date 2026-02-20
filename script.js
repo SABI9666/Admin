@@ -114,6 +114,10 @@ const state = {
     chatbotReportsStats: {},
     bulkEmailHistory: [],
     activityLogs: [],
+    collectedEmails: [],
+    collectedEmailStats: {},
+    collectedEmailSelectedIds: [],
+    emailCollectionEnabled: false,
 };
 
 // --- INITIALIZATION ---
@@ -346,6 +350,7 @@ function showTab(tabName) {
         'marketing-email': { title: 'Marketing Email', subtitle: 'Send professional marketing emails to approved users' },
         'chatbot-reports': { title: 'Chatbot Reports', subtitle: 'View chatbot conversations, email leads, and send draft replies' },
         'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
+        'email-collection': { title: 'Email Collection', subtitle: 'Intelligent discovery of contractor company emails worldwide' },
         'activity-logs': { title: 'Activity Logs', subtitle: 'Track all admin actions — hourly PDF reports sent to sabincn676@gmail.com' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
@@ -377,6 +382,7 @@ function showTab(tabName) {
         'marketing-email': { data: state.marketingRecipients || [], loader: loadMarketingEmailData },
         'chatbot-reports': { data: state.chatbotReports || [], loader: loadChatbotReportsData },
         'bulk-email': { data: [], loader: renderBulkEmailTab },
+        'email-collection': { data: state.collectedEmails || [], loader: loadEmailCollectionData },
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
     };
 
@@ -6831,5 +6837,389 @@ async function downloadActivityReport() {
         showNotification('PDF downloaded successfully', 'success');
     } catch (error) {
         showNotification('Error downloading report: ' + error.message, 'error');
+    }
+}
+
+// ================================================================
+// EMAIL COLLECTION — Intelligent Company Email Discovery
+// ================================================================
+
+async function loadEmailCollectionData() {
+    const container = document.getElementById('email-collection-tab');
+    if (!container) return;
+    showLoader(container);
+    try {
+        const [statusRes, emailsRes] = await Promise.all([
+            apiCall('/email-collection/status'),
+            apiCall('/email-collection/emails'),
+        ]);
+        state.emailCollectionEnabled = statusRes.enabled || false;
+        state.collectedEmails = emailsRes.emails || [];
+        state.collectedEmailStats = statusRes.regionCounts || {};
+        state.collectedEmailSelectedIds = [];
+
+        // Update badge
+        const badge = document.getElementById('emailCollectionBadge');
+        if (badge) badge.textContent = emailsRes.total > 0 ? emailsRes.total : '';
+
+        renderEmailCollectionTab();
+    } catch (error) {
+        container.innerHTML = `<div class="empty-state"><h3>Error loading email collection</h3><p>${error.message}</p></div>`;
+    }
+}
+
+function renderEmailCollectionTab() {
+    const container = document.getElementById('email-collection-tab');
+    if (!container) return;
+    const emails = state.collectedEmails;
+    const stats = state.collectedEmailStats;
+    const enabled = state.emailCollectionEnabled;
+    const totalEmails = emails.length;
+    const usedCount = emails.filter(e => e.used).length;
+    const newCount = emails.filter(e => !e.used).length;
+
+    container.innerHTML = `
+        <div class="ec-layout">
+            <!-- Header Banner -->
+            <div class="ec-banner">
+                <div class="ec-banner-icon">
+                    <i class="fas fa-globe-americas"></i>
+                </div>
+                <div class="ec-banner-info">
+                    <h3>Intelligent Email Collection</h3>
+                    <p>Discover and collect contractor company emails from around the world. Toggle the switch to auto-collect 150+ emails from steel & construction companies across USA, UK, Australia, Asia, and Europe.</p>
+                </div>
+                <div class="ec-toggle-area">
+                    <label class="ec-master-toggle">
+                        <input type="checkbox" id="ecToggle" ${enabled ? 'checked' : ''} onchange="ecToggleCollection(this.checked)">
+                        <span class="ec-toggle-slider"></span>
+                    </label>
+                    <span class="ec-toggle-label" id="ecToggleLabel">${enabled ? 'Active' : 'Inactive'}</span>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="ec-stats-row">
+                <div class="ec-stat-card">
+                    <div class="ec-stat-icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-envelope"></i></div>
+                    <div class="ec-stat-info"><span class="ec-stat-num">${totalEmails}</span><span class="ec-stat-label">Total Collected</span></div>
+                </div>
+                <div class="ec-stat-card">
+                    <div class="ec-stat-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+                    <div class="ec-stat-info"><span class="ec-stat-num">${newCount}</span><span class="ec-stat-label">Available</span></div>
+                </div>
+                <div class="ec-stat-card">
+                    <div class="ec-stat-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-history"></i></div>
+                    <div class="ec-stat-info"><span class="ec-stat-num">${usedCount}</span><span class="ec-stat-label">Used</span></div>
+                </div>
+                <div class="ec-stat-card">
+                    <div class="ec-stat-icon" style="background:#faf5ff;color:#7c3aed;"><i class="fas fa-globe"></i></div>
+                    <div class="ec-stat-info"><span class="ec-stat-num">${Object.keys(stats).length}</span><span class="ec-stat-label">Regions</span></div>
+                </div>
+            </div>
+
+            <!-- Region Search -->
+            <div class="ec-search-section">
+                <div class="ec-search-card">
+                    <h4><i class="fas fa-search-location" style="color:#6366f1;margin-right:8px;"></i>Search by Region</h4>
+                    <p style="font-size:12px;color:#64748b;margin:0 0 14px;">Enter a region, country, or area name to discover contractor companies in that location.</p>
+                    <div class="ec-search-row">
+                        <input type="text" id="ecRegionInput" placeholder="e.g. USA, UK, Australia, India, Germany, Asia, Europe..."
+                            style="flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;"
+                            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e2e8f0'"
+                            onkeydown="if(event.key==='Enter')ecSearchRegion()">
+                        <button onclick="ecSearchRegion()" class="ec-search-btn" id="ecSearchBtn">
+                            <i class="fas fa-radar"></i> Discover Companies
+                        </button>
+                    </div>
+                    <div id="ecSearchResult" style="margin-top:12px;display:none;"></div>
+                    <!-- Quick region buttons -->
+                    <div class="ec-quick-regions">
+                        <span style="font-size:11px;color:#94a3b8;margin-right:8px;">Quick:</span>
+                        <button onclick="ecQuickSearch('USA')" class="ec-region-chip">USA</button>
+                        <button onclick="ecQuickSearch('UK')" class="ec-region-chip">UK</button>
+                        <button onclick="ecQuickSearch('Australia')" class="ec-region-chip">Australia</button>
+                        <button onclick="ecQuickSearch('Asia')" class="ec-region-chip">Asia</button>
+                        <button onclick="ecQuickSearch('Europe')" class="ec-region-chip">Europe</button>
+                    </div>
+                </div>
+
+                <!-- Region Breakdown -->
+                <div class="ec-search-card">
+                    <h4><i class="fas fa-chart-pie" style="color:#6366f1;margin-right:8px;"></i>Region Breakdown</h4>
+                    <div class="ec-region-breakdown">
+                        ${Object.keys(stats).length > 0 ? Object.entries(stats).map(([region, count]) => `
+                            <div class="ec-region-bar-item">
+                                <div class="ec-region-bar-label">
+                                    <span>${region}</span>
+                                    <span style="font-weight:600;">${count}</span>
+                                </div>
+                                <div class="ec-region-bar-track">
+                                    <div class="ec-region-bar-fill" style="width:${Math.round((count / totalEmails) * 100)}%;"></div>
+                                </div>
+                            </div>
+                        `).join('') : '<p style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">No emails collected yet. Toggle the switch above to start.</p>'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="ec-action-bar">
+                <div class="ec-action-left">
+                    <label class="ec-select-all-label">
+                        <input type="checkbox" id="ecSelectAll" onchange="ecToggleSelectAll()">
+                        <span>Select All</span>
+                    </label>
+                    <span class="ec-selected-count" id="ecSelectedCount">0 selected</span>
+                    <!-- Filter buttons -->
+                    <select id="ecRegionFilter" onchange="ecFilterByRegion(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#475569;background:#fff;cursor:pointer;">
+                        <option value="all">All Regions</option>
+                        <option value="USA">USA</option>
+                        <option value="UK">UK</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Asia">Asia</option>
+                        <option value="Europe">Europe</option>
+                    </select>
+                </div>
+                <div class="ec-action-right">
+                    <button onclick="ecCopySelected()" class="ec-action-btn ec-btn-copy" id="ecCopyBtn" disabled>
+                        <i class="fas fa-copy"></i> Copy Emails
+                    </button>
+                    <button onclick="ecMarkSelectedUsed()" class="ec-action-btn ec-btn-used" id="ecMarkUsedBtn" disabled>
+                        <i class="fas fa-check"></i> Mark Used
+                    </button>
+                    <button onclick="ecDeleteSelected()" class="ec-action-btn ec-btn-delete" id="ecDeleteSelectedBtn" disabled>
+                        <i class="fas fa-trash-alt"></i> Delete Selected
+                    </button>
+                    <button onclick="ecDeleteUsed()" class="ec-action-btn ec-btn-delete-used" ${usedCount === 0 ? 'disabled' : ''}>
+                        <i class="fas fa-broom"></i> Delete Used (${usedCount})
+                    </button>
+                </div>
+            </div>
+
+            <!-- Email List -->
+            <div class="ec-email-list" id="ecEmailList">
+                ${emails.length === 0 ? `
+                    <div class="empty-state" style="padding:60px 20px;">
+                        <i class="fas fa-globe-americas" style="font-size:40px;color:#94a3b8;margin-bottom:16px;"></i>
+                        <h3>No Emails Collected Yet</h3>
+                        <p>Toggle the collection switch above to auto-discover 150+ contractor company emails, or use the region search to find companies in a specific area.</p>
+                    </div>
+                ` : emails.map(e => `
+                    <div class="ec-email-item ${e.used ? 'ec-email-used' : ''}" data-id="${e.id}">
+                        <label class="ec-checkbox">
+                            <input type="checkbox" value="${e.id}" onchange="ecToggleEmail('${e.id}')">
+                        </label>
+                        <div class="ec-email-info">
+                            <div class="ec-email-primary">
+                                <span class="ec-email-addr">${sanitizeInput(e.email)}</span>
+                                <span class="ec-email-company">${sanitizeInput(e.company || '')}</span>
+                            </div>
+                            <div class="ec-email-meta">
+                                <span class="ec-region-tag ec-region-${(e.region || '').toLowerCase().replace(/\s+/g, '')}">${e.region || 'Unknown'}</span>
+                                <span class="ec-country-tag">${e.country || ''}</span>
+                                <span class="ec-industry-tag">${e.industry || ''}</span>
+                                ${e.used ? '<span class="ec-used-badge"><i class="fas fa-check"></i> Used</span>' : ''}
+                                <span style="color:#cbd5e1;font-size:11px;">${e.source === 'region-search' ? '<i class="fas fa-search"></i> Search' : '<i class="fas fa-robot"></i> Auto'}</span>
+                            </div>
+                        </div>
+                        <button class="ec-delete-single" onclick="ecDeleteSingle('${e.id}')" title="Delete">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+async function ecToggleCollection(enabled) {
+    const label = document.getElementById('ecToggleLabel');
+    if (label) label.textContent = 'Updating...';
+    try {
+        const result = await apiCall('/email-collection/toggle', 'POST', { enabled });
+        state.emailCollectionEnabled = result.enabled;
+        if (label) label.textContent = result.enabled ? 'Active' : 'Inactive';
+        showNotification(result.message, 'success');
+        // Reload data to show newly seeded emails
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        if (label) label.textContent = !enabled ? 'Active' : 'Inactive';
+        const toggle = document.getElementById('ecToggle');
+        if (toggle) toggle.checked = !enabled;
+        showNotification('Failed to toggle email collection', 'error');
+    }
+}
+
+async function ecSearchRegion() {
+    const input = document.getElementById('ecRegionInput');
+    const region = (input?.value || '').trim();
+    if (!region) {
+        showNotification('Please enter a region or country name', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('ecSearchBtn');
+    const resultEl = document.getElementById('ecSearchResult');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...'; }
+
+    try {
+        const result = await apiCall('/email-collection/search', 'POST', { region });
+        if (resultEl) {
+            resultEl.style.display = '';
+            resultEl.innerHTML = `
+                <div style="padding:12px;border-radius:10px;background:${result.added > 0 ? '#f0fdf4' : '#eff6ff'};border:1px solid ${result.added > 0 ? '#bbf7d0' : '#bfdbfe'};font-size:12px;">
+                    <div style="color:${result.added > 0 ? '#16a34a' : '#2563eb'};font-weight:600;margin-bottom:4px;">
+                        <i class="fas ${result.added > 0 ? 'fa-check-circle' : 'fa-info-circle'}"></i> ${result.message}
+                    </div>
+                    ${result.found > 0 ? `<div style="color:#64748b;margin-top:4px;">Found: ${result.found} | New: ${result.added} | Already existed: ${result.alreadyExisted || 0}</div>` : ''}
+                </div>
+            `;
+        }
+        if (result.added > 0) {
+            showNotification(`Added ${result.added} new company emails from ${region}`, 'success');
+            state.collectedEmails = [];
+            loadEmailCollectionData();
+        }
+    } catch (error) {
+        showNotification('Search failed: ' + error.message, 'error');
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-radar"></i> Discover Companies'; }
+}
+
+function ecQuickSearch(region) {
+    const input = document.getElementById('ecRegionInput');
+    if (input) input.value = region;
+    ecSearchRegion();
+}
+
+function ecToggleEmail(id) {
+    const idx = state.collectedEmailSelectedIds.indexOf(id);
+    if (idx >= 0) state.collectedEmailSelectedIds.splice(idx, 1);
+    else state.collectedEmailSelectedIds.push(id);
+    ecUpdateActionUI();
+}
+
+function ecToggleSelectAll() {
+    const allCheckbox = document.getElementById('ecSelectAll');
+    if (allCheckbox.checked) {
+        state.collectedEmailSelectedIds = state.collectedEmails.map(e => e.id);
+    } else {
+        state.collectedEmailSelectedIds = [];
+    }
+    document.querySelectorAll('#ecEmailList input[type="checkbox"]').forEach(cb => {
+        cb.checked = state.collectedEmailSelectedIds.includes(cb.value);
+    });
+    ecUpdateActionUI();
+}
+
+function ecUpdateActionUI() {
+    const count = state.collectedEmailSelectedIds.length;
+    const countEl = document.getElementById('ecSelectedCount');
+    const copyBtn = document.getElementById('ecCopyBtn');
+    const markBtn = document.getElementById('ecMarkUsedBtn');
+    const delBtn = document.getElementById('ecDeleteSelectedBtn');
+    if (countEl) countEl.textContent = `${count} selected`;
+    if (copyBtn) copyBtn.disabled = count === 0;
+    if (markBtn) markBtn.disabled = count === 0;
+    if (delBtn) delBtn.disabled = count === 0;
+}
+
+function ecCopySelected() {
+    const selectedEmails = state.collectedEmails
+        .filter(e => state.collectedEmailSelectedIds.includes(e.id))
+        .map(e => e.email);
+    if (selectedEmails.length === 0) {
+        showNotification('No emails selected', 'error');
+        return;
+    }
+    const text = selectedEmails.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        showNotification(`${selectedEmails.length} email(s) copied to clipboard`, 'success');
+    }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showNotification(`${selectedEmails.length} email(s) copied to clipboard`, 'success');
+    });
+}
+
+async function ecMarkSelectedUsed() {
+    if (state.collectedEmailSelectedIds.length === 0) return;
+    if (!confirm(`Mark ${state.collectedEmailSelectedIds.length} email(s) as used?`)) return;
+    try {
+        await apiCall('/email-collection/mark-used', 'POST', { ids: state.collectedEmailSelectedIds });
+        showNotification(`${state.collectedEmailSelectedIds.length} emails marked as used`, 'success');
+        state.collectedEmailSelectedIds = [];
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        showNotification('Failed to mark emails as used', 'error');
+    }
+}
+
+async function ecDeleteSelected() {
+    if (state.collectedEmailSelectedIds.length === 0) return;
+    if (!confirm(`Delete ${state.collectedEmailSelectedIds.length} email(s)? This cannot be undone.`)) return;
+    try {
+        await apiCall('/email-collection/delete-bulk', 'POST', { ids: state.collectedEmailSelectedIds });
+        showNotification(`${state.collectedEmailSelectedIds.length} emails deleted`, 'success');
+        state.collectedEmailSelectedIds = [];
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        showNotification('Failed to delete emails', 'error');
+    }
+}
+
+async function ecDeleteUsed() {
+    const usedCount = state.collectedEmails.filter(e => e.used).length;
+    if (usedCount === 0) {
+        showNotification('No used emails to delete', 'info');
+        return;
+    }
+    if (!confirm(`Delete all ${usedCount} used emails? This cannot be undone.`)) return;
+    try {
+        await apiCall('/email-collection/delete-bulk', 'POST', { deleteUsed: true });
+        showNotification(`${usedCount} used emails deleted`, 'success');
+        state.collectedEmailSelectedIds = [];
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        showNotification('Failed to delete used emails', 'error');
+    }
+}
+
+async function ecDeleteSingle(id) {
+    if (!confirm('Delete this email?')) return;
+    try {
+        await apiCall(`/email-collection/emails/${id}`, 'DELETE');
+        showNotification('Email deleted', 'success');
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        showNotification('Failed to delete email', 'error');
+    }
+}
+
+async function ecFilterByRegion(region) {
+    const container = document.getElementById('email-collection-tab');
+    if (!container) return;
+    showLoader(container);
+    try {
+        const emailsRes = await apiCall(`/email-collection/emails?region=${encodeURIComponent(region)}`);
+        state.collectedEmails = emailsRes.emails || [];
+        state.collectedEmailSelectedIds = [];
+        renderEmailCollectionTab();
+        // Restore filter selection
+        const filter = document.getElementById('ecRegionFilter');
+        if (filter) filter.value = region;
+    } catch (error) {
+        showNotification('Failed to filter emails', 'error');
     }
 }
