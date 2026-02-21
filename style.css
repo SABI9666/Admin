@@ -4619,6 +4619,28 @@ table tbody tr:last-child td {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
+}
+.ec-sync-all-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.ec-sync-all-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+.ec-sync-all-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Role Tags */

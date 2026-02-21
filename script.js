@@ -6953,6 +6953,9 @@ function renderEmailCollectionTab() {
                     <button onclick="ecAdvancedSearch()" class="ec-search-btn" id="ecAdvSearchBtn">
                         <i class="fas fa-search"></i> Search Emails
                     </button>
+                    <button onclick="ecSyncAll()" class="ec-sync-all-btn" id="ecSyncAllBtn">
+                        <i class="fas fa-cloud-download-alt"></i> Load All ${ecMetadata.totalAvailable || 2695} Emails
+                    </button>
                     <div id="ecAdvSearchResult" style="display:none;"></div>
                 </div>
             </div>
@@ -7242,4 +7245,20 @@ async function ecDeleteSingle(id) {
         state.collectedEmails = [];
         loadEmailCollectionData();
     } catch (error) { showNotification('Failed to delete', 'error'); }
+}
+
+// Load ALL 2695 emails from database into Firestore at once
+async function ecSyncAll() {
+    if (!confirm('Load all 2695 emails from the database? This will add any missing entries.')) return;
+    const btn = document.getElementById('ecSyncAllBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading all emails...'; }
+    try {
+        const result = await apiCall('/email-collection/sync-all', 'POST', {});
+        showNotification(result.message, 'success');
+        state.collectedEmails = [];
+        loadEmailCollectionData();
+    } catch (error) {
+        showNotification('Failed to sync: ' + error.message, 'error');
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load All Emails'; }
 }
