@@ -7351,12 +7351,14 @@ function renderVisitorAnalyticsTab() {
             : '<span class="vt-muted">Pending...</span>';
         const email = v.userEmail || v.contactEmail || '';
         const name = v.userName || '';
+        const company = v.company || '';
         const src = v.userEmail ? 'login' : (v.contactSource || '');
         const srcCls = src === 'login' ? 'vt-src-blue' : src === 'chatbot' ? 'vt-src-amber' : src === 'prospect' ? 'vt-src-purple' : '';
         const srcLbl = src === 'login' ? 'User' : src === 'chatbot' ? 'Chat' : src === 'prospect' ? 'Lead' : '';
+        const avatarHtml = v.gravatarUrl ? `<img class="vt-avatar" src="${v.gravatarUrl}" onerror="this.style.display='none'" />` : '';
         const contactHtml = email
-            ? `<div class="vt-contact"><i class="fas fa-user-check vt-c-ok"></i><div><strong>${email.length > 28 ? email.substring(0,28)+'...' : email}</strong>${name ? '<br><small>'+name+'</small>' : ''}</div>${srcLbl ? '<span class="vt-src '+srcCls+'">'+srcLbl+'</span>' : ''}</div>`
-            : '<span class="vt-muted"><i class="fas fa-user-secret"></i> Anonymous</span>';
+            ? `<div class="vt-contact">${avatarHtml || '<i class="fas fa-user-check vt-c-ok"></i>'}<div><strong>${name || (email.length > 28 ? email.substring(0,28)+'...' : email)}</strong>${name ? '<br><small>'+email+'</small>' : ''}${company ? '<br><small class="vt-company"><i class="fas fa-building"></i> '+company+'</small>' : ''}</div>${srcLbl ? '<span class="vt-src '+srcCls+'">'+srcLbl+'</span>' : ''}${v.linkedinSearchUrl ? '<a href="'+v.linkedinSearchUrl+'" target="_blank" class="vt-li" title="Search LinkedIn" onclick="event.stopPropagation()"><i class="fab fa-linkedin"></i></a>' : ''}</div>`
+            : `<div class="vt-contact-anon"><i class="fas fa-user-secret"></i><div><span>Anonymous</span>${company ? '<br><small class="vt-company"><i class="fas fa-building"></i> '+company+'</small>' : ''}</div></div>`;
         const devIcon = v.deviceType === 'Mobile' ? 'fa-mobile-alt' : v.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
         const pgCount = (v.pagesViewed || []).length;
         // Detail
@@ -7374,10 +7376,11 @@ function renderVisitorAnalyticsTab() {
             <td>${getTimeAgo(new Date(v.startedAt))}</td>
         </tr>
         <tr class="vt-detail" id="vd${i}" style="display:none"><td colspan="7"><div class="vd-box">
+            <div class="vd-header">${v.gravatarUrl ? '<img class="vd-avatar" src="'+v.gravatarUrl+'" onerror="this.style.display=\'none\'" />' : ''}${name ? '<div class="vd-name">'+name+'</div>' : ''}${company ? '<div class="vd-company"><i class="fas fa-building"></i> '+company+'</div>' : ''}</div>
             <div class="vd-grid">
                 <div><span class="vd-l">IP Address</span><span class="vd-v">${v.ip||'N/A'}</span></div>
                 <div><span class="vd-l">Full Location</span><span class="vd-v">${ld}</span></div>
-                <div><span class="vd-l">ISP / Provider</span><span class="vd-v">${isp}</span></div>
+                <div><span class="vd-l">Company / ISP</span><span class="vd-v">${company || isp}</span></div>
                 <div><span class="vd-l">Device</span><span class="vd-v">${v.deviceType} - ${v.browser} on ${v.os}</span></div>
                 <div><span class="vd-l">Screen</span><span class="vd-v">${v.screenResolution||'N/A'}</span></div>
                 <div><span class="vd-l">Language</span><span class="vd-v">${v.language||'N/A'}</span></div>
@@ -7389,7 +7392,11 @@ function renderVisitorAnalyticsTab() {
                 ${email ? '<div><span class="vd-l">Email</span><span class="vd-v"><a href="mailto:'+email+'">'+email+'</a></span></div>' : ''}
             </div>
             <div class="vd-pgs"><span class="vd-l">Pages Visited (${pgCount})</span><div class="vd-pg-list">${pgs||'<span class="vt-muted">None</span>'}</div></div>
-            ${mapUrl ? '<a href="'+mapUrl+'" target="_blank" class="vd-map"><i class="fas fa-map-marked-alt"></i> View on Google Maps</a>' : ''}
+            <div class="vd-actions">
+                ${mapUrl ? '<a href="'+mapUrl+'" target="_blank" class="vd-map"><i class="fas fa-map-marked-alt"></i> Google Maps</a>' : ''}
+                ${v.linkedinSearchUrl ? '<a href="'+v.linkedinSearchUrl+'" target="_blank" class="vd-linkedin"><i class="fab fa-linkedin"></i> Find on LinkedIn</a>' : ''}
+                ${email ? '<a href="mailto:'+email+'" class="vd-email"><i class="fas fa-envelope"></i> Send Email</a>' : ''}
+            </div>
         </div></td></tr>`;
     }).join('');
 
@@ -7477,8 +7484,8 @@ async function vaClearOldData() {
 function vaExportCSV() {
     const v = state.visitors || [];
     if (!v.length) return showNotification('No data to export', 'warning');
-    const rows = [['Status','Country','City','Region','IP','Email','Name','Device','Browser','OS','Pages','Time(s)','Referrer','Started','Source']];
-    v.forEach(x => { const l = x.location||{}; rows.push([x.isActive?'Active':'Left',l.country||'',l.city||'',l.region||'',x.ip||'',x.userEmail||x.contactEmail||'',x.userName||'',x.deviceType,x.browser,x.os,(x.pagesViewed||[]).length,x.totalTimeSeconds||0,x.referrer||'Direct',x.startedAt||'',x.userEmail?'login':(x.contactSource||'anon')]); });
+    const rows = [['Status','Country','City','Region','IP','Email','Name','Company','Device','Browser','OS','Pages','Time(s)','Referrer','Started','Source','LinkedIn']];
+    v.forEach(x => { const l = x.location||{}; rows.push([x.isActive?'Active':'Left',l.country||'',l.city||'',l.region||'',x.ip||'',x.userEmail||x.contactEmail||'',x.userName||'',x.company||l.org||l.isp||'',x.deviceType,x.browser,x.os,(x.pagesViewed||[]).length,x.totalTimeSeconds||0,x.referrer||'Direct',x.startedAt||'',x.userEmail?'login':(x.contactSource||'anon'),x.linkedinSearchUrl||'']); });
     const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
     const b = new Blob([csv],{type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'visitors-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
     showNotification('Exported '+v.length+' visitors', 'success');
