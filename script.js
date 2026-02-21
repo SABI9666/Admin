@@ -7311,6 +7311,12 @@ function formatDuration(seconds) {
     return h + 'h ' + (m % 60) + 'm';
 }
 
+// Convert country code to flag emoji (e.g., "US" -> flag)
+function countryFlag(code) {
+    if (!code || code.length !== 2) return '';
+    return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
 function renderVisitorAnalyticsTab() {
     const container = document.getElementById('visitor-analytics-tab');
     if (!container) return;
@@ -7329,6 +7335,28 @@ function renderVisitorAnalyticsTab() {
         return `<div class="va-ref-row"><span class="va-ref-name" title="${page}">${shortPage}</span><span class="va-ref-count">${count} views</span></div>`;
     }).join('') || '<div class="va-ref-row"><span>No page data yet</span></div>';
 
+    // Top countries HTML
+    const countriesData = stats.countries || [];
+    const topCountryMax = countriesData.length > 0 ? countriesData[0][1] : 1;
+    const countriesHtml = countriesData.map(([key, count]) => {
+        const parts = key.split('|');
+        const name = parts[0];
+        const code = parts[1] || '';
+        const flag = countryFlag(code);
+        const pct = Math.round((count / topCountryMax) * 100);
+        return `<div class="va-bar-item">
+            <div class="va-bar-label"><span class="va-flag">${flag}</span> ${name}</div>
+            <div class="va-bar-track"><div class="va-bar-fill va-bar-country" style="width:${pct}%"></div></div>
+            <div class="va-bar-value">${count}</div>
+        </div>`;
+    }).join('') || '<div style="color:#94a3b8;font-size:12px;padding:8px;">No location data yet</div>';
+
+    // Top cities HTML
+    const citiesData = stats.cities || [];
+    const citiesHtml = citiesData.map(([city, count]) => {
+        return `<div class="va-ref-row"><span class="va-ref-name"><i class="fas fa-map-pin" style="color:#f59e0b;margin-right:6px;"></i>${city}</span><span class="va-ref-count">${count}</span></div>`;
+    }).join('') || '<div style="color:#94a3b8;font-size:12px;padding:8px;">No city data yet</div>';
+
     // Device breakdown
     const devices = stats.devices || {};
     const totalDevices = Object.values(devices).reduce((a, b) => a + b, 0) || 1;
@@ -7342,7 +7370,7 @@ function renderVisitorAnalyticsTab() {
     // Recent visitors table (last 50)
     const recentVisitors = visitors.slice(0, 50);
     const now = new Date();
-    const visitorsTableHtml = recentVisitors.map(v => {
+    const visitorsTableHtml = recentVisitors.map((v, idx) => {
         const startDate = new Date(v.startedAt);
         const timeAgo = getTimeAgo(startDate);
         const isLive = v.isActive && (now - new Date(v.lastActiveAt)) < 300000;
@@ -7350,17 +7378,65 @@ function renderVisitorAnalyticsTab() {
             ? '<span class="va-badge va-badge-live"><i class="fas fa-circle"></i> Live</span>'
             : '<span class="va-badge va-badge-left">Left</span>';
         const pagesCount = (v.pagesViewed || []).length;
-        const pagesList = (v.pagesViewed || []).map(p => p.page).join(', ');
-        return `<tr>
+
+        // Location
+        const loc = v.location;
+        const locFlag = loc?.countryCode ? countryFlag(loc.countryCode) : '';
+        const locText = loc ? `${locFlag} ${loc.city || ''}${loc.city && loc.country ? ', ' : ''}${loc.country || ''}` : '<span style="color:#cbd5e1;">Resolving...</span>';
+
+        // Contact info
+        const email = v.userEmail || v.contactEmail || '';
+        const contactName = v.userName || '';
+        const contactSource = v.userEmail ? 'login' : (v.contactSource || '');
+        let contactHtml;
+        if (email) {
+            const srcBadge = contactSource === 'login' ? '<span class="va-src-badge va-src-login">User</span>' :
+                             contactSource === 'chatbot' ? '<span class="va-src-badge va-src-chatbot">Chatbot</span>' :
+                             contactSource === 'prospect' ? '<span class="va-src-badge va-src-prospect">Prospect</span>' : '';
+            contactHtml = `<span class="va-contact-found" title="${contactName ? contactName + ' - ' : ''}${email}"><i class="fas fa-envelope"></i> ${email.substring(0, 22)}${email.length > 22 ? '...' : ''} ${srcBadge}</span>`;
+        } else {
+            contactHtml = '<span class="va-contact-anon"><i class="fas fa-user-secret"></i> Anonymous</span>';
+        }
+
+        // Detail row (expandable)
+        const pagesList = (v.pagesViewed || []).map(p => `<span class="va-detail-page">${p.page}</span>`).join(' ');
+        const locDetail = loc ? `${loc.city || ''}, ${loc.region || ''}, ${loc.country || ''} (${loc.timezone || ''})` : 'Not available';
+        const ispDetail = loc?.isp || loc?.org || 'Unknown';
+        const mapLink = (loc?.lat && loc?.lon) ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lon}" target="_blank" class="va-map-link"><i class="fas fa-map-marked-alt"></i> View on Map</a>` : '';
+
+        return `<tr class="va-row-main" onclick="vaToggleDetail('vaDetail${idx}')">
             <td>${statusBadge}</td>
+            <td>${locText}</td>
+            <td class="va-contact-cell">${contactHtml}</td>
             <td><span title="${v.ip}">${v.ip?.substring(0, 18) || 'Unknown'}</span></td>
             <td><i class="fas fa-${v.deviceType === 'Mobile' ? 'mobile-alt' : v.deviceType === 'Tablet' ? 'tablet-alt' : 'desktop'}"></i> ${v.deviceType}</td>
             <td>${v.browser}</td>
-            <td>${v.os}</td>
-            <td title="${pagesList}">${pagesCount} page${pagesCount !== 1 ? 's' : ''}</td>
+            <td title="${pagesCount} pages">${pagesCount} pg</td>
             <td><strong>${formatDuration(v.totalTimeSeconds)}</strong></td>
-            <td title="${v.referrer}">${(v.referrer || 'Direct').substring(0, 25)}</td>
             <td>${timeAgo}</td>
+        </tr>
+        <tr class="va-row-detail" id="vaDetail${idx}" style="display:none;">
+            <td colspan="9">
+                <div class="va-detail-panel">
+                    <div class="va-detail-grid">
+                        <div class="va-detail-item"><span class="va-detail-label">Full Location</span><span>${locDetail}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">ISP / Org</span><span>${ispDetail}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">IP Address</span><span>${v.ip || 'Unknown'}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">OS</span><span>${v.os}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">Screen</span><span>${v.screenResolution || 'N/A'}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">Language</span><span>${v.language || 'N/A'}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">Referrer</span><span title="${v.referrer}">${(v.referrer || 'Direct').substring(0, 60)}</span></div>
+                        <div class="va-detail-item"><span class="va-detail-label">Landing Page</span><span>${v.landingPage || '/'}</span></div>
+                        ${contactName ? `<div class="va-detail-item"><span class="va-detail-label">Name</span><span><strong>${contactName}</strong></span></div>` : ''}
+                        ${email ? `<div class="va-detail-item"><span class="va-detail-label">Email</span><span><a href="mailto:${email}">${email}</a></span></div>` : ''}
+                    </div>
+                    <div class="va-detail-pages-section">
+                        <span class="va-detail-label">Pages Visited (${pagesCount}):</span>
+                        <div class="va-detail-pages">${pagesList || 'None'}</div>
+                    </div>
+                    ${mapLink ? `<div style="margin-top:8px;">${mapLink}</div>` : ''}
+                </div>
+            </td>
         </tr>`;
     }).join('');
 
@@ -7384,7 +7460,7 @@ function renderVisitorAnalyticsTab() {
             </div>
 
             <!-- Stats Cards -->
-            <div class="va-stats-grid">
+            <div class="va-stats-grid va-stats-5">
                 <div class="va-stat-card va-stat-total">
                     <div class="va-stat-icon"><i class="fas fa-users"></i></div>
                     <div class="va-stat-info">
@@ -7406,12 +7482,31 @@ function renderVisitorAnalyticsTab() {
                         <div class="va-stat-label">Live Now</div>
                     </div>
                 </div>
-                <div class="va-stat-card va-stat-time">
-                    <div class="va-stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="va-stat-card va-stat-country">
+                    <div class="va-stat-icon"><i class="fas fa-globe-americas"></i></div>
                     <div class="va-stat-info">
-                        <div class="va-stat-number">${formatDuration(stats.avgTimeSeconds || 0)}</div>
-                        <div class="va-stat-label">Avg. Time Spent</div>
+                        <div class="va-stat-number">${stats.uniqueCountries || 0}</div>
+                        <div class="va-stat-label">Countries</div>
                     </div>
+                </div>
+                <div class="va-stat-card va-stat-identified">
+                    <div class="va-stat-icon"><i class="fas fa-address-book"></i></div>
+                    <div class="va-stat-info">
+                        <div class="va-stat-number">${stats.identifiedVisitors || 0}</div>
+                        <div class="va-stat-label">Identified</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Row: Countries + Cities -->
+            <div class="va-analytics-row va-row-2">
+                <div class="va-card">
+                    <h4><i class="fas fa-globe-americas" style="color:#3b82f6;margin-right:8px;"></i>Top Countries</h4>
+                    <div class="va-bar-list">${countriesHtml}</div>
+                </div>
+                <div class="va-card">
+                    <h4><i class="fas fa-city" style="color:#f59e0b;margin-right:8px;"></i>Top Cities</h4>
+                    <div class="va-ref-list">${citiesHtml}</div>
                 </div>
             </div>
 
@@ -7465,7 +7560,7 @@ function renderVisitorAnalyticsTab() {
             </div>
 
             <!-- Referrers & Pages Row -->
-            <div class="va-analytics-row">
+            <div class="va-analytics-row va-row-2">
                 <div class="va-card">
                     <h4><i class="fas fa-link" style="color:#f59e0b;margin-right:8px;"></i>Top Referrers</h4>
                     <div class="va-ref-list">${refHtml}</div>
@@ -7490,19 +7585,19 @@ function renderVisitorAnalyticsTab() {
 
             <!-- Recent Visitors Table -->
             <div class="va-card va-full-width">
-                <h4><i class="fas fa-list" style="color:#6366f1;margin-right:8px;"></i>Recent Visitors <span style="font-weight:400;color:#94a3b8;font-size:12px;">(Last ${recentVisitors.length})</span></h4>
+                <h4><i class="fas fa-list" style="color:#6366f1;margin-right:8px;"></i>Recent Visitors <span style="font-weight:400;color:#94a3b8;font-size:12px;">(Last ${recentVisitors.length}) &mdash; Click any row for full details</span></h4>
                 <div class="va-table-wrap">
                     <table class="va-table">
                         <thead>
                             <tr>
                                 <th>Status</th>
+                                <th>Location</th>
+                                <th>Contact</th>
                                 <th>IP Address</th>
                                 <th>Device</th>
                                 <th>Browser</th>
-                                <th>OS</th>
                                 <th>Pages</th>
-                                <th>Time Spent</th>
-                                <th>Referrer</th>
+                                <th>Time</th>
                                 <th>When</th>
                             </tr>
                         </thead>
@@ -7515,6 +7610,11 @@ function renderVisitorAnalyticsTab() {
 
     // Render Charts
     renderVisitorCharts(stats);
+}
+
+function vaToggleDetail(id) {
+    const row = document.getElementById(id);
+    if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
 }
 
 function renderVisitorCharts(stats) {
