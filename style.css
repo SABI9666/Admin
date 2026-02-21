@@ -4939,13 +4939,50 @@ table tbody tr:last-child td {
     font-size: 11px; color: #475569; font-weight: 500;
 }
 
-/* Map Link */
-.vd-map {
-    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #eff6ff;
-    color: #3b82f6; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none;
-    transition: all 0.2s; margin-top: 12px;
+/* Avatar in Table */
+.vt-avatar {
+    width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    border: 2px solid #e2e8f0;
 }
+.vt-company { color: #6366f1; font-weight: 500; display: flex; align-items: center; gap: 3px; }
+.vt-company i { font-size: 8px; }
+
+/* LinkedIn Button in Table */
+.vt-li {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+    border-radius: 6px; background: #eff6ff; color: #0a66c2; font-size: 14px; text-decoration: none;
+    transition: all 0.2s; flex-shrink: 0; margin-left: 4px;
+}
+.vt-li:hover { background: #dbeafe; transform: translateY(-1px); }
+
+/* Anonymous Contact */
+.vt-contact-anon { display: flex; align-items: center; gap: 6px; color: #94a3b8; }
+.vt-contact-anon i { font-size: 14px; color: #cbd5e1; }
+.vt-contact-anon span { font-size: 12px; font-weight: 500; }
+
+/* Detail Header (Name + Avatar + Company) */
+.vd-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.vd-avatar {
+    width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+    border: 3px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.vd-name { font-size: 16px; font-weight: 800; color: #0f172a; }
+.vd-company { font-size: 12px; color: #6366f1; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.vd-company i { font-size: 10px; }
+
+/* Detail Actions Row */
+.vd-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.vd-map, .vd-linkedin, .vd-email {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none;
+    transition: all 0.2s;
+}
+.vd-map { background: #eff6ff; color: #3b82f6; }
 .vd-map:hover { background: #dbeafe; transform: translateY(-1px); }
+.vd-linkedin { background: #eff6ff; color: #0a66c2; }
+.vd-linkedin:hover { background: #dbeafe; transform: translateY(-1px); }
+.vd-email { background: #f0fdf4; color: #16a34a; }
+.vd-email:hover { background: #dcfce7; transform: translateY(-1px); }
 
 /* Nav badge green */
 .nav-badge-green { background: #dcfce7 !important; color: #16a34a !important; font-size: 9px !important; }
