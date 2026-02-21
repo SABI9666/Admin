@@ -7268,10 +7268,12 @@ async function ecSyncAll() {
 }
 
 // =====================================================
-// VISITOR ANALYTICS — Full Dashboard
+// VISITOR ANALYTICS — Professional Dashboard
 // =====================================================
 let visitorFilterDays = 30;
 let visitorAutoRefresh = null;
+let vaTrendChart = null;
+let vaHourlyChart = null;
 
 async function loadVisitorAnalyticsData() {
     const container = document.getElementById('visitor-analytics-tab');
@@ -7320,392 +7322,173 @@ function countryFlag(code) {
 function renderVisitorAnalyticsTab() {
     const container = document.getElementById('visitor-analytics-tab');
     if (!container) return;
-    const stats = state.visitorStats;
+    if (vaTrendChart) { vaTrendChart.destroy(); vaTrendChart = null; }
+    if (vaHourlyChart) { vaHourlyChart.destroy(); vaHourlyChart = null; }
+    const s = state.visitorStats;
     const visitors = state.visitors;
-
-    // Top referrers HTML
-    const refHtml = (stats.referrers || []).map(([ref, count]) => {
-        const shortRef = ref.length > 40 ? ref.substring(0, 40) + '...' : ref;
-        return `<div class="va-ref-row"><span class="va-ref-name" title="${ref}">${shortRef}</span><span class="va-ref-count">${count}</span></div>`;
-    }).join('') || '<div class="va-ref-row"><span>No referrer data yet</span></div>';
-
-    // Top pages HTML
-    const pagesHtml = (stats.topPages || []).map(([page, count]) => {
-        const shortPage = page.length > 35 ? '...' + page.substring(page.length - 35) : page;
-        return `<div class="va-ref-row"><span class="va-ref-name" title="${page}">${shortPage}</span><span class="va-ref-count">${count} views</span></div>`;
-    }).join('') || '<div class="va-ref-row"><span>No page data yet</span></div>';
-
-    // Top countries HTML
-    const countriesData = stats.countries || [];
-    const topCountryMax = countriesData.length > 0 ? countriesData[0][1] : 1;
-    const countriesHtml = countriesData.map(([key, count]) => {
-        const parts = key.split('|');
-        const name = parts[0];
-        const code = parts[1] || '';
-        const flag = countryFlag(code);
-        const pct = Math.round((count / topCountryMax) * 100);
-        return `<div class="va-bar-item">
-            <div class="va-bar-label"><span class="va-flag">${flag}</span> ${name}</div>
-            <div class="va-bar-track"><div class="va-bar-fill va-bar-country" style="width:${pct}%"></div></div>
-            <div class="va-bar-value">${count}</div>
-        </div>`;
-    }).join('') || '<div style="color:#94a3b8;font-size:12px;padding:8px;">No location data yet</div>';
-
-    // Top cities HTML
-    const citiesData = stats.cities || [];
-    const citiesHtml = citiesData.map(([city, count]) => {
-        return `<div class="va-ref-row"><span class="va-ref-name"><i class="fas fa-map-pin" style="color:#f59e0b;margin-right:6px;"></i>${city}</span><span class="va-ref-count">${count}</span></div>`;
-    }).join('') || '<div style="color:#94a3b8;font-size:12px;padding:8px;">No city data yet</div>';
-
-    // Device breakdown
-    const devices = stats.devices || {};
-    const totalDevices = Object.values(devices).reduce((a, b) => a + b, 0) || 1;
-
-    // Browser breakdown
-    const browsers = stats.browsers || {};
-
-    // OS breakdown
-    const osSystems = stats.osSystems || {};
-
-    // Recent visitors table (last 50)
-    const recentVisitors = visitors.slice(0, 50);
     const now = new Date();
-    const visitorsTableHtml = recentVisitors.map((v, idx) => {
-        const startDate = new Date(v.startedAt);
-        const timeAgo = getTimeAgo(startDate);
+    const total = s.totalVisitors || 1;
+    const countriesData = s.countries || [];
+    const citiesData = s.cities || [];
+    const devices = s.devices || {};
+    const browsers = s.browsers || {};
+    const osSystems = s.osSystems || {};
+    const devTotal = Object.values(devices).reduce((a,b) => a+b, 0) || 1;
+
+    function pct(n) { return Math.round((n / devTotal) * 100); }
+    function bar(label, count, color, icon) {
+        const p = pct(count);
+        return `<div class="vb-row"><div class="vb-lbl">${icon ? '<i class="fas '+icon+'"></i> ' : ''}${label}</div><div class="vb-track"><div class="vb-fill" style="width:${p}%;background:${color}"></div></div><div class="vb-val">${count} (${p}%)</div></div>`;
+    }
+
+    const recentVisitors = visitors.slice(0, 100);
+    const tableRows = recentVisitors.map((v, i) => {
         const isLive = v.isActive && (now - new Date(v.lastActiveAt)) < 300000;
-        const statusBadge = isLive
-            ? '<span class="va-badge va-badge-live"><i class="fas fa-circle"></i> Live</span>'
-            : '<span class="va-badge va-badge-left">Left</span>';
-        const pagesCount = (v.pagesViewed || []).length;
-
-        // Location
         const loc = v.location;
-        const locFlag = loc?.countryCode ? countryFlag(loc.countryCode) : '';
-        const locText = loc ? `${locFlag} ${loc.city || ''}${loc.city && loc.country ? ', ' : ''}${loc.country || ''}` : '<span style="color:#cbd5e1;">Resolving...</span>';
-
-        // Contact info
+        const flag = loc?.countryCode ? countryFlag(loc.countryCode) : '';
+        const locHtml = loc?.country
+            ? `<div class="vt-loc"><span class="vt-flag">${flag}</span><div><strong>${loc.city || loc.country}</strong><br><small>${loc.city ? loc.country : ''}${loc.region ? ', '+loc.region : ''}</small></div></div>`
+            : '<span class="vt-muted">Pending...</span>';
         const email = v.userEmail || v.contactEmail || '';
-        const contactName = v.userName || '';
-        const contactSource = v.userEmail ? 'login' : (v.contactSource || '');
-        let contactHtml;
-        if (email) {
-            const srcBadge = contactSource === 'login' ? '<span class="va-src-badge va-src-login">User</span>' :
-                             contactSource === 'chatbot' ? '<span class="va-src-badge va-src-chatbot">Chatbot</span>' :
-                             contactSource === 'prospect' ? '<span class="va-src-badge va-src-prospect">Prospect</span>' : '';
-            contactHtml = `<span class="va-contact-found" title="${contactName ? contactName + ' - ' : ''}${email}"><i class="fas fa-envelope"></i> ${email.substring(0, 22)}${email.length > 22 ? '...' : ''} ${srcBadge}</span>`;
-        } else {
-            contactHtml = '<span class="va-contact-anon"><i class="fas fa-user-secret"></i> Anonymous</span>';
-        }
-
-        // Detail row (expandable)
-        const pagesList = (v.pagesViewed || []).map(p => `<span class="va-detail-page">${p.page}</span>`).join(' ');
-        const locDetail = loc ? `${loc.city || ''}, ${loc.region || ''}, ${loc.country || ''} (${loc.timezone || ''})` : 'Not available';
-        const ispDetail = loc?.isp || loc?.org || 'Unknown';
-        const mapLink = (loc?.lat && loc?.lon) ? `<a href="https://www.google.com/maps?q=${loc.lat},${loc.lon}" target="_blank" class="va-map-link"><i class="fas fa-map-marked-alt"></i> View on Map</a>` : '';
-
-        return `<tr class="va-row-main" onclick="vaToggleDetail('vaDetail${idx}')">
-            <td>${statusBadge}</td>
-            <td>${locText}</td>
-            <td class="va-contact-cell">${contactHtml}</td>
-            <td><span title="${v.ip}">${v.ip?.substring(0, 18) || 'Unknown'}</span></td>
-            <td><i class="fas fa-${v.deviceType === 'Mobile' ? 'mobile-alt' : v.deviceType === 'Tablet' ? 'tablet-alt' : 'desktop'}"></i> ${v.deviceType}</td>
-            <td>${v.browser}</td>
-            <td title="${pagesCount} pages">${pagesCount} pg</td>
-            <td><strong>${formatDuration(v.totalTimeSeconds)}</strong></td>
-            <td>${timeAgo}</td>
+        const name = v.userName || '';
+        const src = v.userEmail ? 'login' : (v.contactSource || '');
+        const srcCls = src === 'login' ? 'vt-src-blue' : src === 'chatbot' ? 'vt-src-amber' : src === 'prospect' ? 'vt-src-purple' : '';
+        const srcLbl = src === 'login' ? 'User' : src === 'chatbot' ? 'Chat' : src === 'prospect' ? 'Lead' : '';
+        const contactHtml = email
+            ? `<div class="vt-contact"><i class="fas fa-user-check vt-c-ok"></i><div><strong>${email.length > 28 ? email.substring(0,28)+'...' : email}</strong>${name ? '<br><small>'+name+'</small>' : ''}</div>${srcLbl ? '<span class="vt-src '+srcCls+'">'+srcLbl+'</span>' : ''}</div>`
+            : '<span class="vt-muted"><i class="fas fa-user-secret"></i> Anonymous</span>';
+        const devIcon = v.deviceType === 'Mobile' ? 'fa-mobile-alt' : v.deviceType === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
+        const pgCount = (v.pagesViewed || []).length;
+        // Detail
+        const ld = loc ? [loc.city, loc.region, loc.country].filter(Boolean).join(', ') + (loc.timezone ? ' ('+loc.timezone+')' : '') : 'N/A';
+        const isp = loc?.isp || loc?.org || 'N/A';
+        const pgs = (v.pagesViewed || []).map(p => `<span class="vd-pg">${p.page}</span>`).join('');
+        const mapUrl = (loc?.lat && loc?.lon) ? `https://www.google.com/maps?q=${loc.lat},${loc.lon}` : '';
+        return `<tr class="vt-main${isLive ? ' vt-live-row' : ''}" onclick="vaToggleDetail('vd${i}')">
+            <td>${isLive ? '<span class="vt-live"><span class="vt-dot"></span>Live</span>' : '<span class="vt-left">Left</span>'}</td>
+            <td>${locHtml}</td>
+            <td>${contactHtml}</td>
+            <td><div class="vt-dev"><i class="fas ${devIcon}"></i><div>${v.browser}<br><small>${v.os}</small></div></div></td>
+            <td class="vt-center">${pgCount}</td>
+            <td class="vt-center"><strong>${formatDuration(v.totalTimeSeconds)}</strong></td>
+            <td>${getTimeAgo(new Date(v.startedAt))}</td>
         </tr>
-        <tr class="va-row-detail" id="vaDetail${idx}" style="display:none;">
-            <td colspan="9">
-                <div class="va-detail-panel">
-                    <div class="va-detail-grid">
-                        <div class="va-detail-item"><span class="va-detail-label">Full Location</span><span>${locDetail}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">ISP / Org</span><span>${ispDetail}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">IP Address</span><span>${v.ip || 'Unknown'}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">OS</span><span>${v.os}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">Screen</span><span>${v.screenResolution || 'N/A'}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">Language</span><span>${v.language || 'N/A'}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">Referrer</span><span title="${v.referrer}">${(v.referrer || 'Direct').substring(0, 60)}</span></div>
-                        <div class="va-detail-item"><span class="va-detail-label">Landing Page</span><span>${v.landingPage || '/'}</span></div>
-                        ${contactName ? `<div class="va-detail-item"><span class="va-detail-label">Name</span><span><strong>${contactName}</strong></span></div>` : ''}
-                        ${email ? `<div class="va-detail-item"><span class="va-detail-label">Email</span><span><a href="mailto:${email}">${email}</a></span></div>` : ''}
-                    </div>
-                    <div class="va-detail-pages-section">
-                        <span class="va-detail-label">Pages Visited (${pagesCount}):</span>
-                        <div class="va-detail-pages">${pagesList || 'None'}</div>
-                    </div>
-                    ${mapLink ? `<div style="margin-top:8px;">${mapLink}</div>` : ''}
-                </div>
-            </td>
-        </tr>`;
+        <tr class="vt-detail" id="vd${i}" style="display:none"><td colspan="7"><div class="vd-box">
+            <div class="vd-grid">
+                <div><span class="vd-l">IP Address</span><span class="vd-v">${v.ip||'N/A'}</span></div>
+                <div><span class="vd-l">Full Location</span><span class="vd-v">${ld}</span></div>
+                <div><span class="vd-l">ISP / Provider</span><span class="vd-v">${isp}</span></div>
+                <div><span class="vd-l">Device</span><span class="vd-v">${v.deviceType} - ${v.browser} on ${v.os}</span></div>
+                <div><span class="vd-l">Screen</span><span class="vd-v">${v.screenResolution||'N/A'}</span></div>
+                <div><span class="vd-l">Language</span><span class="vd-v">${v.language||'N/A'}</span></div>
+                <div><span class="vd-l">Referrer</span><span class="vd-v">${v.referrer||'Direct'}</span></div>
+                <div><span class="vd-l">Landing Page</span><span class="vd-v">${v.landingPage||'/'}</span></div>
+                <div><span class="vd-l">Session Start</span><span class="vd-v">${new Date(v.startedAt).toLocaleString()}</span></div>
+                <div><span class="vd-l">Last Active</span><span class="vd-v">${new Date(v.lastActiveAt).toLocaleString()}</span></div>
+                ${name ? '<div><span class="vd-l">Name</span><span class="vd-v"><strong>'+name+'</strong></span></div>' : ''}
+                ${email ? '<div><span class="vd-l">Email</span><span class="vd-v"><a href="mailto:'+email+'">'+email+'</a></span></div>' : ''}
+            </div>
+            <div class="vd-pgs"><span class="vd-l">Pages Visited (${pgCount})</span><div class="vd-pg-list">${pgs||'<span class="vt-muted">None</span>'}</div></div>
+            ${mapUrl ? '<a href="'+mapUrl+'" target="_blank" class="vd-map"><i class="fas fa-map-marked-alt"></i> View on Google Maps</a>' : ''}
+        </div></td></tr>`;
     }).join('');
 
-    container.innerHTML = `
-        <div class="va-layout">
-            <!-- Controls -->
-            <div class="va-controls">
-                <div class="va-filter-group">
-                    <label>Time Range:</label>
-                    <select id="vaFilterDays" onchange="vaChangeDays(this.value)">
-                        <option value="1" ${visitorFilterDays === 1 ? 'selected' : ''}>Today</option>
-                        <option value="7" ${visitorFilterDays === 7 ? 'selected' : ''}>Last 7 Days</option>
-                        <option value="30" ${visitorFilterDays === 30 ? 'selected' : ''}>Last 30 Days</option>
-                        <option value="90" ${visitorFilterDays === 90 ? 'selected' : ''}>Last 90 Days</option>
-                    </select>
-                </div>
-                <div class="va-controls-right">
-                    <button onclick="loadVisitorAnalyticsData()" class="va-refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button>
-                    <button onclick="vaClearOldData()" class="va-clear-btn"><i class="fas fa-trash-alt"></i> Clear Old Data</button>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="va-stats-grid va-stats-5">
-                <div class="va-stat-card va-stat-total">
-                    <div class="va-stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="va-stat-info">
-                        <div class="va-stat-number">${stats.totalVisitors || 0}</div>
-                        <div class="va-stat-label">Total Visitors</div>
-                    </div>
-                </div>
-                <div class="va-stat-card va-stat-today">
-                    <div class="va-stat-icon"><i class="fas fa-calendar-day"></i></div>
-                    <div class="va-stat-info">
-                        <div class="va-stat-number">${stats.todayVisitors || 0}</div>
-                        <div class="va-stat-label">Today</div>
-                    </div>
-                </div>
-                <div class="va-stat-card va-stat-live">
-                    <div class="va-stat-icon"><i class="fas fa-broadcast-tower"></i></div>
-                    <div class="va-stat-info">
-                        <div class="va-stat-number">${stats.activeNow || 0}</div>
-                        <div class="va-stat-label">Live Now</div>
-                    </div>
-                </div>
-                <div class="va-stat-card va-stat-country">
-                    <div class="va-stat-icon"><i class="fas fa-globe-americas"></i></div>
-                    <div class="va-stat-info">
-                        <div class="va-stat-number">${stats.uniqueCountries || 0}</div>
-                        <div class="va-stat-label">Countries</div>
-                    </div>
-                </div>
-                <div class="va-stat-card va-stat-identified">
-                    <div class="va-stat-icon"><i class="fas fa-address-book"></i></div>
-                    <div class="va-stat-info">
-                        <div class="va-stat-number">${stats.identifiedVisitors || 0}</div>
-                        <div class="va-stat-label">Identified</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Location Row: Countries + Cities -->
-            <div class="va-analytics-row va-row-2">
-                <div class="va-card">
-                    <h4><i class="fas fa-globe-americas" style="color:#3b82f6;margin-right:8px;"></i>Top Countries</h4>
-                    <div class="va-bar-list">${countriesHtml}</div>
-                </div>
-                <div class="va-card">
-                    <h4><i class="fas fa-city" style="color:#f59e0b;margin-right:8px;"></i>Top Cities</h4>
-                    <div class="va-ref-list">${citiesHtml}</div>
-                </div>
-            </div>
-
-            <!-- Analytics Cards Row -->
-            <div class="va-analytics-row">
-                <!-- Devices -->
-                <div class="va-card">
-                    <h4><i class="fas fa-laptop" style="color:#6366f1;margin-right:8px;"></i>Devices</h4>
-                    <div class="va-bar-list">
-                        ${Object.entries(devices).map(([device, count]) => {
-                            const pct = Math.round((count / totalDevices) * 100);
-                            const icon = device === 'Mobile' ? 'fa-mobile-alt' : device === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
-                            return `<div class="va-bar-item">
-                                <div class="va-bar-label"><i class="fas ${icon}"></i> ${device}</div>
-                                <div class="va-bar-track"><div class="va-bar-fill va-bar-device" style="width:${pct}%"></div></div>
-                                <div class="va-bar-value">${count} (${pct}%)</div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- Browsers -->
-                <div class="va-card">
-                    <h4><i class="fas fa-globe" style="color:#8b5cf6;margin-right:8px;"></i>Browsers</h4>
-                    <div class="va-bar-list">
-                        ${Object.entries(browsers).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([browser, count]) => {
-                            const pct = Math.round((count / totalDevices) * 100);
-                            return `<div class="va-bar-item">
-                                <div class="va-bar-label">${browser}</div>
-                                <div class="va-bar-track"><div class="va-bar-fill va-bar-browser" style="width:${pct}%"></div></div>
-                                <div class="va-bar-value">${count} (${pct}%)</div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- OS -->
-                <div class="va-card">
-                    <h4><i class="fas fa-cog" style="color:#ec4899;margin-right:8px;"></i>Operating Systems</h4>
-                    <div class="va-bar-list">
-                        ${Object.entries(osSystems).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([os, count]) => {
-                            const pct = Math.round((count / totalDevices) * 100);
-                            return `<div class="va-bar-item">
-                                <div class="va-bar-label">${os}</div>
-                                <div class="va-bar-track"><div class="va-bar-fill va-bar-os" style="width:${pct}%"></div></div>
-                                <div class="va-bar-value">${count} (${pct}%)</div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Referrers & Pages Row -->
-            <div class="va-analytics-row va-row-2">
-                <div class="va-card">
-                    <h4><i class="fas fa-link" style="color:#f59e0b;margin-right:8px;"></i>Top Referrers</h4>
-                    <div class="va-ref-list">${refHtml}</div>
-                </div>
-                <div class="va-card">
-                    <h4><i class="fas fa-file-alt" style="color:#10b981;margin-right:8px;"></i>Most Viewed Pages</h4>
-                    <div class="va-ref-list">${pagesHtml}</div>
-                </div>
-            </div>
-
-            <!-- Daily Trend Chart -->
-            <div class="va-card va-full-width">
-                <h4><i class="fas fa-chart-area" style="color:#3b82f6;margin-right:8px;"></i>Daily Visitor Trend</h4>
-                <canvas id="vaVisitorTrendChart" height="80"></canvas>
-            </div>
-
-            <!-- Hourly Distribution -->
-            <div class="va-card va-full-width">
-                <h4><i class="fas fa-clock" style="color:#8b5cf6;margin-right:8px;"></i>Hourly Distribution (Peak Hours)</h4>
-                <canvas id="vaHourlyChart" height="60"></canvas>
-            </div>
-
-            <!-- Recent Visitors Table -->
-            <div class="va-card va-full-width">
-                <h4><i class="fas fa-list" style="color:#6366f1;margin-right:8px;"></i>Recent Visitors <span style="font-weight:400;color:#94a3b8;font-size:12px;">(Last ${recentVisitors.length}) &mdash; Click any row for full details</span></h4>
-                <div class="va-table-wrap">
-                    <table class="va-table">
-                        <thead>
-                            <tr>
-                                <th>Status</th>
-                                <th>Location</th>
-                                <th>Contact</th>
-                                <th>IP Address</th>
-                                <th>Device</th>
-                                <th>Browser</th>
-                                <th>Pages</th>
-                                <th>Time</th>
-                                <th>When</th>
-                            </tr>
-                        </thead>
-                        <tbody>${visitorsTableHtml || '<tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">No visitor data yet. Tracking will begin once someone visits your website.</td></tr>'}</tbody>
-                    </table>
-                </div>
+    container.innerHTML = `<div class="va-dash">
+        <div class="va-top">
+            <div><h3 class="va-title"><i class="fas fa-chart-pie"></i> Visitor Analytics</h3><p class="va-sub">Real-time tracking &mdash; auto-refreshes every 60s</p></div>
+            <div class="va-actions">
+                <select class="va-sel" onchange="vaChangeDays(this.value)">
+                    <option value="1" ${visitorFilterDays===1?'selected':''}>Today</option>
+                    <option value="7" ${visitorFilterDays===7?'selected':''}>7 Days</option>
+                    <option value="30" ${visitorFilterDays===30?'selected':''}>30 Days</option>
+                    <option value="90" ${visitorFilterDays===90?'selected':''}>90 Days</option>
+                </select>
+                <button onclick="loadVisitorAnalyticsData()" class="va-btn-ref"><i class="fas fa-sync-alt"></i></button>
+                <button onclick="vaExportCSV()" class="va-btn-exp"><i class="fas fa-download"></i> CSV</button>
             </div>
         </div>
-    `;
-
-    // Render Charts
-    renderVisitorCharts(stats);
+        <div class="va-kpis">
+            <div class="va-kpi kpi-blue"><div class="va-kpi-ic"><i class="fas fa-users"></i></div><div class="va-kpi-num">${s.totalVisitors||0}</div><div class="va-kpi-lbl">Total Visitors</div></div>
+            <div class="va-kpi kpi-green"><div class="va-kpi-ic"><i class="fas fa-calendar-day"></i></div><div class="va-kpi-num">${s.todayVisitors||0}</div><div class="va-kpi-lbl">Today</div></div>
+            <div class="va-kpi kpi-red"><div class="va-kpi-ic"><i class="fas fa-broadcast-tower"></i></div><div class="va-kpi-num">${s.activeNow||0}</div><div class="va-kpi-lbl">Live Now</div></div>
+            <div class="va-kpi kpi-purple"><div class="va-kpi-ic"><i class="fas fa-clock"></i></div><div class="va-kpi-num">${formatDuration(s.avgTimeSeconds||0)}</div><div class="va-kpi-lbl">Avg. Time</div></div>
+            <div class="va-kpi kpi-cyan"><div class="va-kpi-ic"><i class="fas fa-globe-americas"></i></div><div class="va-kpi-num">${s.uniqueCountries||0}</div><div class="va-kpi-lbl">Countries</div></div>
+            <div class="va-kpi kpi-orange"><div class="va-kpi-ic"><i class="fas fa-address-book"></i></div><div class="va-kpi-num">${s.identifiedVisitors||0}</div><div class="va-kpi-lbl">Identified</div></div>
+        </div>
+        <div class="va-g2">
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-chart-area"></i> Daily Trend</h4></div><div style="height:200px"><canvas id="vaChartTrend"></canvas></div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-clock"></i> Peak Hours</h4></div><div style="height:200px"><canvas id="vaChartHourly"></canvas></div></div>
+        </div>
+        <div class="va-g2">
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-globe-americas"></i> Top Countries</h4></div><div class="va-scroll-list">${countriesData.map(([k,c]) => {
+                const pts = k.split('|'); const nm = pts[0]; const cd = pts[1]||''; const fl = countryFlag(cd); const p = Math.round((c/total)*100);
+                return `<div class="vc-row"><span class="vc-flag">${fl}</span><span class="vc-name">${nm}</span><div class="vc-bar"><div class="vc-fill" style="width:${Math.max(p,4)}%"></div></div><span class="vc-num">${c}</span></div>`;
+            }).join('') || '<div class="va-empty">No location data yet</div>'}</div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-city"></i> Top Cities</h4></div><div class="va-scroll-list">${citiesData.map(([city,c]) => {
+                return `<div class="vc-row"><i class="fas fa-map-marker-alt" style="color:#f59e0b"></i><span class="vc-name">${city}</span><span class="vc-num">${c}</span></div>`;
+            }).join('') || '<div class="va-empty">No city data yet</div>'}</div></div>
+        </div>
+        <div class="va-g3">
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-laptop"></i> Devices</h4></div><div class="vb-list">${Object.entries(devices).filter(([,c])=>c>0).map(([d,c]) => bar(d,c,d==='Desktop'?'#6366f1':d==='Mobile'?'#8b5cf6':'#a78bfa',d==='Mobile'?'fa-mobile-alt':d==='Tablet'?'fa-tablet-alt':'fa-desktop')).join('')}</div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-globe"></i> Browsers</h4></div><div class="vb-list">${Object.entries(browsers).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([b,c]) => bar(b,c,'#8b5cf6','')).join('')}</div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-server"></i> OS</h4></div><div class="vb-list">${Object.entries(osSystems).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([o,c]) => bar(o,c,'#ec4899','')).join('')}</div></div>
+        </div>
+        <div class="va-g2">
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-external-link-alt"></i> Traffic Sources</h4></div><div class="va-scroll-list">${(s.referrers||[]).map(([r,c]) => `<div class="vr-row"><span class="vr-name" title="${r}">${r.length>45?r.substring(0,45)+'...':r}</span><span class="vr-cnt">${c}</span></div>`).join('') || '<div class="va-empty">No data</div>'}</div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-file-alt"></i> Top Pages</h4></div><div class="va-scroll-list">${(s.topPages||[]).map(([p,c]) => `<div class="vr-row"><span class="vr-name" title="${p}">${p.length>40?'...'+p.substring(p.length-40):p}</span><span class="vr-cnt">${c}</span></div>`).join('') || '<div class="va-empty">No data</div>'}</div></div>
+        </div>
+        <div class="va-pnl va-full">
+            <div class="va-pnl-h va-pnl-h-tbl"><h4><i class="fas fa-users"></i> All Visitors <span class="va-badge-count">${recentVisitors.length}</span></h4><div><span class="va-hint">Click row for details</span><button onclick="vaClearOldData()" class="va-btn-del"><i class="fas fa-trash-alt"></i> Clear Old</button></div></div>
+            <div class="vt-wrap"><table class="vt"><thead><tr>
+                <th width="80">Status</th><th width="190">Location</th><th>Contact / Identity</th><th width="150">Device</th><th width="50">Pgs</th><th width="70">Time</th><th width="80">When</th>
+            </tr></thead><tbody>${tableRows || '<tr><td colspan="7" class="vt-empty"><i class="fas fa-satellite-dish" style="font-size:24px;margin-bottom:8px;color:#cbd5e1"></i><br>No visitors yet<br><small>Data appears after someone visits your website</small></td></tr>'}</tbody></table></div>
+        </div>
+    </div>`;
+    renderVisitorCharts(s);
 }
 
-function vaToggleDetail(id) {
-    const row = document.getElementById(id);
-    if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-}
+function vaToggleDetail(id) { const r = document.getElementById(id); if (r) r.style.display = r.style.display === 'none' ? 'table-row' : 'none'; }
 
-function renderVisitorCharts(stats) {
-    // Daily trend chart
-    const dailyData = stats.dailyTrend || [];
-    const trendCtx = document.getElementById('vaVisitorTrendChart');
-    if (trendCtx && dailyData.length > 0) {
-        new Chart(trendCtx, {
-            type: 'line',
-            data: {
-                labels: dailyData.map(d => { const dt = new Date(d[0]); return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }),
-                datasets: [{
-                    label: 'Visitors',
-                    data: dailyData.map(d => d[1]),
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#6366f1',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { borderDash: [3,3], color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } }
-            }
-        });
+function renderVisitorCharts(s) {
+    const dd = s.dailyTrend || [];
+    const tc = document.getElementById('vaChartTrend');
+    if (tc && dd.length > 0) {
+        vaTrendChart = new Chart(tc, { type:'line', data:{ labels:dd.map(d=>{const dt=new Date(d[0]);return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});}), datasets:[{label:'Visitors',data:dd.map(d=>d[1]),borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.08)',borderWidth:2.5,fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#6366f1',pointBorderColor:'#fff',pointBorderWidth:2,pointHoverRadius:7}] }, options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e293b',padding:12,cornerRadius:8}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#94a3b8'},grid:{borderDash:[3,3],color:'rgba(0,0,0,0.05)'}},x:{ticks:{color:'#94a3b8'},grid:{display:false}}} } });
     }
-
-    // Hourly distribution chart
-    const hourlyData = stats.hourlyDistribution || {};
-    const hourlyCtx = document.getElementById('vaHourlyChart');
-    if (hourlyCtx) {
-        const hours = Array.from({length: 24}, (_, i) => i);
-        new Chart(hourlyCtx, {
-            type: 'bar',
-            data: {
-                labels: hours.map(h => h.toString().padStart(2, '0') + ':00'),
-                datasets: [{
-                    label: 'Visitors',
-                    data: hours.map(h => hourlyData[h] || 0),
-                    backgroundColor: hours.map(h => (hourlyData[h] || 0) > 0 ? 'rgba(139, 92, 246, 0.7)' : 'rgba(139, 92, 246, 0.15)'),
-                    borderRadius: 4,
-                    borderSkipped: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { borderDash: [3,3], color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } } }
-            }
-        });
+    const hd = s.hourlyDistribution || {};
+    const hc = document.getElementById('vaChartHourly');
+    if (hc) {
+        const hrs = Array.from({length:24},(_,i)=>i);
+        const mx = Math.max(...hrs.map(h=>hd[h]||0),1);
+        vaHourlyChart = new Chart(hc, { type:'bar', data:{ labels:hrs.map(h=>h.toString().padStart(2,'0')+':00'), datasets:[{label:'Visitors',data:hrs.map(h=>hd[h]||0),backgroundColor:hrs.map(h=>`rgba(139,92,246,${Math.max(0.15,(hd[h]||0)/mx)})`),borderRadius:5,borderSkipped:false}] }, options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e293b',padding:12,cornerRadius:8}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#94a3b8'},grid:{borderDash:[3,3],color:'rgba(0,0,0,0.05)'}},x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:0},grid:{display:false}}} } });
     }
 }
 
-function vaChangeDays(days) {
-    visitorFilterDays = parseInt(days);
-    state.visitors = [];
-    loadVisitorAnalyticsData();
-}
+function vaChangeDays(d) { visitorFilterDays = parseInt(d); state.visitors = []; loadVisitorAnalyticsData(); }
 
 async function vaClearOldData() {
-    const days = prompt('Delete visitor records older than how many days?', '30');
-    if (!days) return;
-    if (!confirm(`Delete all visitor records older than ${days} days?`)) return;
-    try {
-        const result = await apiCall('/visitors/clear', 'DELETE', { olderThanDays: parseInt(days) });
-        showNotification(result.message || `Deleted ${result.deleted} records`, 'success');
-        state.visitors = [];
-        loadVisitorAnalyticsData();
-    } catch (error) {
-        showNotification('Failed to clear: ' + error.message, 'error');
-    }
+    const d = prompt('Delete records older than how many days?', '30');
+    if (!d) return;
+    if (!confirm('Delete all visitor records older than ' + d + ' days?')) return;
+    try { const r = await apiCall('/visitors/clear', 'DELETE', { olderThanDays: parseInt(d) }); showNotification(r.message || 'Deleted ' + r.deleted, 'success'); state.visitors = []; loadVisitorAnalyticsData(); }
+    catch (e) { showNotification('Error: ' + e.message, 'error'); }
+}
+
+function vaExportCSV() {
+    const v = state.visitors || [];
+    if (!v.length) return showNotification('No data to export', 'warning');
+    const rows = [['Status','Country','City','Region','IP','Email','Name','Device','Browser','OS','Pages','Time(s)','Referrer','Started','Source']];
+    v.forEach(x => { const l = x.location||{}; rows.push([x.isActive?'Active':'Left',l.country||'',l.city||'',l.region||'',x.ip||'',x.userEmail||x.contactEmail||'',x.userName||'',x.deviceType,x.browser,x.os,(x.pagesViewed||[]).length,x.totalTimeSeconds||0,x.referrer||'Direct',x.startedAt||'',x.userEmail?'login':(x.contactSource||'anon')]); });
+    const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const b = new Blob([csv],{type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'visitors-'+new Date().toISOString().split('T')[0]+'.csv'; a.click();
+    showNotification('Exported '+v.length+' visitors', 'success');
 }
 
 function getTimeAgo(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'Just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return diffMin + 'm ago';
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return diffHr + 'h ago';
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return diffDay + 'd ago';
+    const now = new Date(); const ms = now - date; const sec = Math.floor(ms/1000);
+    if (sec < 60) return 'Just now';
+    const min = Math.floor(sec/60); if (min < 60) return min + 'm ago';
+    const hr = Math.floor(min/60); if (hr < 24) return hr + 'h ago';
+    const dy = Math.floor(hr/24); if (dy < 7) return dy + 'd ago';
     return formatAdminDate(date);
 }
