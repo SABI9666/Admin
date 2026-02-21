@@ -118,6 +118,8 @@ const state = {
     collectedEmailStats: {},
     collectedEmailSelectedIds: [],
     emailCollectionEnabled: false,
+    visitors: [],
+    visitorStats: {},
 };
 
 // --- INITIALIZATION ---
@@ -351,6 +353,7 @@ function showTab(tabName) {
         'chatbot-reports': { title: 'Chatbot Reports', subtitle: 'View chatbot conversations, email leads, and send draft replies' },
         'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
         'email-collection': { title: 'Email Collection', subtitle: 'Intelligent discovery of contractor company emails worldwide' },
+        'visitor-analytics': { title: 'Visitor Analytics', subtitle: 'Track who browses your website, how long they stay, and where they come from' },
         'activity-logs': { title: 'Activity Logs', subtitle: 'Track all admin actions — hourly PDF reports sent to sabincn676@gmail.com' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
@@ -383,6 +386,7 @@ function showTab(tabName) {
         'chatbot-reports': { data: state.chatbotReports || [], loader: loadChatbotReportsData },
         'bulk-email': { data: [], loader: renderBulkEmailTab },
         'email-collection': { data: state.collectedEmails || [], loader: loadEmailCollectionData },
+        'visitor-analytics': { data: state.visitors || [], loader: loadVisitorAnalyticsData },
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
     };
 
@@ -7261,4 +7265,347 @@ async function ecSyncAll() {
         showNotification('Failed to sync: ' + error.message, 'error');
     }
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load All Emails'; }
+}
+
+// =====================================================
+// VISITOR ANALYTICS — Full Dashboard
+// =====================================================
+let visitorFilterDays = 30;
+let visitorAutoRefresh = null;
+
+async function loadVisitorAnalyticsData() {
+    const container = document.getElementById('visitor-analytics-tab');
+    if (!container) return;
+    showLoader(container);
+    try {
+        const result = await apiCall(`/visitors?days=${visitorFilterDays}&limit=500`);
+        state.visitors = result.visitors || [];
+        state.visitorStats = result.stats || {};
+        const badge = document.getElementById('visitorLiveBadge');
+        if (badge) badge.textContent = result.stats?.activeNow > 0 ? result.stats.activeNow + ' live' : '';
+        renderVisitorAnalyticsTab();
+        // Auto-refresh every 60 seconds
+        if (visitorAutoRefresh) clearInterval(visitorAutoRefresh);
+        visitorAutoRefresh = setInterval(async () => {
+            try {
+                const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=500`);
+                state.visitors = r.visitors || [];
+                state.visitorStats = r.stats || {};
+                const b = document.getElementById('visitorLiveBadge');
+                if (b) b.textContent = r.stats?.activeNow > 0 ? r.stats.activeNow + ' live' : '';
+                renderVisitorAnalyticsTab();
+            } catch(e) {}
+        }, 60000);
+    } catch (error) {
+        container.innerHTML = `<div class="empty-state"><h3>Error loading visitor data</h3><p>${error.message}</p></div>`;
+    }
+}
+
+function formatDuration(seconds) {
+    if (!seconds || seconds < 1) return '0s';
+    if (seconds < 60) return seconds + 's';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m < 60) return m + 'm ' + s + 's';
+    const h = Math.floor(m / 60);
+    return h + 'h ' + (m % 60) + 'm';
+}
+
+function renderVisitorAnalyticsTab() {
+    const container = document.getElementById('visitor-analytics-tab');
+    if (!container) return;
+    const stats = state.visitorStats;
+    const visitors = state.visitors;
+
+    // Top referrers HTML
+    const refHtml = (stats.referrers || []).map(([ref, count]) => {
+        const shortRef = ref.length > 40 ? ref.substring(0, 40) + '...' : ref;
+        return `<div class="va-ref-row"><span class="va-ref-name" title="${ref}">${shortRef}</span><span class="va-ref-count">${count}</span></div>`;
+    }).join('') || '<div class="va-ref-row"><span>No referrer data yet</span></div>';
+
+    // Top pages HTML
+    const pagesHtml = (stats.topPages || []).map(([page, count]) => {
+        const shortPage = page.length > 35 ? '...' + page.substring(page.length - 35) : page;
+        return `<div class="va-ref-row"><span class="va-ref-name" title="${page}">${shortPage}</span><span class="va-ref-count">${count} views</span></div>`;
+    }).join('') || '<div class="va-ref-row"><span>No page data yet</span></div>';
+
+    // Device breakdown
+    const devices = stats.devices || {};
+    const totalDevices = Object.values(devices).reduce((a, b) => a + b, 0) || 1;
+
+    // Browser breakdown
+    const browsers = stats.browsers || {};
+
+    // OS breakdown
+    const osSystems = stats.osSystems || {};
+
+    // Recent visitors table (last 50)
+    const recentVisitors = visitors.slice(0, 50);
+    const now = new Date();
+    const visitorsTableHtml = recentVisitors.map(v => {
+        const startDate = new Date(v.startedAt);
+        const timeAgo = getTimeAgo(startDate);
+        const isLive = v.isActive && (now - new Date(v.lastActiveAt)) < 300000;
+        const statusBadge = isLive
+            ? '<span class="va-badge va-badge-live"><i class="fas fa-circle"></i> Live</span>'
+            : '<span class="va-badge va-badge-left">Left</span>';
+        const pagesCount = (v.pagesViewed || []).length;
+        const pagesList = (v.pagesViewed || []).map(p => p.page).join(', ');
+        return `<tr>
+            <td>${statusBadge}</td>
+            <td><span title="${v.ip}">${v.ip?.substring(0, 18) || 'Unknown'}</span></td>
+            <td><i class="fas fa-${v.deviceType === 'Mobile' ? 'mobile-alt' : v.deviceType === 'Tablet' ? 'tablet-alt' : 'desktop'}"></i> ${v.deviceType}</td>
+            <td>${v.browser}</td>
+            <td>${v.os}</td>
+            <td title="${pagesList}">${pagesCount} page${pagesCount !== 1 ? 's' : ''}</td>
+            <td><strong>${formatDuration(v.totalTimeSeconds)}</strong></td>
+            <td title="${v.referrer}">${(v.referrer || 'Direct').substring(0, 25)}</td>
+            <td>${timeAgo}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="va-layout">
+            <!-- Controls -->
+            <div class="va-controls">
+                <div class="va-filter-group">
+                    <label>Time Range:</label>
+                    <select id="vaFilterDays" onchange="vaChangeDays(this.value)">
+                        <option value="1" ${visitorFilterDays === 1 ? 'selected' : ''}>Today</option>
+                        <option value="7" ${visitorFilterDays === 7 ? 'selected' : ''}>Last 7 Days</option>
+                        <option value="30" ${visitorFilterDays === 30 ? 'selected' : ''}>Last 30 Days</option>
+                        <option value="90" ${visitorFilterDays === 90 ? 'selected' : ''}>Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="va-controls-right">
+                    <button onclick="loadVisitorAnalyticsData()" class="va-refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <button onclick="vaClearOldData()" class="va-clear-btn"><i class="fas fa-trash-alt"></i> Clear Old Data</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="va-stats-grid">
+                <div class="va-stat-card va-stat-total">
+                    <div class="va-stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="va-stat-info">
+                        <div class="va-stat-number">${stats.totalVisitors || 0}</div>
+                        <div class="va-stat-label">Total Visitors</div>
+                    </div>
+                </div>
+                <div class="va-stat-card va-stat-today">
+                    <div class="va-stat-icon"><i class="fas fa-calendar-day"></i></div>
+                    <div class="va-stat-info">
+                        <div class="va-stat-number">${stats.todayVisitors || 0}</div>
+                        <div class="va-stat-label">Today</div>
+                    </div>
+                </div>
+                <div class="va-stat-card va-stat-live">
+                    <div class="va-stat-icon"><i class="fas fa-broadcast-tower"></i></div>
+                    <div class="va-stat-info">
+                        <div class="va-stat-number">${stats.activeNow || 0}</div>
+                        <div class="va-stat-label">Live Now</div>
+                    </div>
+                </div>
+                <div class="va-stat-card va-stat-time">
+                    <div class="va-stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="va-stat-info">
+                        <div class="va-stat-number">${formatDuration(stats.avgTimeSeconds || 0)}</div>
+                        <div class="va-stat-label">Avg. Time Spent</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Cards Row -->
+            <div class="va-analytics-row">
+                <!-- Devices -->
+                <div class="va-card">
+                    <h4><i class="fas fa-laptop" style="color:#6366f1;margin-right:8px;"></i>Devices</h4>
+                    <div class="va-bar-list">
+                        ${Object.entries(devices).map(([device, count]) => {
+                            const pct = Math.round((count / totalDevices) * 100);
+                            const icon = device === 'Mobile' ? 'fa-mobile-alt' : device === 'Tablet' ? 'fa-tablet-alt' : 'fa-desktop';
+                            return `<div class="va-bar-item">
+                                <div class="va-bar-label"><i class="fas ${icon}"></i> ${device}</div>
+                                <div class="va-bar-track"><div class="va-bar-fill va-bar-device" style="width:${pct}%"></div></div>
+                                <div class="va-bar-value">${count} (${pct}%)</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Browsers -->
+                <div class="va-card">
+                    <h4><i class="fas fa-globe" style="color:#8b5cf6;margin-right:8px;"></i>Browsers</h4>
+                    <div class="va-bar-list">
+                        ${Object.entries(browsers).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([browser, count]) => {
+                            const pct = Math.round((count / totalDevices) * 100);
+                            return `<div class="va-bar-item">
+                                <div class="va-bar-label">${browser}</div>
+                                <div class="va-bar-track"><div class="va-bar-fill va-bar-browser" style="width:${pct}%"></div></div>
+                                <div class="va-bar-value">${count} (${pct}%)</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- OS -->
+                <div class="va-card">
+                    <h4><i class="fas fa-cog" style="color:#ec4899;margin-right:8px;"></i>Operating Systems</h4>
+                    <div class="va-bar-list">
+                        ${Object.entries(osSystems).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([os, count]) => {
+                            const pct = Math.round((count / totalDevices) * 100);
+                            return `<div class="va-bar-item">
+                                <div class="va-bar-label">${os}</div>
+                                <div class="va-bar-track"><div class="va-bar-fill va-bar-os" style="width:${pct}%"></div></div>
+                                <div class="va-bar-value">${count} (${pct}%)</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referrers & Pages Row -->
+            <div class="va-analytics-row">
+                <div class="va-card">
+                    <h4><i class="fas fa-link" style="color:#f59e0b;margin-right:8px;"></i>Top Referrers</h4>
+                    <div class="va-ref-list">${refHtml}</div>
+                </div>
+                <div class="va-card">
+                    <h4><i class="fas fa-file-alt" style="color:#10b981;margin-right:8px;"></i>Most Viewed Pages</h4>
+                    <div class="va-ref-list">${pagesHtml}</div>
+                </div>
+            </div>
+
+            <!-- Daily Trend Chart -->
+            <div class="va-card va-full-width">
+                <h4><i class="fas fa-chart-area" style="color:#3b82f6;margin-right:8px;"></i>Daily Visitor Trend</h4>
+                <canvas id="vaVisitorTrendChart" height="80"></canvas>
+            </div>
+
+            <!-- Hourly Distribution -->
+            <div class="va-card va-full-width">
+                <h4><i class="fas fa-clock" style="color:#8b5cf6;margin-right:8px;"></i>Hourly Distribution (Peak Hours)</h4>
+                <canvas id="vaHourlyChart" height="60"></canvas>
+            </div>
+
+            <!-- Recent Visitors Table -->
+            <div class="va-card va-full-width">
+                <h4><i class="fas fa-list" style="color:#6366f1;margin-right:8px;"></i>Recent Visitors <span style="font-weight:400;color:#94a3b8;font-size:12px;">(Last ${recentVisitors.length})</span></h4>
+                <div class="va-table-wrap">
+                    <table class="va-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>IP Address</th>
+                                <th>Device</th>
+                                <th>Browser</th>
+                                <th>OS</th>
+                                <th>Pages</th>
+                                <th>Time Spent</th>
+                                <th>Referrer</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>${visitorsTableHtml || '<tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">No visitor data yet. Tracking will begin once someone visits your website.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Render Charts
+    renderVisitorCharts(stats);
+}
+
+function renderVisitorCharts(stats) {
+    // Daily trend chart
+    const dailyData = stats.dailyTrend || [];
+    const trendCtx = document.getElementById('vaVisitorTrendChart');
+    if (trendCtx && dailyData.length > 0) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: dailyData.map(d => { const dt = new Date(d[0]); return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }),
+                datasets: [{
+                    label: 'Visitors',
+                    data: dailyData.map(d => d[1]),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { borderDash: [3,3], color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } }
+            }
+        });
+    }
+
+    // Hourly distribution chart
+    const hourlyData = stats.hourlyDistribution || {};
+    const hourlyCtx = document.getElementById('vaHourlyChart');
+    if (hourlyCtx) {
+        const hours = Array.from({length: 24}, (_, i) => i);
+        new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: hours.map(h => h.toString().padStart(2, '0') + ':00'),
+                datasets: [{
+                    label: 'Visitors',
+                    data: hours.map(h => hourlyData[h] || 0),
+                    backgroundColor: hours.map(h => (hourlyData[h] || 0) > 0 ? 'rgba(139, 92, 246, 0.7)' : 'rgba(139, 92, 246, 0.15)'),
+                    borderRadius: 4,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', padding: 12, cornerRadius: 8 } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { borderDash: [3,3], color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } } }
+            }
+        });
+    }
+}
+
+function vaChangeDays(days) {
+    visitorFilterDays = parseInt(days);
+    state.visitors = [];
+    loadVisitorAnalyticsData();
+}
+
+async function vaClearOldData() {
+    const days = prompt('Delete visitor records older than how many days?', '30');
+    if (!days) return;
+    if (!confirm(`Delete all visitor records older than ${days} days?`)) return;
+    try {
+        const result = await apiCall('/visitors/clear', 'DELETE', { olderThanDays: parseInt(days) });
+        showNotification(result.message || `Deleted ${result.deleted} records`, 'success');
+        state.visitors = [];
+        loadVisitorAnalyticsData();
+    } catch (error) {
+        showNotification('Failed to clear: ' + error.message, 'error');
+    }
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return diffMin + 'm ago';
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return diffHr + 'h ago';
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7) return diffDay + 'd ago';
+    return formatAdminDate(date);
 }
