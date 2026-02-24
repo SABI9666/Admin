@@ -29,11 +29,13 @@
         </div>
 
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Main</div>
+            <div class="nav-section-label">Overview</div>
             <button class="sidebar-link active" onclick="showTab('dashboard')" data-tab="dashboard">
                 <i class="fas fa-grid-2"></i>
                 <span>Dashboard</span>
             </button>
+
+            <div class="nav-section-label">User Management</div>
             <button class="sidebar-link" onclick="showTab('users')" data-tab="users">
                 <i class="fas fa-users"></i>
                 <span>Users</span>
@@ -50,14 +52,6 @@
             </button>
 
             <div class="nav-section-label">Business</div>
-            <button class="sidebar-link" onclick="showTab('conversations')" data-tab="conversations">
-                <i class="fas fa-comments"></i>
-                <span>Conversations</span>
-            </button>
-            <button class="sidebar-link" onclick="showTab('estimations')" data-tab="estimations">
-                <i class="fas fa-calculator"></i>
-                <span>Estimations</span>
-            </button>
             <button class="sidebar-link" onclick="showTab('jobs')" data-tab="jobs">
                 <i class="fas fa-briefcase"></i>
                 <span>Jobs</span>
@@ -66,6 +60,10 @@
                 <i class="fas fa-file-invoice-dollar"></i>
                 <span>Quotes</span>
             </button>
+            <button class="sidebar-link" onclick="showTab('estimations')" data-tab="estimations">
+                <i class="fas fa-calculator"></i>
+                <span>Estimations</span>
+            </button>
             <button class="sidebar-link" onclick="showTab('subscriptions')" data-tab="subscriptions">
                 <i class="fas fa-credit-card"></i>
                 <span>Subscriptions</span>
@@ -73,6 +71,10 @@
             </button>
 
             <div class="nav-section-label">Communication</div>
+            <button class="sidebar-link" onclick="showTab('conversations')" data-tab="conversations">
+                <i class="fas fa-comments"></i>
+                <span>Conversations</span>
+            </button>
             <button class="sidebar-link" onclick="showTab('messages')" data-tab="messages">
                 <i class="fas fa-envelope"></i>
                 <span>Messages</span>
@@ -86,13 +88,12 @@
                 <span>Community Feed</span>
                 <span class="nav-badge" id="communityPendingBadge"></span>
             </button>
-
             <button class="sidebar-link" onclick="showTab('announcements')" data-tab="announcements">
                 <i class="fas fa-bullhorn"></i>
                 <span>News & Updates</span>
             </button>
 
-            <div class="nav-section-label">Marketing</div>
+            <div class="nav-section-label">Marketing & Outreach</div>
             <button class="sidebar-link" onclick="showTab('prospect-outreach')" data-tab="prospect-outreach">
                 <i class="fas fa-bullseye"></i>
                 <span>Prospect Outreach</span>
@@ -102,11 +103,6 @@
                 <i class="fas fa-paper-plane"></i>
                 <span>Marketing Email</span>
             </button>
-            <button class="sidebar-link" onclick="showTab('chatbot-reports')" data-tab="chatbot-reports">
-                <i class="fas fa-robot"></i>
-                <span>Chatbot Reports</span>
-                <span class="nav-badge" id="chatbotReportsBadge"></span>
-            </button>
             <button class="sidebar-link" onclick="showTab('bulk-email')" data-tab="bulk-email">
                 <i class="fas fa-envelope-open-text"></i>
                 <span>Bulk Email</span>
@@ -115,6 +111,11 @@
                 <i class="fas fa-globe-americas"></i>
                 <span>Email Collection</span>
                 <span class="nav-badge nav-badge-amber" id="emailCollectionBadge"></span>
+            </button>
+            <button class="sidebar-link" onclick="showTab('chatbot-reports')" data-tab="chatbot-reports">
+                <i class="fas fa-robot"></i>
+                <span>Chatbot Reports</span>
+                <span class="nav-badge" id="chatbotReportsBadge"></span>
             </button>
 
             <div class="nav-section-label">Analytics</div>
@@ -150,7 +151,7 @@
                 </a>
             </div>
 
-            <div class="nav-section-label">Administration</div>
+            <div class="nav-section-label">System</div>
             <button class="sidebar-link" onclick="showTab('activity-logs')" data-tab="activity-logs">
                 <i class="fas fa-clipboard-list"></i>
                 <span>Activity Logs</span>
