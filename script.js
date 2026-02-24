@@ -7614,6 +7614,13 @@ function renderSubscriptionsTab() {
                     <span class="sub-stat-label">Contractor Pro</span>
                 </div>
             </div>
+            <div class="sub-stat-card sub-stat-invoices">
+                <div class="sub-stat-icon"><i class="fas fa-file-invoice"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.totalInvoices || 0}</span>
+                    <span class="sub-stat-label">Invoices Generated</span>
+                </div>
+            </div>
         </div>
 
         <!-- Plan Cards Section -->
@@ -7657,6 +7664,9 @@ function renderSubscriptionsTab() {
                         <option value="designer_15">Designer Premium ($15)</option>
                         <option value="contractor_pro">Contractor Pro ($49)</option>
                     </select>
+                    <button class="btn btn-sm" onclick="viewAllInvoices()" style="background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;">
+                        <i class="fas fa-file-invoice"></i> All Invoices
+                    </button>
                     <button class="btn btn-sm btn-primary" onclick="showCreateSubscriptionModal()">
                         <i class="fas fa-plus"></i> Add Subscription
                     </button>
@@ -7764,8 +7774,8 @@ function renderSubscriptionsTable(subs) {
                         <th>Plan</th>
                         <th>Amount</th>
                         <th>Status</th>
+                        <th>Invoice</th>
                         <th>Start Date</th>
-                        <th>End Date</th>
                         <th>Payment</th>
                         <th>Actions</th>
                     </tr>
@@ -7779,6 +7789,7 @@ function renderSubscriptionsTable(subs) {
                         const planLabel = planLabels[sub.plan] || sub.planLabel || sub.plan;
                         const isFreeOverride = sub.status === 'free_override';
                         const isActive = sub.status === 'active' || sub.status === 'free_override';
+                        const inv = sub.latestInvoice;
 
                         return `
                             <tr>
@@ -7801,8 +7812,18 @@ function renderSubscriptionsTable(subs) {
                                         ${st.label}
                                     </span>
                                 </td>
+                                <td>
+                                    ${inv ? `
+                                        <div class="sub-invoice-cell">
+                                            <span class="sub-invoice-num">${inv.invoiceNumber}</span>
+                                            <div class="sub-invoice-actions">
+                                                ${inv.pdfUrl ? `<a href="${inv.pdfUrl}" target="_blank" class="sub-inv-btn" title="Download PDF"><i class="fas fa-file-pdf"></i></a>` : ''}
+                                                <button class="sub-inv-btn" onclick="viewSubscriptionInvoices('${sub._id}')" title="View all invoices"><i class="fas fa-receipt"></i></button>
+                                            </div>
+                                        </div>
+                                    ` : `<span style="color:#9ca3af; font-size:12px;">No invoice</span>`}
+                                </td>
                                 <td>${formatAdminDate(sub.startDate)}</td>
-                                <td>${formatAdminDate(sub.endDate)}</td>
                                 <td>
                                     <span style="text-transform:capitalize; font-size:13px;">${sub.paymentMethod}</span>
                                 </td>
@@ -8064,6 +8085,163 @@ async function createManualSubscription() {
         showNotification(result.message || 'Subscription created', 'success');
         document.querySelector('.modal-overlay')?.remove();
         loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// ============================================================
+// INVOICE MANAGEMENT (Admin)
+// ============================================================
+
+async function viewAllInvoices() {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `
+        <div class="modal-overlay" onclick="this.remove()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:800px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #6d28d9, #8b5cf6); color:white; padding:20px 24px; border-radius:12px 12px 0 0;">
+                    <h3 style="margin:0; font-size:18px;"><i class="fas fa-file-invoice"></i> All Invoices</h3>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="allInvoicesContent" style="padding:24px;">
+                    <div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#6366f1;"></i><p style="color:#6b7280; margin-top:8px;">Loading invoices...</p></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    try {
+        const result = await subscriptionApiCall('/admin/invoices');
+        const invoices = result.invoices || [];
+        renderInvoicesList('allInvoicesContent', invoices);
+    } catch (error) {
+        document.getElementById('allInvoicesContent').innerHTML = `<p style="color:#dc2626; text-align:center;">Error: ${error.message}</p>`;
+    }
+}
+
+async function viewSubscriptionInvoices(subscriptionId) {
+    const modalContainer = document.getElementById('modal-container');
+    modalContainer.innerHTML = `
+        <div class="modal-overlay" onclick="this.remove()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:800px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #6d28d9, #8b5cf6); color:white; padding:20px 24px; border-radius:12px 12px 0 0;">
+                    <h3 style="margin:0; font-size:18px;"><i class="fas fa-receipt"></i> Subscription Invoices</h3>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="subInvoicesContent" style="padding:24px;">
+                    <div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#6366f1;"></i><p style="color:#6b7280; margin-top:8px;">Loading invoices...</p></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    try {
+        const result = await subscriptionApiCall(`/admin/invoices/${subscriptionId}`);
+        const invoices = result.invoices || [];
+        renderInvoicesList('subInvoicesContent', invoices);
+    } catch (error) {
+        document.getElementById('subInvoicesContent').innerHTML = `<p style="color:#dc2626; text-align:center;">Error: ${error.message}</p>`;
+    }
+}
+
+function renderInvoicesList(containerId, invoices) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (invoices.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:30px; color:#6b7280;">
+                <i class="fas fa-inbox" style="font-size:36px; color:#d1d5db; margin-bottom:10px;"></i>
+                <p>No invoices found</p>
+            </div>`;
+        return;
+    }
+
+    const invoiceStatusColors = {
+        paid: { bg: '#ecfdf5', color: '#059669' },
+        free: { bg: '#eff6ff', color: '#2563eb' },
+        pending: { bg: '#fffbeb', color: '#d97706' },
+        failed: { bg: '#fef2f2', color: '#dc2626' },
+        refunded: { bg: '#f3f4f6', color: '#6b7280' },
+    };
+
+    container.innerHTML = `
+        <div class="sub-table-wrapper">
+            <table class="sub-table" style="font-size:13px;">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Plan</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Issued</th>
+                        <th>Email Sent</th>
+                        <th>PDF</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${invoices.map(inv => {
+                        const stc = invoiceStatusColors[inv.status] || invoiceStatusColors.pending;
+                        return `
+                            <tr>
+                                <td><strong style="font-family:monospace; font-size:12px;">${inv.invoiceNumber}</strong></td>
+                                <td>
+                                    <div style="font-weight:600; font-size:13px;">${inv.customerName}</div>
+                                    <div style="font-size:11px; color:#6b7280;">${inv.customerEmail}</div>
+                                </td>
+                                <td><span class="sub-plan-badge" style="font-size:11px;">${inv.planLabel}</span></td>
+                                <td><strong>${inv.total === 0 ? 'Free' : '$' + inv.total.toFixed(2)}</strong></td>
+                                <td>
+                                    <span class="sub-status-badge" style="background:${stc.bg}; color:${stc.color}; font-size:11px;">
+                                        ${inv.status.toUpperCase()}
+                                    </span>
+                                </td>
+                                <td>${formatAdminDate(inv.issuedAt)}</td>
+                                <td>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <span title="Customer" style="font-size:12px;">${inv.emailSentToCustomer ? '<i class="fas fa-check-circle" style="color:#059669;"></i>' : '<i class="fas fa-times-circle" style="color:#dc2626;"></i>'}</span>
+                                        <span title="Admin" style="font-size:12px;">${inv.emailSentToAdmin ? '<i class="fas fa-check-circle" style="color:#059669;"></i>' : '<i class="fas fa-times-circle" style="color:#dc2626;"></i>'}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    ${inv.pdfUrl ? `
+                                        <a href="${inv.pdfUrl}" target="_blank" class="sub-inv-btn" title="Download PDF" style="color:#2563eb;">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    ` : `
+                                        <button class="sub-inv-btn" onclick="regenerateInvoicePDF('${inv._id}')" title="Generate PDF" style="color:#d97706;">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function regenerateInvoicePDF(invoiceId) {
+    try {
+        showNotification('Regenerating invoice PDF...', 'info');
+        const result = await subscriptionApiCall(`/admin/invoices/${invoiceId}/regenerate`, 'POST');
+        showNotification('Invoice PDF regenerated successfully', 'success');
+
+        // Refresh the invoices modal if open
+        const allContent = document.getElementById('allInvoicesContent');
+        if (allContent) viewAllInvoices();
+        const subContent = document.getElementById('subInvoicesContent');
+        if (subContent) {
+            const subId = result.invoice?.subscriptionId;
+            if (subId) viewSubscriptionInvoices(subId);
+        }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
