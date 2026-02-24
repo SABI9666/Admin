@@ -5496,3 +5496,45 @@ table tbody tr:last-child td {
     .sub-section-actions { width: 100%; }
     .sub-filter-select { flex: 1; min-width: 0; }
 }
+
+/* Invoice styles */
+.sub-stat-invoices .sub-stat-icon { background: #ede9fe; color: #6d28d9; }
+
+.sub-invoice-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sub-invoice-num {
+    font-size: 11px;
+    font-family: monospace;
+    color: #374151;
+    font-weight: 600;
+}
+
+.sub-invoice-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.sub-inv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #6366f1;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sub-inv-btn:hover {
+    background: #ede9fe;
+    color: #4f46e5;
+}
