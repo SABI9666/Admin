@@ -120,6 +120,9 @@ const state = {
     emailCollectionEnabled: false,
     visitors: [],
     visitorStats: {},
+    subscriptions: [],
+    subscriptionStats: {},
+    subscriptionPlans: {},
 };
 
 // --- INITIALIZATION ---
@@ -355,6 +358,7 @@ function showTab(tabName) {
         'email-collection': { title: 'Email Collection', subtitle: 'Intelligent discovery of contractor company emails worldwide' },
         'visitor-analytics': { title: 'Visitor Analytics', subtitle: 'Track who browses your website, how long they stay, and where they come from' },
         'activity-logs': { title: 'Activity Logs', subtitle: 'Track all admin actions — hourly PDF reports sent to sabincn676@gmail.com' },
+        'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -388,6 +392,7 @@ function showTab(tabName) {
         'email-collection': { data: state.collectedEmails || [], loader: loadEmailCollectionData },
         'visitor-analytics': { data: state.visitors || [], loader: loadVisitorAnalyticsData },
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
+        'subscriptions': { data: state.subscriptions || [], loader: loadSubscriptionsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -7498,4 +7503,568 @@ function getTimeAgo(date) {
     const hr = Math.floor(min/60); if (hr < 24) return hr + 'h ago';
     const dy = Math.floor(hr/24); if (dy < 7) return dy + 'd ago';
     return formatAdminDate(date);
+}
+
+// ============================================================
+// SUBSCRIPTIONS MANAGEMENT
+// ============================================================
+
+const SUBSCRIPTION_API_BASE = API_BASE_URL.replace('/api/admin', '').replace(/\/$/, '');
+
+async function subscriptionApiCall(endpoint, method = 'GET', body = null) {
+    const token = getToken();
+    if (!token) { showNotification('Authentication error. Please log in again.', 'error'); logout(); throw new Error('No token'); }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const options = { method, headers: { 'Authorization': `Bearer ${token}` }, signal: controller.signal };
+    if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
+    try {
+        const response = await fetch(`${SUBSCRIPTION_API_BASE}/api/subscriptions${endpoint}`, options);
+        clearTimeout(timeoutId);
+        if (response.status === 401) { logout(); throw new Error('Session expired'); }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Request failed');
+        return data;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') throw new Error('Request timed out');
+        throw error;
+    }
+}
+
+async function loadSubscriptionsData() {
+    const container = document.getElementById('subscriptions-tab');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading subscriptions...</div>';
+
+    try {
+        const [subsResponse, plansResponse] = await Promise.all([
+            subscriptionApiCall('/admin/all'),
+            subscriptionApiCall('/admin/plans'),
+        ]);
+
+        state.subscriptions = subsResponse.subscriptions || [];
+        state.subscriptionStats = subsResponse.stats || {};
+        state.subscriptionPlans = plansResponse.plans || {};
+
+        renderSubscriptionsTab();
+
+        // Update sidebar badge
+        const badge = document.getElementById('subscriptionsBadge');
+        if (badge) {
+            const activeCount = state.subscriptionStats.active || 0;
+            badge.textContent = activeCount > 0 ? activeCount : '';
+            badge.style.display = activeCount > 0 ? 'inline-block' : 'none';
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:60px 20px;">
+                <i class="fas fa-exclamation-circle" style="font-size:48px; color:#dc2626; margin-bottom:16px;"></i>
+                <h3 style="color:#1f2937; margin-bottom:8px;">Failed to Load Subscriptions</h3>
+                <p style="color:#6b7280; margin-bottom:20px;">${error.message}</p>
+                <button class="btn btn-primary" onclick="loadSubscriptionsData()">
+                    <i class="fas fa-sync-alt"></i> Retry
+                </button>
+            </div>`;
+    }
+}
+
+function renderSubscriptionsTab() {
+    const container = document.getElementById('subscriptions-tab');
+    if (!container) return;
+    const stats = state.subscriptionStats;
+    const plans = state.subscriptionPlans;
+    const subs = state.subscriptions;
+
+    container.innerHTML = `
+        <!-- Stats Cards -->
+        <div class="sub-stats-grid">
+            <div class="sub-stat-card sub-stat-total">
+                <div class="sub-stat-icon"><i class="fas fa-users"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.total || 0}</span>
+                    <span class="sub-stat-label">Total Subscriptions</span>
+                </div>
+            </div>
+            <div class="sub-stat-card sub-stat-active">
+                <div class="sub-stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.active || 0}</span>
+                    <span class="sub-stat-label">Active</span>
+                </div>
+            </div>
+            <div class="sub-stat-card sub-stat-free">
+                <div class="sub-stat-icon"><i class="fas fa-gift"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.freeOverride || 0}</span>
+                    <span class="sub-stat-label">Free Overrides</span>
+                </div>
+            </div>
+            <div class="sub-stat-card sub-stat-revenue">
+                <div class="sub-stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">$${stats.totalRevenue || 0}</span>
+                    <span class="sub-stat-label">Total Revenue</span>
+                </div>
+            </div>
+            <div class="sub-stat-card sub-stat-contractor">
+                <div class="sub-stat-icon"><i class="fas fa-hard-hat"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.contractorProCount || 0}</span>
+                    <span class="sub-stat-label">Contractor Pro</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan Cards Section -->
+        <div class="sub-section">
+            <div class="sub-section-header">
+                <h3><i class="fas fa-layer-group"></i> Subscription Plans</h3>
+                <p class="sub-section-desc">Designer Portal &amp; Contractor Pro Plan definitions</p>
+            </div>
+            <div class="sub-plans-grid">
+                ${renderPlanCards(plans)}
+            </div>
+        </div>
+
+        <!-- Stripe Configuration Notice -->
+        <div class="sub-stripe-notice">
+            <div class="sub-stripe-notice-icon"><i class="fas fa-info-circle"></i></div>
+            <div class="sub-stripe-notice-content">
+                <strong>Stripe Payment Integration</strong>
+                <p>Stripe checkout is ready to be connected. Add your Stripe API keys in the server environment variables (<code>STRIPE_SECRET_KEY</code>, <code>STRIPE_WEBHOOK_SECRET</code>) to enable live payments.</p>
+            </div>
+        </div>
+
+        <!-- Subscriber Management -->
+        <div class="sub-section">
+            <div class="sub-section-header">
+                <h3><i class="fas fa-users-cog"></i> Subscribed Clients</h3>
+                <div class="sub-section-actions">
+                    <select id="subFilterStatus" onchange="filterSubscriptions()" class="sub-filter-select">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="free_override">Free Override</option>
+                        <option value="pending">Pending</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                    <select id="subFilterPlan" onchange="filterSubscriptions()" class="sub-filter-select">
+                        <option value="all">All Plans</option>
+                        <option value="designer_free">Designer Free</option>
+                        <option value="designer_5">Designer Basic ($5)</option>
+                        <option value="designer_10">Designer Standard ($10)</option>
+                        <option value="designer_15">Designer Premium ($15)</option>
+                        <option value="contractor_pro">Contractor Pro ($49)</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary" onclick="showCreateSubscriptionModal()">
+                        <i class="fas fa-plus"></i> Add Subscription
+                    </button>
+                    <button class="btn btn-sm" onclick="loadSubscriptionsData()" style="background:#f1f5f9; border:1px solid #e2e8f0;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="subscriptionsTableContainer">
+                ${renderSubscriptionsTable(subs)}
+            </div>
+        </div>
+    `;
+}
+
+function renderPlanCards(plans) {
+    const planOrder = ['designer_free', 'designer_5', 'designer_10', 'designer_15', 'contractor_pro'];
+    const planColors = {
+        designer_free: { bg: '#f0fdf4', border: '#86efac', icon: '#16a34a', gradient: 'linear-gradient(135deg, #16a34a, #22c55e)' },
+        designer_5: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
+        designer_10: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)' },
+        designer_15: { bg: '#fdf4ff', border: '#f0abfc', icon: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #c084fc)' },
+        contractor_pro: { bg: '#fff7ed', border: '#fdba74', icon: '#ea580c', gradient: 'linear-gradient(135deg, #ea580c, #f97316)' },
+    };
+
+    return planOrder.map(key => {
+        const plan = plans[key];
+        if (!plan) return '';
+        const color = planColors[key] || planColors.designer_free;
+        const breakdownStats = state.subscriptionStats.planBreakdown || {};
+        const count = breakdownStats[key] || 0;
+
+        const isContractor = key === 'contractor_pro';
+        const priceDisplay = plan.price === 0 ? 'Free' : `$${plan.price}/mo`;
+
+        return `
+            <div class="sub-plan-card" style="border-color:${color.border}; background:${color.bg};">
+                <div class="sub-plan-header" style="background:${color.gradient};">
+                    <div class="sub-plan-price">${priceDisplay}</div>
+                    <div class="sub-plan-name">${plan.label}</div>
+                </div>
+                <div class="sub-plan-body">
+                    <div class="sub-plan-desc">${plan.description}</div>
+                    <ul class="sub-plan-features">
+                        ${plan.features.map(f => `<li><i class="fas fa-check" style="color:${color.icon};"></i> ${f}</li>`).join('')}
+                    </ul>
+                    <div class="sub-plan-subscribers">
+                        <i class="fas fa-users" style="color:${color.icon};"></i>
+                        <span>${count} active subscriber${count !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${isContractor ? `
+                        <div class="sub-plan-rates">
+                            <div class="sub-rate-item">
+                                <span class="sub-rate-label">AI Estimation</span>
+                                <span class="sub-rate-value">$${plan.aiEstimationRate}/MB</span>
+                            </div>
+                            <div class="sub-rate-item">
+                                <span class="sub-rate-label">AI Analysis</span>
+                                <span class="sub-rate-value">$${plan.aiAnalysisRate}/MB</span>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="sub-plan-quota">
+                            <span class="sub-quota-label">Quotes Allowed</span>
+                            <span class="sub-quota-value">${plan.quotesAllowed}</span>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSubscriptionsTable(subs) {
+    if (!subs || subs.length === 0) {
+        return `
+            <div style="text-align:center; padding:40px 20px; color:#6b7280;">
+                <i class="fas fa-inbox" style="font-size:40px; margin-bottom:12px; color:#d1d5db;"></i>
+                <p>No subscriptions found</p>
+            </div>`;
+    }
+
+    const statusColors = {
+        active: { bg: '#ecfdf5', color: '#059669', label: 'Active' },
+        free_override: { bg: '#eff6ff', color: '#2563eb', label: 'Free' },
+        pending: { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
+        cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
+        expired: { bg: '#f3f4f6', color: '#6b7280', label: 'Expired' },
+    };
+
+    const planLabels = {
+        designer_free: 'Designer Free',
+        designer_5: 'Designer $5',
+        designer_10: 'Designer $10',
+        designer_15: 'Designer $15',
+        contractor_pro: 'Contractor Pro',
+    };
+
+    return `
+        <div class="sub-table-wrapper">
+            <table class="sub-table">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Payment</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${subs.map(sub => {
+                        const st = statusColors[sub.status] || statusColors.pending;
+                        const name = sub.userData?.name || sub.userName || 'Unknown';
+                        const email = sub.userEmail || '';
+                        const company = sub.userData?.company || '';
+                        const planLabel = planLabels[sub.plan] || sub.planLabel || sub.plan;
+                        const isFreeOverride = sub.status === 'free_override';
+                        const isActive = sub.status === 'active' || sub.status === 'free_override';
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="sub-client-info">
+                                        <div class="sub-client-avatar" style="background:${st.bg}; color:${st.color};">
+                                            ${name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div class="sub-client-name">${name}</div>
+                                            <div class="sub-client-email">${email}</div>
+                                            ${company ? `<div class="sub-client-company">${company}</div>` : ''}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="sub-plan-badge">${planLabel}</span></td>
+                                <td><strong>${sub.amount === 0 ? 'Free' : '$' + sub.amount}</strong></td>
+                                <td>
+                                    <span class="sub-status-badge" style="background:${st.bg}; color:${st.color};">
+                                        ${st.label}
+                                    </span>
+                                </td>
+                                <td>${formatAdminDate(sub.startDate)}</td>
+                                <td>${formatAdminDate(sub.endDate)}</td>
+                                <td>
+                                    <span style="text-transform:capitalize; font-size:13px;">${sub.paymentMethod}</span>
+                                </td>
+                                <td>
+                                    <div class="sub-actions">
+                                        ${isActive ? `
+                                            <label class="sub-toggle-switch" title="${isFreeOverride ? 'Revoke free service' : 'Grant free service'}">
+                                                <input type="checkbox" ${isFreeOverride ? 'checked' : ''} onchange="toggleFreeService('${sub._id}', this.checked)">
+                                                <span class="sub-toggle-slider"></span>
+                                            </label>
+                                            <span class="sub-toggle-label">${isFreeOverride ? 'Free ON' : 'Free OFF'}</span>
+                                        ` : ''}
+                                        ${isActive ? `
+                                            <button class="btn btn-xs btn-danger" onclick="cancelSubscription('${sub._id}')" title="Cancel subscription">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-xs" onclick="viewSubscriptionDetails('${sub._id}')" title="View details" style="background:#f1f5f9; border:1px solid #e2e8f0;">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function filterSubscriptions() {
+    const statusFilter = document.getElementById('subFilterStatus')?.value || 'all';
+    const planFilter = document.getElementById('subFilterPlan')?.value || 'all';
+
+    let filtered = state.subscriptions || [];
+    if (statusFilter !== 'all') {
+        filtered = filtered.filter(s => s.status === statusFilter);
+    }
+    if (planFilter !== 'all') {
+        filtered = filtered.filter(s => s.plan === planFilter);
+    }
+
+    const tableContainer = document.getElementById('subscriptionsTableContainer');
+    if (tableContainer) {
+        tableContainer.innerHTML = renderSubscriptionsTable(filtered);
+    }
+}
+
+async function toggleFreeService(subscriptionId, grantFree) {
+    try {
+        const action = grantFree ? 'grant free service to' : 'revoke free service from';
+        if (!confirm(`Are you sure you want to ${action} this subscriber?`)) {
+            loadSubscriptionsData();
+            return;
+        }
+
+        const result = await subscriptionApiCall('/admin/toggle-free', 'POST', {
+            subscriptionId,
+            grantFree,
+        });
+
+        showNotification(result.message || 'Subscription updated', 'success');
+        loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        loadSubscriptionsData();
+    }
+}
+
+async function cancelSubscription(subscriptionId) {
+    const reason = prompt('Enter cancellation reason (optional):');
+    if (reason === null) return; // User pressed cancel
+
+    try {
+        const result = await subscriptionApiCall('/admin/cancel', 'POST', {
+            subscriptionId,
+            reason: reason || 'Cancelled by admin',
+        });
+
+        showNotification(result.message || 'Subscription cancelled', 'success');
+        loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+function viewSubscriptionDetails(subscriptionId) {
+    const sub = state.subscriptions.find(s => s._id === subscriptionId);
+    if (!sub) return showNotification('Subscription not found', 'error');
+
+    const statusColors = {
+        active: '#059669', free_override: '#2563eb', pending: '#d97706',
+        cancelled: '#dc2626', expired: '#6b7280',
+    };
+    const stColor = statusColors[sub.status] || '#6b7280';
+
+    const modalHtml = `
+        <div class="modal-overlay" onclick="this.remove()">
+            <div class="modal-content sub-detail-modal" onclick="event.stopPropagation()" style="max-width:560px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); color:white; padding:20px 24px; border-radius:12px 12px 0 0;">
+                    <h3 style="margin:0; font-size:18px;"><i class="fas fa-receipt"></i> Subscription Details</h3>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="padding:24px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div class="sub-detail-field">
+                            <label>Client Name</label>
+                            <span>${sub.userData?.name || sub.userName || 'N/A'}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Email</label>
+                            <span>${sub.userEmail || 'N/A'}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>User Type</label>
+                            <span style="text-transform:capitalize;">${sub.userType || 'N/A'}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Plan</label>
+                            <span>${sub.planLabel || sub.plan}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Amount</label>
+                            <span>${sub.amount === 0 ? 'Free' : '$' + sub.amount + '/mo'}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Status</label>
+                            <span style="color:${stColor}; font-weight:600; text-transform:capitalize;">${sub.status.replace('_', ' ')}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Start Date</label>
+                            <span>${formatAdminDate(sub.startDate)}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>End Date</label>
+                            <span>${formatAdminDate(sub.endDate)}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Payment Method</label>
+                            <span style="text-transform:capitalize;">${sub.paymentMethod}</span>
+                        </div>
+                        <div class="sub-detail-field">
+                            <label>Free Override</label>
+                            <span>${sub.freeOverride ? 'Yes (by ' + (sub.freeOverrideBy || 'admin') + ')' : 'No'}</span>
+                        </div>
+                        ${sub.quotesAllowed !== null && sub.quotesAllowed !== undefined ? `
+                            <div class="sub-detail-field">
+                                <label>Quotes Used</label>
+                                <span>${sub.quotesUsed || 0} / ${sub.quotesAllowed}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.aiEstimationRate ? `
+                            <div class="sub-detail-field">
+                                <label>AI Estimation Rate</label>
+                                <span>$${sub.aiEstimationRate}/MB</span>
+                            </div>
+                        ` : ''}
+                        ${sub.aiAnalysisRate ? `
+                            <div class="sub-detail-field">
+                                <label>AI Analysis Rate</label>
+                                <span>$${sub.aiAnalysisRate}/MB</span>
+                            </div>
+                        ` : ''}
+                        ${sub.stripeCustomerId ? `
+                            <div class="sub-detail-field">
+                                <label>Stripe Customer</label>
+                                <span style="font-family:monospace; font-size:12px;">${sub.stripeCustomerId}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.cancelledAt ? `
+                            <div class="sub-detail-field" style="grid-column:span 2;">
+                                <label>Cancelled</label>
+                                <span>${formatAdminDate(sub.cancelledAt)} — ${sub.cancelReason || 'No reason'}</span>
+                            </div>
+                        ` : ''}
+                        <div class="sub-detail-field">
+                            <label>Created</label>
+                            <span>${formatAdminDate(sub.createdAt)}</span>
+                        </div>
+                        ${sub.userData?.company ? `
+                            <div class="sub-detail-field">
+                                <label>Company</label>
+                                <span>${sub.userData.company}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modal-container').innerHTML = modalHtml;
+}
+
+function showCreateSubscriptionModal() {
+    const modalHtml = `
+        <div class="modal-overlay" onclick="this.remove()">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:480px;">
+                <div class="modal-header" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); color:white; padding:20px 24px; border-radius:12px 12px 0 0;">
+                    <h3 style="margin:0; font-size:18px;"><i class="fas fa-plus-circle"></i> Create Subscription</h3>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="padding:24px;">
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block; font-weight:600; margin-bottom:6px; font-size:14px; color:#374151;">User Email</label>
+                        <input type="email" id="newSubEmail" placeholder="user@example.com" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block; font-weight:600; margin-bottom:6px; font-size:14px; color:#374151;">Plan</label>
+                        <select id="newSubPlan" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                            <option value="">Select a plan...</option>
+                            <option value="designer_free">Designer Free (1 quote)</option>
+                            <option value="designer_5">Designer Basic - $5/mo (5 quotes)</option>
+                            <option value="designer_10">Designer Standard - $10/mo (10 quotes)</option>
+                            <option value="designer_15">Designer Premium - $15/mo (20 quotes)</option>
+                            <option value="contractor_pro">Contractor Pro - $49/mo</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:#374151;">
+                            <input type="checkbox" id="newSubFree" style="width:18px; height:18px;">
+                            <span>Grant as <strong>free service</strong> (no payment required)</span>
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:12px; justify-content:flex-end;">
+                        <button class="btn" onclick="this.closest('.modal-overlay').remove()" style="background:#f1f5f9; border:1px solid #e2e8f0;">Cancel</button>
+                        <button class="btn btn-primary" onclick="createManualSubscription()">
+                            <i class="fas fa-check"></i> Create Subscription
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modal-container').innerHTML = modalHtml;
+}
+
+async function createManualSubscription() {
+    const email = document.getElementById('newSubEmail')?.value?.trim();
+    const planId = document.getElementById('newSubPlan')?.value;
+    const isFree = document.getElementById('newSubFree')?.checked || false;
+
+    if (!email) return showNotification('Please enter a user email', 'warning');
+    if (!planId) return showNotification('Please select a plan', 'warning');
+
+    try {
+        const result = await subscriptionApiCall('/admin/create-manual', 'POST', {
+            userEmail: email,
+            planId,
+            isFree,
+        });
+
+        showNotification(result.message || 'Subscription created', 'success');
+        document.querySelector('.modal-overlay')?.remove();
+        loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
 }
