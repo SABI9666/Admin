@@ -359,6 +359,7 @@ function showTab(tabName) {
         'visitor-analytics': { title: 'Visitor Analytics', subtitle: 'Track who browses your website, how long they stay, and where they come from' },
         'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to sabincn676@gmail.com / 9895909666' },
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
+        'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: 9895909666 (testing)' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -393,6 +394,7 @@ function showTab(tabName) {
         'visitor-analytics': { data: state.visitors || [], loader: loadVisitorAnalyticsData },
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
         'subscriptions': { data: state.subscriptions || [], loader: loadSubscriptionsData },
+        'whatsapp-marketing': { data: state.whatsappRecipients || [], loader: loadWhatsAppMarketingData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -6624,6 +6626,330 @@ initializeAdminPanel = async function() {
     await _origInitAdmin();
     loadOperationsPortalStatus();
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ██  WHATSAPP MARKETING TAB
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let waRecipients = [];
+let waSelectedRecipients = [];
+let waCampaigns = [];
+let waApiStatus = null;
+
+async function loadWhatsAppMarketingData() {
+    const container = document.getElementById('whatsapp-marketing-tab');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading WhatsApp Marketing...</div>';
+
+    try {
+        // Fetch status, recipients, and campaigns in parallel
+        const [statusRes, recipientsRes, campaignsRes] = await Promise.allSettled([
+            apiCall('/whatsapp/status'),
+            apiCall('/whatsapp/recipients'),
+            apiCall('/whatsapp/campaigns')
+        ]);
+
+        waApiStatus = statusRes.status === 'fulfilled' ? statusRes.value : null;
+        if (recipientsRes.status === 'fulfilled' && recipientsRes.value.success) {
+            waRecipients = recipientsRes.value.recipients || [];
+            state.whatsappRecipients = waRecipients;
+        }
+        if (campaignsRes.status === 'fulfilled' && campaignsRes.value.success) {
+            waCampaigns = campaignsRes.value.campaigns || [];
+        }
+        waSelectedRecipients = [];
+        renderWhatsAppMarketingTab();
+    } catch (error) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: ' + error.message + '</p></div>';
+    }
+}
+
+function renderWhatsAppMarketingTab() {
+    const container = document.getElementById('whatsapp-marketing-tab');
+    if (!container) return;
+
+    const configured = waApiStatus && waApiStatus.configured;
+    const withPhone = waRecipients.filter(r => r.hasPhone);
+
+    let html = '';
+
+    // ── API Status Banner ──
+    if (configured) {
+        html += `<div style="padding:14px 18px; background:#ecfdf5; border:1px solid #86efac; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+            <i class="fab fa-whatsapp" style="color:#25d366; font-size:22px;"></i>
+            <div style="font-size:13px; color:#065f46; line-height:1.6;">
+                <strong>WhatsApp Cloud API Connected</strong> — Sender: <strong>${waApiStatus.senderNumber || '9895909666'}</strong> (testing — will change to Dubai number).
+                Phone ID: ${waApiStatus.phoneNumberId || 'N/A'}
+            </div>
+        </div>`;
+    } else {
+        html += `<div style="padding:16px 20px; background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                <i class="fab fa-whatsapp" style="color:#dc2626; font-size:22px;"></i>
+                <strong style="color:#991b1b; font-size:15px;">WhatsApp API Not Configured</strong>
+            </div>
+            <div style="font-size:13px; color:#7f1d1d; line-height:1.8;">
+                To enable WhatsApp Marketing, set these environment variables on your backend server:<br>
+                <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5;">WHATSAPP_PHONE_NUMBER_ID</code> — Your WhatsApp Business phone number ID<br>
+                <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5;">WHATSAPP_ACCESS_TOKEN</code> — Permanent access token from Meta Business<br><br>
+                <strong>How to get these:</strong><br>
+                1. Go to <a href="https://developers.facebook.com" target="_blank" style="color:#2563eb;">developers.facebook.com</a> → Create App → WhatsApp<br>
+                2. Add your phone number (9895909666 for testing)<br>
+                3. Get Phone Number ID + Access Token from API Setup page<br>
+                4. Add them to your Render.com environment variables
+            </div>
+        </div>`;
+    }
+
+    // ── Quick Send Section ──
+    html += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;"><i class="fab fa-whatsapp" style="color:#25d366; margin-right:8px;"></i>Quick Send</h3>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Phone Number (with country code)</label>
+                <input type="text" id="waQuickPhone" placeholder="e.g. 919895909666" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Message</label>
+                <textarea id="waQuickMessage" rows="4" placeholder="Type your WhatsApp message..." style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+            <button onclick="waSendQuick()" style="padding:10px 20px; background:#25d366; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;" ${!configured ? 'disabled title="Configure WhatsApp API first"' : ''}>
+                <i class="fab fa-whatsapp"></i> Send Message
+            </button>
+        </div>
+
+        <!-- Stats -->
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;">Summary</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div style="padding:14px; background:#f0fdf4; border-radius:8px; text-align:center;">
+                    <div style="font-size:24px; font-weight:800; color:#059669;">${withPhone.length}</div>
+                    <div style="font-size:11px; color:#64748b;">With Phone</div>
+                </div>
+                <div style="padding:14px; background:#fef2f2; border-radius:8px; text-align:center;">
+                    <div style="font-size:24px; font-weight:800; color:#dc2626;">${waRecipients.length - withPhone.length}</div>
+                    <div style="font-size:11px; color:#64748b;">No Phone</div>
+                </div>
+                <div style="padding:14px; background:#f0f9ff; border-radius:8px; text-align:center;">
+                    <div style="font-size:24px; font-weight:800; color:#0369a1;">${waRecipients.length}</div>
+                    <div style="font-size:11px; color:#64748b;">Total Users</div>
+                </div>
+                <div style="padding:14px; background:#f5f3ff; border-radius:8px; text-align:center;">
+                    <div style="font-size:24px; font-weight:800; color:#7c3aed;">${waCampaigns.length}</div>
+                    <div style="font-size:11px; color:#64748b;">Campaigns Sent</div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    // ── Bulk Campaign Section ──
+    html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:24px;">
+        <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;"><i class="fas fa-bullhorn" style="color:#25d366; margin-right:8px;"></i>Bulk WhatsApp Campaign</h3>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Campaign Name</label>
+                <input type="text" id="waCampaignName" placeholder="e.g. February Promo" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Filter by Type</label>
+                <select id="waTypeFilter" onchange="waFilterRecipients()" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <option value="all">All Users with Phone</option>
+                    <option value="contractor">Contractors Only</option>
+                    <option value="designer">Designers Only</option>
+                    <option value="prospect">Prospects Only</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Message Template <span style="color:#94a3b8;">(Use {{name}} for personalization)</span></label>
+            <textarea id="waBulkMessage" rows="5" placeholder="Hello {{name}}, we have exciting updates at SteelConnect..." style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
+            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Characters: <span id="waCharCount">0</span> / 4096</div>
+        </div>
+
+        <!-- Recipients Table -->
+        <div style="margin-bottom:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <span style="font-size:14px; font-weight:600; color:#334155;">Recipients (<span id="waSelectedCount">0</span> selected)</span>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="waSelectAll()" style="padding:6px 12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:12px;">Select All</button>
+                    <button onclick="waDeselectAll()" style="padding:6px 12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:12px;">Deselect All</button>
+                </div>
+            </div>
+            <div id="waRecipientsTable" style="max-height:300px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;"></div>
+        </div>
+
+        <button onclick="waSendBulk()" style="padding:12px 24px; background:#25d366; color:white; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px;" ${!configured ? 'disabled title="Configure WhatsApp API first"' : ''}>
+            <i class="fab fa-whatsapp"></i> Send WhatsApp Campaign
+        </button>
+    </div>`;
+
+    // ── Campaign History ──
+    if (waCampaigns.length > 0) {
+        html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:24px;">
+            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;"><i class="fas fa-history" style="margin-right:8px;"></i>Campaign History</h3>
+            <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f8fafc;">
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Campaign</th>
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Recipients</th>
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Sent</th>
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Failed</th>
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Sender</th>
+                        <th style="padding:10px 14px; text-align:left; font-weight:600; color:#475569;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        waCampaigns.forEach(c => {
+            const date = c.createdAt ? new Date(c.createdAt).toLocaleString() : '—';
+            html += `<tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:10px 14px; font-weight:500; color:#1e293b;">${c.name || 'Unnamed'}</td>
+                <td style="padding:10px 14px; color:#64748b;">${c.totalRecipients}</td>
+                <td style="padding:10px 14px;"><span style="color:#059669; font-weight:600;">${c.sent}</span></td>
+                <td style="padding:10px 14px;"><span style="color:#dc2626; font-weight:600;">${c.failed}</span></td>
+                <td style="padding:10px 14px; color:#64748b;">${c.sentBy || 'admin'}</td>
+                <td style="padding:10px 14px; color:#64748b; white-space:nowrap;">${date}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Render recipients table
+    waFilterRecipients();
+
+    // Character counter
+    const msgInput = document.getElementById('waBulkMessage');
+    if (msgInput) {
+        msgInput.addEventListener('input', () => {
+            const countEl = document.getElementById('waCharCount');
+            if (countEl) countEl.textContent = msgInput.value.length;
+        });
+    }
+}
+
+function waFilterRecipients() {
+    const typeFilter = document.getElementById('waTypeFilter')?.value || 'all';
+    const tableEl = document.getElementById('waRecipientsTable');
+    if (!tableEl) return;
+
+    const filtered = waRecipients.filter(r => {
+        if (!r.hasPhone) return false;
+        if (typeFilter === 'all') return true;
+        return r.type === typeFilter;
+    });
+
+    waSelectedRecipients = filtered.map(r => ({ phone: r.phone, name: r.name }));
+
+    let html = `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="background:#f8fafc; position:sticky; top:0;">
+                <th style="padding:8px 12px; text-align:left; width:40px;"><input type="checkbox" checked onchange="waToggleAll(this.checked)"></th>
+                <th style="padding:8px 12px; text-align:left; font-weight:600; color:#475569;">Name</th>
+                <th style="padding:8px 12px; text-align:left; font-weight:600; color:#475569;">Phone</th>
+                <th style="padding:8px 12px; text-align:left; font-weight:600; color:#475569;">Type</th>
+                <th style="padding:8px 12px; text-align:left; font-weight:600; color:#475569;">Email</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    if (filtered.length === 0) {
+        html += `<tr><td colspan="5" style="padding:20px; text-align:center; color:#94a3b8;">No recipients with phone numbers found</td></tr>`;
+    } else {
+        filtered.forEach((r, i) => {
+            const typeBadge = r.type === 'contractor' ? '#3b82f6' : r.type === 'designer' ? '#8b5cf6' : '#f59e0b';
+            html += `<tr style="border-top:1px solid #f1f5f9;">
+                <td style="padding:8px 12px;"><input type="checkbox" checked class="wa-recipient-cb" data-index="${i}" data-phone="${r.phone}" data-name="${r.name || ''}" onchange="waUpdateSelected()"></td>
+                <td style="padding:8px 12px; font-weight:500; color:#1e293b;">${r.name || '—'}</td>
+                <td style="padding:8px 12px; color:#334155; font-family:monospace;">${r.phone}</td>
+                <td style="padding:8px 12px;"><span style="padding:2px 8px; border-radius:6px; background:${typeBadge}20; color:${typeBadge}; font-size:11px; font-weight:600;">${r.type}</span></td>
+                <td style="padding:8px 12px; color:#64748b;">${r.email || '—'}</td>
+            </tr>`;
+        });
+    }
+
+    html += `</tbody></table>`;
+    tableEl.innerHTML = html;
+    waUpdateSelected();
+}
+
+function waToggleAll(checked) {
+    document.querySelectorAll('.wa-recipient-cb').forEach(cb => { cb.checked = checked; });
+    waUpdateSelected();
+}
+
+function waSelectAll() {
+    document.querySelectorAll('.wa-recipient-cb').forEach(cb => { cb.checked = true; });
+    waUpdateSelected();
+}
+
+function waDeselectAll() {
+    document.querySelectorAll('.wa-recipient-cb').forEach(cb => { cb.checked = false; });
+    waUpdateSelected();
+}
+
+function waUpdateSelected() {
+    waSelectedRecipients = [];
+    document.querySelectorAll('.wa-recipient-cb:checked').forEach(cb => {
+        waSelectedRecipients.push({ phone: cb.dataset.phone, name: cb.dataset.name || '' });
+    });
+    const countEl = document.getElementById('waSelectedCount');
+    if (countEl) countEl.textContent = waSelectedRecipients.length;
+}
+
+async function waSendQuick() {
+    const phone = document.getElementById('waQuickPhone')?.value?.trim();
+    const message = document.getElementById('waQuickMessage')?.value?.trim();
+
+    if (!phone) { showNotification('Enter a phone number', 'error'); return; }
+    if (!message) { showNotification('Enter a message', 'error'); return; }
+
+    try {
+        showNotification('Sending WhatsApp message...', 'info');
+        const response = await apiCall('/whatsapp/send-single', 'POST', { phone, message });
+        if (response.success) {
+            showNotification('WhatsApp message sent successfully!', 'success');
+            document.getElementById('waQuickMessage').value = '';
+        } else {
+            showNotification('Failed: ' + (response.message || response.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function waSendBulk() {
+    const campaignName = document.getElementById('waCampaignName')?.value?.trim() || '';
+    const message = document.getElementById('waBulkMessage')?.value?.trim();
+
+    if (!message) { showNotification('Enter a message template', 'error'); return; }
+    if (waSelectedRecipients.length === 0) { showNotification('Select at least one recipient', 'error'); return; }
+
+    if (!confirm(`Send WhatsApp message to ${waSelectedRecipients.length} recipient(s)?`)) return;
+
+    try {
+        showNotification(`Sending to ${waSelectedRecipients.length} recipients... This may take a while.`, 'info');
+        const response = await apiCall('/whatsapp/send', 'POST', {
+            recipients: waSelectedRecipients,
+            message,
+            campaignName
+        });
+
+        if (response.success) {
+            showNotification(`Campaign sent! ${response.sent} delivered, ${response.failed} failed.`, 'success');
+            // Reload to show updated campaigns
+            loadWhatsAppMarketingData();
+        } else {
+            showNotification('Failed: ' + (response.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ██  ADMIN ACTIVITY LOGS TAB
