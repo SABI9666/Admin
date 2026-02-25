@@ -6675,13 +6675,19 @@ function renderWhatsAppMarketingTab() {
 
     // ── API Status Banner ──
     if (configured) {
-        html += `<div style="padding:14px 18px; background:#ecfdf5; border:1px solid #86efac; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
-            <i class="fab fa-whatsapp" style="color:#25d366; font-size:22px;"></i>
-            <div style="font-size:13px; color:#065f46; line-height:1.6;">
-                <strong>WhatsApp Cloud API Connected</strong> — Sender: <strong>${waApiStatus.senderNumber || '9895909666'}</strong> (testing — will change to Dubai number).
-                Phone ID: ${waApiStatus.phoneNumberId || 'N/A'}
+        html += `<div style="padding:14px 18px; background:#ecfdf5; border:1px solid #86efac; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <i class="fab fa-whatsapp" style="color:#25d366; font-size:22px;"></i>
+                <div style="font-size:13px; color:#065f46; line-height:1.6;">
+                    <strong>WhatsApp Cloud API Connected</strong> — Sender: <strong>${waApiStatus.senderNumber || '9895909666'}</strong> (testing — will change to Dubai number).
+                    Phone ID: ${waApiStatus.phoneNumberId || 'N/A'}
+                </div>
             </div>
-        </div>`;
+            <button onclick="waTestConnection()" style="padding:8px 16px; background:#25d366; color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">
+                <i class="fab fa-whatsapp"></i> Test Connection
+            </button>
+        </div>
+        <div id="waTestResult" style="display:none; margin-bottom:16px;"></div>`;
     } else {
         html += `<div style="padding:16px 20px; background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; margin-bottom:20px;">
             <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
@@ -6948,6 +6954,54 @@ async function waSendBulk() {
         }
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function waTestConnection() {
+    const resultDiv = document.getElementById('waTestResult');
+    if (!resultDiv) return;
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div style="padding:14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1;"><i class="fas fa-spinner fa-spin"></i> Testing WhatsApp connection... sending test to 919895909666...</div>';
+
+    try {
+        const response = await apiCall('/whatsapp/test', 'POST', { phone: '919895909666' });
+
+        let html = `<div style="padding:16px; background:white; border:1px solid #e2e8f0; border-radius:10px;">
+            <h4 style="font-size:15px; margin:0 0 12px 0; color:#0f172a;">WhatsApp Test Results</h4>
+            <p style="font-size:13px; color:#64748b; margin:0 0 12px 0;">Phone: <strong>${response.testPhone}</strong> | Phone Number ID: <strong>${response.phoneNumberId}</strong></p>`;
+
+        // Text message result
+        const text = response.textMessage;
+        html += `<div style="padding:10px 14px; margin-bottom:8px; border-radius:6px; background:${text?.sent ? '#ecfdf5' : '#fef2f2'}; border:1px solid ${text?.sent ? '#86efac' : '#fca5a5'};">
+            <strong style="color:${text?.sent ? '#059669' : '#dc2626'};">Text Message: ${text?.sent ? 'SENT' : 'FAILED'}</strong>
+            <span style="font-size:12px; color:#64748b;"> (HTTP ${text?.httpStatus})</span>
+            ${text?.messageId ? `<br><span style="font-size:12px; color:#059669;">Message ID: ${text.messageId}</span>` : ''}
+            ${text?.error ? `<br><span style="font-size:12px; color:#dc2626;">Error: ${text.error.message || JSON.stringify(text.error)}</span>` : ''}
+        </div>`;
+
+        // Template message result
+        const tmpl = response.templateMessage;
+        html += `<div style="padding:10px 14px; margin-bottom:8px; border-radius:6px; background:${tmpl?.sent ? '#ecfdf5' : '#fef2f2'}; border:1px solid ${tmpl?.sent ? '#86efac' : '#fca5a5'};">
+            <strong style="color:${tmpl?.sent ? '#059669' : '#dc2626'};">Template Message (hello_world): ${tmpl?.sent ? 'SENT' : 'FAILED'}</strong>
+            <span style="font-size:12px; color:#64748b;"> (HTTP ${tmpl?.httpStatus})</span>
+            ${tmpl?.messageId ? `<br><span style="font-size:12px; color:#059669;">Message ID: ${tmpl.messageId}</span>` : ''}
+            ${tmpl?.error ? `<br><span style="font-size:12px; color:#dc2626;">Error: ${tmpl.error.message || JSON.stringify(tmpl.error)}</span>` : ''}
+        </div>`;
+
+        if (!text?.sent && !tmpl?.sent) {
+            html += `<div style="padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; font-size:13px; color:#92400e;">
+                <strong>Troubleshooting:</strong><br>
+                1. Make sure your phone number 9895909666 is added to WhatsApp Business account<br>
+                2. The access token may have expired — regenerate on Meta Developer Portal<br>
+                3. For first-time messages, you MUST first send "hello" from 9895909666 to your WhatsApp Business number<br>
+                4. Check that the phone number ID matches the number registered in Meta Business
+            </div>`;
+        }
+
+        html += `</div>`;
+        resultDiv.innerHTML = html;
+    } catch (error) {
+        resultDiv.innerHTML = `<div style="padding:14px; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; font-size:13px; color:#991b1b;">Error: ${error.message}</div>`;
     }
 }
 
