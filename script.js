@@ -357,7 +357,7 @@ function showTab(tabName) {
         'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
         'email-collection': { title: 'Email Collection', subtitle: 'Intelligent discovery of contractor company emails worldwide' },
         'visitor-analytics': { title: 'Visitor Analytics', subtitle: 'Track who browses your website, how long they stay, and where they come from' },
-        'activity-logs': { title: 'Activity Logs', subtitle: 'Track all admin actions — hourly PDF reports sent to sabincn676@gmail.com' },
+        'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to sabincn676@gmail.com / 9895909666' },
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
@@ -6630,6 +6630,7 @@ initializeAdminPanel = async function() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ACTIVITY_CATEGORY_COLORS = {
+    // Admin activity categories
     'User Management':    { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
     'Profile Review':     { bg: '#dcfce7', text: '#166534', border: '#86efac' },
     'Estimation':         { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
@@ -6646,22 +6647,43 @@ const ACTIVITY_CATEGORY_COLORS = {
     'Chatbot':            { bg: '#fffbeb', text: '#78350f', border: '#fbbf24' },
     'Jobs':               { bg: '#f1f5f9', text: '#334155', border: '#94a3b8' },
     'Quotes':             { bg: '#f8fafc', text: '#475569', border: '#cbd5e1' },
+    // User activity categories
+    'User Registration':  { bg: '#dbeafe', text: '#1e40af', border: '#60a5fa' },
+    'User Login':         { bg: '#d1fae5', text: '#065f46', border: '#34d399' },
+    'Profile Completion': { bg: '#fef3c7', text: '#92400e', border: '#fbbf24' },
+    'Job Posting':        { bg: '#e0e7ff', text: '#3730a3', border: '#818cf8' },
+    'Quote Submission':   { bg: '#fce7f3', text: '#9d174d', border: '#f472b6' },
+    'Estimation Request': { bg: '#fff7ed', text: '#9a3412', border: '#fb923c' },
+    'User Message':       { bg: '#f0fdfa', text: '#134e4a', border: '#2dd4bf' },
+    'Visitor Activity':   { bg: '#ecfdf5', text: '#065f46', border: '#6ee7b7' },
 };
 
-let activityLogsHoursFilter = 1;
+let activityLogsHoursFilter = 24;
 
 async function loadActivityLogsData() {
     const container = document.getElementById('activity-logs-tab');
     if (!container) return;
-    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading activity logs...</div>';
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading comprehensive activity report...</div>';
 
     try {
-        const response = await apiCall(`/activity-logs?hours=${activityLogsHoursFilter}`);
+        // Fetch comprehensive report (admin + user activities + visitor stats)
+        const response = await apiCall(`/comprehensive-activity-report?hours=${activityLogsHoursFilter}`);
         if (response.success) {
-            state.activityLogs = response.data || [];
+            state.activityLogs = response.adminActivities || [];
+            state.userActivityLogs = response.userActivities || [];
+            state.visitorStats = response.visitorStats || null;
             renderActivityLogsTab();
         } else {
-            container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load activity logs</p></div>';
+            // Fallback to old endpoint
+            const fallback = await apiCall(`/activity-logs?hours=${activityLogsHoursFilter}`);
+            if (fallback.success) {
+                state.activityLogs = fallback.data || [];
+                state.userActivityLogs = [];
+                state.visitorStats = null;
+                renderActivityLogsTab();
+            } else {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load activity logs</p></div>';
+            }
         }
     } catch (error) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: ' + error.message + '</p></div>';
@@ -6672,23 +6694,16 @@ function renderActivityLogsTab() {
     const container = document.getElementById('activity-logs-tab');
     if (!container) return;
 
-    const logs = state.activityLogs || [];
+    const adminLogs = state.activityLogs || [];
+    const userLogs = state.userActivityLogs || [];
+    const visitorStats = state.visitorStats || null;
+    const totalActivities = adminLogs.length + userLogs.length;
 
-    // Build category summary
+    // Build combined category summary
     const catSummary = {};
-    logs.forEach(l => {
-        const cat = l.category || 'Other';
-        catSummary[cat] = (catSummary[cat] || 0) + 1;
-    });
+    adminLogs.forEach(l => { catSummary[l.category || 'Other'] = (catSummary[l.category || 'Other'] || 0) + 1; });
+    userLogs.forEach(l => { catSummary[l.category || 'Other'] = (catSummary[l.category || 'Other'] || 0) + 1; });
     const sortedCats = Object.entries(catSummary).sort((a, b) => b[1] - a[1]);
-
-    // Group logs by category
-    const grouped = {};
-    logs.forEach(l => {
-        const cat = l.category || 'Other';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(l);
-    });
 
     let html = `
     <!-- Controls Bar -->
@@ -6716,36 +6731,110 @@ function renderActivityLogsTab() {
 
     <!-- Info Banner -->
     <div style="padding:14px 18px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
-        <i class="fas fa-info-circle" style="color:#0284c7; font-size:18px;"></i>
+        <i class="fas fa-bell" style="color:#0284c7; font-size:18px;"></i>
         <div style="font-size:13px; color:#0369a1; line-height:1.6;">
-            <strong>Hourly reports</strong> are automatically sent to <strong>sabincn676@gmail.com</strong> as a PDF email every 1 hour.
-            All admin actions (create, update, delete, approve, reject, etc.) are tracked and categorized.
+            <strong>Real-time notifications</strong> are sent to <strong>sabincn676@gmail.com</strong> &amp; <strong>9895909666</strong> (WhatsApp) for every activity.
+            All activities (admin actions, user registrations, logins, job posts, quotes, estimations, visitor sessions) are tracked with visitor analytics included.
         </div>
     </div>
 
     <!-- Summary Stats -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
-        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:#1e293b;">${logs.length}</div>
-            <div style="font-size:13px; color:#64748b; margin-top:4px;">Total Activities</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:14px; margin-bottom:24px;">
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#1e293b;">${totalActivities}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">Total Activities</div>
         </div>
-        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:#2563eb;">${sortedCats.length}</div>
-            <div style="font-size:13px; color:#64748b; margin-top:4px;">Categories</div>
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#7c3aed;">${adminLogs.length}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">Admin Actions</div>
         </div>
-        <div style="padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
-            <div style="font-size:28px; font-weight:800; color:#059669;">${[...new Set(logs.map(l => l.adminEmail))].length}</div>
-            <div style="font-size:13px; color:#64748b; margin-top:4px;">Active Admins</div>
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#059669;">${userLogs.length}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">User Activities</div>
+        </div>
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#0369a1;">${visitorStats ? visitorStats.todayTotal : 0}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">Visitors Today</div>
+        </div>
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#ea580c;">${visitorStats ? visitorStats.activeNow : 0}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">Active Now</div>
+        </div>
+        <div style="padding:18px; background:white; border:1px solid #e2e8f0; border-radius:12px; text-align:center;">
+            <div style="font-size:26px; font-weight:800; color:#2563eb;">${sortedCats.length}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">Categories</div>
         </div>
     </div>`;
+
+    // ── Visitor Analytics Section ──
+    if (visitorStats && visitorStats.todayTotal > 0) {
+        const avgMin = Math.floor((visitorStats.avgTimeSeconds || 0) / 60);
+        const avgSec = (visitorStats.avgTimeSeconds || 0) % 60;
+        html += `<div style="background:white; border:1px solid #bae6fd; border-radius:12px; padding:20px; margin-bottom:24px;">
+            <h3 style="font-size:16px; font-weight:700; color:#0c4a6e; margin:0 0 16px 0;"><i class="fas fa-chart-line" style="margin-right:8px;"></i>Visitor Analytics Summary</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:16px;">
+                <div style="padding:12px; background:#f0f9ff; border-radius:8px; text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#0369a1;">${visitorStats.todayTotal}</div>
+                    <div style="font-size:11px; color:#64748b;">Today</div>
+                </div>
+                <div style="padding:12px; background:#ecfdf5; border-radius:8px; text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#059669;">${visitorStats.activeNow}</div>
+                    <div style="font-size:11px; color:#64748b;">Active Now</div>
+                </div>
+                <div style="padding:12px; background:#f5f3ff; border-radius:8px; text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#7c3aed;">${visitorStats.last24hTotal}</div>
+                    <div style="font-size:11px; color:#64748b;">Last 24h</div>
+                </div>
+                <div style="padding:12px; background:#fff7ed; border-radius:8px; text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#ea580c;">${avgMin}m ${avgSec}s</div>
+                    <div style="font-size:11px; color:#64748b;">Avg Time</div>
+                </div>
+                <div style="padding:12px; background:#fdf4ff; border-radius:8px; text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#a21caf;">${visitorStats.identifiedVisitors}</div>
+                    <div style="font-size:11px; color:#64748b;">Identified</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:#334155;">
+                <span><strong>Devices:</strong> Desktop: ${visitorStats.devices?.Desktop || 0} | Mobile: ${visitorStats.devices?.Mobile || 0} | Tablet: ${visitorStats.devices?.Tablet || 0}</span>
+            </div>`;
+
+        if (visitorStats.topCountries && visitorStats.topCountries.length > 0) {
+            html += `<div style="margin-top:10px; font-size:13px;"><strong>Top Countries:</strong> ${visitorStats.topCountries.map(([c, n]) => `<span style="display:inline-block; padding:2px 8px; margin:2px; background:#ecfdf5; color:#065f46; border-radius:10px; font-size:11px;">${c}: ${n}</span>`).join('')}</div>`;
+        }
+
+        if (visitorStats.recentVisitors && visitorStats.recentVisitors.length > 0) {
+            html += `<h4 style="font-size:14px; font-weight:600; color:#334155; margin:14px 0 8px 0;">Recent Visitors</h4>
+            <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <tr style="background:#f1f5f9;">
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:#475569;">Visitor</th>
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:#475569;">Location</th>
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:#475569;">Device</th>
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:#475569;">Duration</th>
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:#475569;">Pages</th>
+                </tr>`;
+            visitorStats.recentVisitors.forEach(v => {
+                const mins = Math.floor(v.timeSpent / 60);
+                html += `<tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:6px 10px; color:#334155;">${v.email}</td>
+                    <td style="padding:6px 10px; color:#64748b;">${v.country}${v.city ? ', ' + v.city : ''}</td>
+                    <td style="padding:6px 10px; color:#64748b;">${v.device} / ${v.browser}</td>
+                    <td style="padding:6px 10px; color:#64748b;">${mins}m</td>
+                    <td style="padding:6px 10px; color:#64748b;">${v.pages}</td>
+                </tr>`;
+            });
+            html += `</table></div>`;
+        }
+        html += `</div>`;
+    }
 
     // Category Breakdown
     if (sortedCats.length > 0) {
         html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:24px;">
-            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;">Activity Breakdown</h3>`;
+            <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;">Activity Breakdown (All)</h3>`;
         sortedCats.forEach(([cat, count]) => {
             const colors = ACTIVITY_CATEGORY_COLORS[cat] || { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
-            const pct = logs.length > 0 ? Math.round((count / logs.length) * 100) : 0;
+            const pct = totalActivities > 0 ? Math.round((count / totalActivities) * 100) : 0;
             html += `<div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
                 <span style="display:inline-block; min-width:160px; padding:4px 12px; border-radius:20px; background:${colors.bg}; color:${colors.text}; font-size:12px; font-weight:600; text-align:center; border:1px solid ${colors.border};">${cat}</span>
                 <div style="flex:1; height:8px; background:#f1f5f9; border-radius:4px; overflow:hidden;">
@@ -6757,13 +6846,69 @@ function renderActivityLogsTab() {
         html += `</div>`;
     }
 
-    // Detailed Activities by Category
-    if (logs.length === 0) {
-        html += `<div style="text-align:center; padding:60px 20px; background:white; border:1px solid #e2e8f0; border-radius:12px;">
-            <i class="fas fa-clipboard-check" style="font-size:48px; color:#cbd5e1; margin-bottom:16px;"></i>
-            <p style="font-size:16px; color:#64748b;">No admin activities recorded in this period.</p>
-        </div>`;
-    } else {
+    // ── User Activities Section ──
+    if (userLogs.length > 0) {
+        const userGrouped = {};
+        userLogs.forEach(l => {
+            const cat = l.category || 'Other';
+            if (!userGrouped[cat]) userGrouped[cat] = [];
+            userGrouped[cat].push(l);
+        });
+
+        html += `<h3 style="font-size:17px; font-weight:700; color:#059669; margin:24px 0 16px 0;"><i class="fas fa-users" style="margin-right:8px;"></i>User Activities (${userLogs.length})</h3>`;
+
+        const sortedUserGroups = Object.entries(userGrouped).sort((a, b) => b[1].length - a[1].length);
+        for (const [category, items] of sortedUserGroups) {
+            const colors = ACTIVITY_CATEGORY_COLORS[category] || { bg: '#ecfdf5', text: '#065f46', border: '#34d399' };
+            html += `<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:16px; overflow:hidden;">
+                <div style="padding:14px 20px; background:${colors.bg}; border-bottom:2px solid ${colors.border}; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:15px; font-weight:700; color:${colors.text};">${category}</span>
+                    <span style="background:${colors.border}; color:white; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:700;">${items.length}</span>
+                </div>
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f8fafc;">
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Time</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">User</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Type</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Action</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            items.forEach(item => {
+                const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '—';
+                const user = item.userEmail ? item.userEmail.split('@')[0] : (item.userName || 'unknown');
+                const userType = item.userType || '—';
+                const action = item.action || '—';
+                const desc = item.description || '—';
+                html += `<tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:10px 16px; font-size:13px; color:#64748b; white-space:nowrap;">${time}</td>
+                    <td style="padding:10px 16px; font-size:13px; color:#334155; font-weight:500;">${user}</td>
+                    <td style="padding:10px 16px;"><span style="padding:2px 8px; border-radius:6px; background:#f0fdf4; color:#065f46; font-size:11px; font-weight:600;">${userType}</span></td>
+                    <td style="padding:10px 16px;">
+                        <span style="display:inline-block; padding:3px 10px; border-radius:6px; background:${colors.bg}; color:${colors.text}; font-size:12px; font-weight:600;">${action}</span>
+                    </td>
+                    <td style="padding:10px 16px; font-size:13px; color:#475569; max-width:400px; word-break:break-word;">${desc}</td>
+                </tr>`;
+            });
+            html += `</tbody></table></div></div>`;
+        }
+    }
+
+    // ── Admin Activities Section ──
+    if (adminLogs.length > 0) {
+        const grouped = {};
+        adminLogs.forEach(l => {
+            const cat = l.category || 'Other';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(l);
+        });
+
+        html += `<h3 style="font-size:17px; font-weight:700; color:#7c3aed; margin:24px 0 16px 0;"><i class="fas fa-shield-alt" style="margin-right:8px;"></i>Admin Activities (${adminLogs.length})</h3>`;
+
         const sortedGroups = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
         for (const [category, items] of sortedGroups) {
             const colors = ACTIVITY_CATEGORY_COLORS[category] || { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
@@ -6776,31 +6921,38 @@ function renderActivityLogsTab() {
                 <table style="width:100%; border-collapse:collapse;">
                     <thead>
                         <tr style="background:#f8fafc;">
-                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Time</th>
-                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Admin</th>
-                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Action</th>
-                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Details</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Time</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Admin</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Action</th>
+                            <th style="padding:10px 16px; text-align:left; font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase;">Details</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
             items.forEach(item => {
                 const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '—';
-                const admin = item.adminEmail ? item.adminEmail.split('@')[0] : 'system';
+                const adminName = item.adminEmail ? item.adminEmail.split('@')[0] : 'system';
                 const action = item.action || '—';
                 const desc = item.description || '—';
                 html += `<tr style="border-top:1px solid #f1f5f9;">
                     <td style="padding:10px 16px; font-size:13px; color:#64748b; white-space:nowrap;">${time}</td>
-                    <td style="padding:10px 16px; font-size:13px; color:#334155; font-weight:500;">${admin}</td>
+                    <td style="padding:10px 16px; font-size:13px; color:#334155; font-weight:500;">${adminName}</td>
                     <td style="padding:10px 16px;">
                         <span style="display:inline-block; padding:3px 10px; border-radius:6px; background:${colors.bg}; color:${colors.text}; font-size:12px; font-weight:600;">${action}</span>
                     </td>
                     <td style="padding:10px 16px; font-size:13px; color:#475569; max-width:400px; word-break:break-word;">${desc}</td>
                 </tr>`;
             });
-
             html += `</tbody></table></div></div>`;
         }
+    }
+
+    // No activities at all
+    if (totalActivities === 0) {
+        html += `<div style="text-align:center; padding:60px 20px; background:white; border:1px solid #e2e8f0; border-radius:12px;">
+            <i class="fas fa-clipboard-check" style="font-size:48px; color:#cbd5e1; margin-bottom:16px;"></i>
+            <p style="font-size:16px; color:#64748b;">No activities recorded in this period.</p>
+        </div>`;
     }
 
     container.innerHTML = html;
