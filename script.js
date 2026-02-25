@@ -6719,6 +6719,14 @@ function renderWhatsAppMarketingTab() {
                 <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Message</label>
                 <textarea id="waQuickMessage" rows="4" placeholder="Type your WhatsApp message..." style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
             </div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                <button onclick="waInsertLink('waQuickMessage')" style="padding:6px 12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px;">
+                    <i class="fas fa-link"></i> Insert Website Link
+                </button>
+                <button onclick="waInsertCustomLink('waQuickMessage')" style="padding:6px 12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px;">
+                    <i class="fas fa-external-link-alt"></i> Insert Custom Link
+                </button>
+            </div>
             <button onclick="waSendQuick()" style="padding:10px 20px; background:#25d366; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;" ${!configured ? 'disabled title="Configure WhatsApp API first"' : ''}>
                 <i class="fab fa-whatsapp"></i> Send Message
             </button>
@@ -6768,10 +6776,32 @@ function renderWhatsAppMarketingTab() {
             </div>
         </div>
 
+        <div style="margin-bottom:12px;">
+            <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Quick Templates</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="waUseTemplate('welcome')" style="padding:6px 12px; background:#ecfdf5; border:1px solid #86efac; border-radius:6px; cursor:pointer; font-size:12px; color:#065f46;">Welcome</button>
+                <button onclick="waUseTemplate('promo')" style="padding:6px 12px; background:#eff6ff; border:1px solid #93c5fd; border-radius:6px; cursor:pointer; font-size:12px; color:#1e40af;">Promotion</button>
+                <button onclick="waUseTemplate('update')" style="padding:6px 12px; background:#fef3c7; border:1px solid #fcd34d; border-radius:6px; cursor:pointer; font-size:12px; color:#92400e;">Platform Update</button>
+                <button onclick="waUseTemplate('opportunity')" style="padding:6px 12px; background:#f3e8ff; border:1px solid #c084fc; border-radius:6px; cursor:pointer; font-size:12px; color:#6b21a8;">New Opportunity</button>
+                <button onclick="waUseTemplate('follow_up')" style="padding:6px 12px; background:#fce7f3; border:1px solid #f9a8d4; border-radius:6px; cursor:pointer; font-size:12px; color:#9d174d;">Follow Up</button>
+            </div>
+        </div>
+
         <div style="margin-bottom:16px;">
             <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Message Template <span style="color:#94a3b8;">(Use {{name}} for personalization)</span></label>
-            <textarea id="waBulkMessage" rows="5" placeholder="Hello {{name}}, we have exciting updates at SteelConnect..." style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
-            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Characters: <span id="waCharCount">0</span> / 4096</div>
+            <textarea id="waBulkMessage" rows="6" placeholder="Hello {{name}}, we have exciting updates at SteelConnect..." style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px;">
+                <div style="display:flex; gap:8px;">
+                    <button onclick="waInsertLink('waBulkMessage')" style="padding:5px 10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:11px; display:flex; align-items:center; gap:4px;">
+                        <i class="fas fa-link"></i> Website Link
+                    </button>
+                    <button onclick="waInsertCustomLink('waBulkMessage')" style="padding:5px 10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:11px; display:flex; align-items:center; gap:4px;">
+                        <i class="fas fa-external-link-alt"></i> Custom Link
+                    </button>
+                    <button onclick="waInsertText('waBulkMessage', '{{name}}')" style="padding:5px 10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-size:11px;">+ Name</button>
+                </div>
+                <div style="font-size:12px; color:#94a3b8;">Characters: <span id="waCharCount">0</span> / 4096</div>
+            </div>
         </div>
 
         <!-- Recipients Table -->
@@ -6955,6 +6985,125 @@ async function waSendBulk() {
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
+}
+
+const WA_WEBSITE_URL = 'https://steelconnectapp.com';
+
+const WA_TEMPLATES = {
+    welcome: `Hello {{name}},
+
+Welcome to *SteelConnect* — the professional platform connecting contractors with skilled steel designers.
+
+We're excited to have you on board! Start exploring projects and connect with industry professionals today.
+
+Visit us: ${WA_WEBSITE_URL}
+
+Best regards,
+SteelConnect Team`,
+
+    promo: `Hi {{name}},
+
+We have an exclusive offer for you at *SteelConnect*!
+
+For a limited time, get access to premium features and connect with top steel construction professionals.
+
+Check it out now: ${WA_WEBSITE_URL}
+
+Don't miss out!
+SteelConnect Team`,
+
+    update: `Hi {{name}},
+
+We've just launched exciting new features on *SteelConnect*:
+
+- Improved project matching
+- Faster estimation tools
+- Enhanced communication
+
+Log in to see what's new: ${WA_WEBSITE_URL}
+
+SteelConnect Team`,
+
+    opportunity: `Hi {{name}},
+
+New opportunities are available on *SteelConnect*!
+
+Contractors are posting new steel construction projects and looking for skilled professionals like you.
+
+Browse available projects: ${WA_WEBSITE_URL}
+
+Best regards,
+SteelConnect Team`,
+
+    follow_up: `Hi {{name}},
+
+We noticed you haven't been active on *SteelConnect* recently.
+
+There are new projects and professionals waiting for you. Don't miss out on great opportunities!
+
+Come back and explore: ${WA_WEBSITE_URL}
+
+We'd love to have you back!
+SteelConnect Team`
+};
+
+function waInsertLink(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const linkText = `\n\nVisit us: ${WA_WEBSITE_URL}`;
+    textarea.value = text.substring(0, start) + linkText + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + linkText.length;
+    if (textareaId === 'waBulkMessage') {
+        const countEl = document.getElementById('waCharCount');
+        if (countEl) countEl.textContent = textarea.value.length;
+    }
+}
+
+function waInsertCustomLink(textareaId) {
+    const url = prompt('Enter the URL to insert:', 'https://');
+    if (!url || url === 'https://') return;
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const linkText = `\n${url}`;
+    textarea.value = text.substring(0, start) + linkText + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + linkText.length;
+    if (textareaId === 'waBulkMessage') {
+        const countEl = document.getElementById('waCharCount');
+        if (countEl) countEl.textContent = textarea.value.length;
+    }
+}
+
+function waInsertText(textareaId, text) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+    textarea.value = val.substring(0, start) + text + val.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    if (textareaId === 'waBulkMessage') {
+        const countEl = document.getElementById('waCharCount');
+        if (countEl) countEl.textContent = textarea.value.length;
+    }
+}
+
+function waUseTemplate(templateKey) {
+    const template = WA_TEMPLATES[templateKey];
+    if (!template) return;
+    const textarea = document.getElementById('waBulkMessage');
+    if (!textarea) return;
+    textarea.value = template;
+    const countEl = document.getElementById('waCharCount');
+    if (countEl) countEl.textContent = textarea.value.length;
 }
 
 async function waTestConnection() {
