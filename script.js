@@ -122,6 +122,8 @@ const state = {
     visitorStats: {},
     subscriptions: [],
     subscriptionStats: {},
+    voiceCallLogs: [],
+    voiceCallStats: {},
     subscriptionPlans: {},
 };
 
@@ -360,6 +362,7 @@ function showTab(tabName) {
         'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to sabincn676@gmail.com / 9895909666' },
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
         'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: 9895909666 (testing)' },
+        'voice-call-logs': { title: 'Voice Call Logs', subtitle: 'Monitor voice calls between users' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -395,6 +398,7 @@ function showTab(tabName) {
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
         'subscriptions': { data: state.subscriptions || [], loader: loadSubscriptionsData },
         'whatsapp-marketing': { data: state.whatsappRecipients || [], loader: loadWhatsAppMarketingData },
+        'voice-call-logs': { data: state.voiceCallLogs || [], loader: loadVoiceCallLogsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -2117,6 +2121,110 @@ async function viewConversationMessages(conversationId) {
     } catch (error) {
         closeModal();
     }
+}
+
+// --- VOICE CALL LOGS MANAGEMENT ---
+async function loadVoiceCallLogsData() {
+    const container = document.getElementById('voice-call-logs-tab');
+    showLoader(container);
+    try {
+        const { data, stats } = await apiCall('/voice-calls/admin/all?limit=200');
+        state.voiceCallLogs = data || [];
+        state.voiceCallStats = stats || {};
+        renderVoiceCallLogsTab();
+    } catch (error) {
+        container.innerHTML = `<p class="error">Failed to load voice call logs.</p><button class="btn" onclick="loadVoiceCallLogsData()">Retry</button>`;
+    }
+}
+
+function renderVoiceCallLogsTab() {
+    const container = document.getElementById('voice-call-logs-tab');
+    const stats = state.voiceCallStats;
+    const calls = state.voiceCallLogs;
+
+    const avgDuration = stats.total > 0 ? Math.round(stats.totalDuration / (stats.completed || 1)) : 0;
+    const avgMins = Math.floor(avgDuration / 60);
+    const avgSecs = avgDuration % 60;
+
+    container.innerHTML = `
+        <div class="section-header">
+            <h3><i class="fas fa-phone-alt"></i> Voice Call Logs (${calls.length})</h3>
+            <div class="header-actions">
+                <button class="btn" onclick="loadVoiceCallLogsData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+        <div class="call-stats-grid">
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #2563eb, #4f46e5)"><i class="fas fa-phone"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.total || 0}</span><span class="call-stat-label">Total Calls</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #10b981, #059669)"><i class="fas fa-check-circle"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.completed || 0}</span><span class="call-stat-label">Completed</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706)"><i class="fas fa-phone-slash"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.missed || 0}</span><span class="call-stat-label">Missed</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626)"><i class="fas fa-times-circle"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.rejected || 0}</span><span class="call-stat-label">Rejected</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"><i class="fas fa-clock"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${avgMins}m ${avgSecs}s</span><span class="call-stat-label">Avg Duration</span></div>
+            </div>
+        </div>
+        <div id="call-logs-table-container">
+            ${renderCallLogsTable(calls)}
+        </div>
+    `;
+}
+
+function renderCallLogsTable(calls) {
+    if (!calls || calls.length === 0) return '<p style="text-align:center;padding:2rem;color:#94a3b8;">No voice call logs found yet.</p>';
+
+    return `
+        <table>
+            <thead>
+                <tr>
+                    <th>Caller</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Started At</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${calls.map(call => {
+                    const statusColors = {
+                        completed: '#10b981', missed: '#f59e0b', rejected: '#ef4444',
+                        cancelled: '#94a3b8', disconnected: '#f97316'
+                    };
+                    const statusColor = statusColors[call.status] || '#94a3b8';
+                    const mins = Math.floor((call.duration || 0) / 60);
+                    const secs = (call.duration || 0) % 60;
+                    const durationStr = call.duration > 0 ? `${mins}m ${secs}s` : '-';
+                    const startTime = call.startedAt ? new Date(call.startedAt).toLocaleString() : 'N/A';
+
+                    return `
+                        <tr>
+                            <td>
+                                <div style="display:flex;flex-direction:column;">
+                                    <strong>${call.callerName || 'Unknown'}</strong>
+                                    <small style="color:#94a3b8;font-size:11px;">${call.callerId ? call.callerId.substring(0, 12) + '...' : ''}</small>
+                                </div>
+                            </td>
+                            <td><span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${statusColor}15;color:${statusColor};border:1px solid ${statusColor}30;"><i class="fas ${call.status === 'completed' ? 'fa-check' : call.status === 'missed' ? 'fa-phone-slash' : call.status === 'rejected' ? 'fa-times' : 'fa-minus-circle'}"></i>${call.status}</span></td>
+                            <td>${durationStr}</td>
+                            <td><small>${startTime}</small></td>
+                            <td><span style="padding:3px 8px;background:#f1f5f9;border-radius:6px;font-size:11px;font-weight:500;">${call.callType || 'voice'}</span></td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
 }
 
 // --- ENHANCED SUPPORT SYSTEM MANAGEMENT ---
