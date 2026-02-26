@@ -8281,6 +8281,13 @@ function renderSubscriptionsTab() {
                     <span class="sub-stat-label">Free Overrides</span>
                 </div>
             </div>
+            <div class="sub-stat-card" style="border-left:4px solid #b45309;">
+                <div class="sub-stat-icon" style="background:#fef3c7; color:#b45309;"><i class="fas fa-pause-circle"></i></div>
+                <div class="sub-stat-info">
+                    <span class="sub-stat-number">${stats.stopped || 0}</span>
+                    <span class="sub-stat-label">Stopped</span>
+                </div>
+            </div>
             <div class="sub-stat-card sub-stat-revenue">
                 <div class="sub-stat-icon"><i class="fas fa-dollar-sign"></i></div>
                 <div class="sub-stat-info">
@@ -8339,6 +8346,7 @@ function renderSubscriptionsTab() {
                     <select id="subFilterStatus" onchange="filterSubscriptions()" class="sub-filter-select">
                         <option value="all">All Status</option>
                         <option value="active">Active</option>
+                        <option value="stopped">Stopped</option>
                         <option value="free_override">Free Override</option>
                         <option value="pending">Pending</option>
                         <option value="cancelled">Cancelled</option>
@@ -8479,6 +8487,7 @@ function renderSubscriptionsTable(subs) {
     const statusColors = {
         active: { bg: '#ecfdf5', color: '#059669', label: 'Active' },
         free_override: { bg: '#eff6ff', color: '#2563eb', label: 'Free' },
+        stopped: { bg: '#fef3c7', color: '#b45309', label: 'Stopped' },
         pending: { bg: '#fffbeb', color: '#d97706', label: 'Pending' },
         cancelled: { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
         expired: { bg: '#f3f4f6', color: '#6b7280', label: 'Expired' },
@@ -8563,14 +8572,16 @@ function renderSubscriptionsTable(subs) {
                                 </td>
                                 <td>
                                     <div class="sub-actions">
-                                        ${isActive ? `
-                                            <label class="sub-toggle-switch" title="${isFreeOverride ? 'Revoke free service' : 'Grant free service'}">
-                                                <input type="checkbox" ${isFreeOverride ? 'checked' : ''} onchange="toggleFreeService('${sub._id}', this.checked)">
-                                                <span class="sub-toggle-slider"></span>
-                                            </label>
-                                            <span class="sub-toggle-label">${isFreeOverride ? 'Free ON' : 'Free OFF'}</span>
-                                        ` : ''}
-                                        ${isActive ? `
+                                        ${isActive || sub.status === 'stopped' ? `
+                                            <select class="sub-status-select" onchange="setSubscriptionStatus('${sub._id}', this.value)" title="Change subscription status" style="font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; cursor:pointer; min-width:90px; background:${st.bg}; color:${st.color}; font-weight:600;">
+                                                <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>
+                                                <option value="stopped" ${sub.status === 'stopped' ? 'selected' : ''}>Stopped</option>
+                                                <option value="free_override" ${sub.status === 'free_override' ? 'selected' : ''}>Free</option>
+                                            </select>
+                                        ` : `
+                                            <span style="font-size:12px; color:#9ca3af;">${st.label}</span>
+                                        `}
+                                        ${isActive || sub.status === 'stopped' ? `
                                             <button class="btn btn-xs btn-danger" onclick="cancelSubscription('${sub._id}')" title="Cancel subscription">
                                                 <i class="fas fa-ban"></i>
                                             </button>
@@ -8628,6 +8639,27 @@ async function toggleFreeService(subscriptionId, grantFree) {
     }
 }
 
+async function setSubscriptionStatus(subscriptionId, newStatus) {
+    const labels = { active: 'Activate', stopped: 'Stop', free_override: 'make Free' };
+    if (!confirm(`Are you sure you want to ${labels[newStatus] || newStatus} this subscription?`)) {
+        loadSubscriptionsData();
+        return;
+    }
+
+    try {
+        const result = await subscriptionApiCall('/admin/set-status', 'POST', {
+            subscriptionId,
+            newStatus,
+        });
+
+        showNotification(result.message || 'Subscription status updated', 'success');
+        loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+        loadSubscriptionsData();
+    }
+}
+
 async function cancelSubscription(subscriptionId) {
     const reason = prompt('Enter cancellation reason (optional):');
     if (reason === null) return; // User pressed cancel
@@ -8650,8 +8682,8 @@ function viewSubscriptionDetails(subscriptionId) {
     if (!sub) return showNotification('Subscription not found', 'error');
 
     const statusColors = {
-        active: '#059669', free_override: '#2563eb', pending: '#d97706',
-        cancelled: '#dc2626', expired: '#6b7280',
+        active: '#059669', free_override: '#2563eb', stopped: '#b45309',
+        pending: '#d97706', cancelled: '#dc2626', expired: '#6b7280',
     };
     const stColor = statusColors[sub.status] || '#6b7280';
 
@@ -8728,6 +8760,12 @@ function viewSubscriptionDetails(subscriptionId) {
                             <div class="sub-detail-field">
                                 <label>Stripe Customer</label>
                                 <span style="font-family:monospace; font-size:12px;">${sub.stripeCustomerId}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.statusChangedBy ? `
+                            <div class="sub-detail-field" style="grid-column:span 2;">
+                                <label>Status Changed By</label>
+                                <span>${sub.statusChangedBy} on ${formatAdminDate(sub.statusChangedAt)}</span>
                             </div>
                         ` : ''}
                         ${sub.cancelledAt ? `
