@@ -8571,22 +8571,37 @@ function renderSubscriptionsTable(subs) {
                                     <span style="text-transform:capitalize; font-size:13px;">${sub.paymentMethod}</span>
                                 </td>
                                 <td>
-                                    <div class="sub-actions">
-                                        ${isActive || sub.status === 'stopped' ? `
-                                            <select class="sub-status-select" onchange="setSubscriptionStatus('${sub._id}', this.value)" title="Change subscription status" style="font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; cursor:pointer; min-width:90px; background:${st.bg}; color:${st.color}; font-weight:600;">
-                                                <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>
-                                                <option value="stopped" ${sub.status === 'stopped' ? 'selected' : ''}>Stopped</option>
-                                                <option value="free_override" ${sub.status === 'free_override' ? 'selected' : ''}>Free</option>
-                                            </select>
-                                        ` : `
-                                            <span style="font-size:12px; color:#9ca3af;">${st.label}</span>
-                                        `}
-                                        ${isActive || sub.status === 'stopped' ? `
-                                            <button class="btn btn-xs btn-danger" onclick="cancelSubscription('${sub._id}')" title="Cancel subscription">
-                                                <i class="fas fa-ban"></i>
+                                    <div class="sub-actions" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                        ${sub.status === 'active' ? `
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'stopped')" title="Stop this subscription" style="background:#fef3c7; color:#b45309; border:1px solid #fbbf24; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-pause"></i> Stop
+                                            </button>
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'free_override')" title="Make free" style="background:#eff6ff; color:#2563eb; border:1px solid #93c5fd; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-gift"></i> Free
                                             </button>
                                         ` : ''}
-                                        <button class="btn btn-xs" onclick="viewSubscriptionDetails('${sub._id}')" title="View details" style="background:#f1f5f9; border:1px solid #e2e8f0;">
+                                        ${sub.status === 'stopped' ? `
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'active')" title="Activate this subscription" style="background:#ecfdf5; color:#059669; border:1px solid #6ee7b7; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-play"></i> Activate
+                                            </button>
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'free_override')" title="Make free" style="background:#eff6ff; color:#2563eb; border:1px solid #93c5fd; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-gift"></i> Free
+                                            </button>
+                                        ` : ''}
+                                        ${sub.status === 'free_override' ? `
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'active')" title="Set to paid active" style="background:#ecfdf5; color:#059669; border:1px solid #6ee7b7; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-play"></i> Activate
+                                            </button>
+                                            <button class="btn btn-xs" onclick="setSubscriptionStatus('${sub._id}', 'stopped')" title="Stop this subscription" style="background:#fef3c7; color:#b45309; border:1px solid #fbbf24; font-weight:600; padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-pause"></i> Stop
+                                            </button>
+                                        ` : ''}
+                                        ${isActive || sub.status === 'stopped' ? `
+                                            <button class="btn btn-xs btn-danger" onclick="cancelSubscription('${sub._id}')" title="Cancel subscription permanently" style="padding:4px 10px; font-size:11px;">
+                                                <i class="fas fa-ban"></i> Cancel
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-xs" onclick="viewSubscriptionDetails('${sub._id}')" title="View details" style="background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 8px; font-size:11px;">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
@@ -8785,6 +8800,33 @@ function viewSubscriptionDetails(subscriptionId) {
                             </div>
                         ` : ''}
                     </div>
+
+                    <!-- Subscription Control Actions -->
+                    ${sub.status !== 'cancelled' && sub.status !== 'expired' ? `
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #e5e7eb;">
+                        <label style="display:block; font-weight:700; font-size:13px; color:#374151; margin-bottom:10px;"><i class="fas fa-sliders-h"></i> Subscription Control</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${sub.status !== 'active' ? `
+                                <button class="btn btn-sm" onclick="closeModal(); setSubscriptionStatus('${sub._id}', 'active')" style="background:#ecfdf5; color:#059669; border:1px solid #6ee7b7; font-weight:600;">
+                                    <i class="fas fa-play-circle"></i> Activate
+                                </button>
+                            ` : ''}
+                            ${sub.status !== 'stopped' ? `
+                                <button class="btn btn-sm" onclick="closeModal(); setSubscriptionStatus('${sub._id}', 'stopped')" style="background:#fef3c7; color:#b45309; border:1px solid #fbbf24; font-weight:600;">
+                                    <i class="fas fa-pause-circle"></i> Stop
+                                </button>
+                            ` : ''}
+                            ${sub.status !== 'free_override' ? `
+                                <button class="btn btn-sm" onclick="closeModal(); setSubscriptionStatus('${sub._id}', 'free_override')" style="background:#eff6ff; color:#2563eb; border:1px solid #93c5fd; font-weight:600;">
+                                    <i class="fas fa-gift"></i> Make Free
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm btn-danger" onclick="closeModal(); cancelSubscription('${sub._id}')" style="font-weight:600;">
+                                <i class="fas fa-ban"></i> Cancel Permanently
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
         </div>
