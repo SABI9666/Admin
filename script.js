@@ -8421,7 +8421,7 @@ function renderPlanCards(plans) {
                     </div>
                     ${plan.storageAllowedMB ? `
                     <div class="sub-rate-item">
-                        <span class="sub-rate-label">Storage</span>
+                        <span class="sub-rate-label">Max AI Estimation</span>
                         <span class="sub-rate-value">${(plan.storageAllowedMB / 1024).toFixed(0)} GB</span>
                     </div>` : ''}
                 </div>`;
@@ -8766,8 +8766,8 @@ function showCreateSubscriptionModal() {
                             <option value="contractor_pro">Contractor Pro - $49/mo</option>
                             <option value="ai_analysis_daily_weekly">AI Analysis Daily/Weekly - $5/wk</option>
                             <option value="ai_analysis_monthly">AI Analysis Monthly - $10/mo</option>
-                            <option value="ai_analysis_premium">AI Analysis Premium - $49/mo (100GB + 1 analysis)</option>
-                            <option value="ai_analysis_pro">AI Analysis Pro - $99/mo (500GB + 3 analyses)</option>
+                            <option value="ai_analysis_premium">AI Analysis Premium - $49/mo (100GB max estimation + 1 analysis)</option>
+                            <option value="ai_analysis_pro">AI Analysis Pro - $99/mo (500GB max estimation + 3 analyses)</option>
                         </select>
                     </div>
                     <div style="margin-bottom:20px;">
