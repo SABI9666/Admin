@@ -8349,7 +8349,8 @@ function renderSubscriptionsTab() {
                         <option value="designer_free">Designer Free</option>
                         <option value="designer_5">Designer Basic ($5)</option>
                         <option value="designer_10">Designer Standard ($10)</option>
-                        <option value="designer_15">Designer Premium ($15)</option>
+                        <option value="designer_15">Designer Plus ($15)</option>
+                        <option value="designer_30">Designer Premium ($30)</option>
                         <option value="contractor_pro">Contractor Pro ($49)</option>
                         <option value="ai_analysis_daily_weekly">AI Analysis Daily/Weekly ($5)</option>
                         <option value="ai_analysis_monthly">AI Analysis Monthly ($10)</option>
@@ -8375,12 +8376,13 @@ function renderSubscriptionsTab() {
 }
 
 function renderPlanCards(plans) {
-    const planOrder = ['designer_free', 'designer_5', 'designer_10', 'designer_15', 'contractor_pro', 'ai_analysis_daily_weekly', 'ai_analysis_monthly', 'ai_analysis_premium', 'ai_analysis_pro'];
+    const planOrder = ['designer_free', 'designer_5', 'designer_10', 'designer_15', 'designer_30', 'contractor_pro', 'ai_analysis_daily_weekly', 'ai_analysis_monthly', 'ai_analysis_premium', 'ai_analysis_pro'];
     const planColors = {
         designer_free: { bg: '#f0fdf4', border: '#86efac', icon: '#16a34a', gradient: 'linear-gradient(135deg, #16a34a, #22c55e)' },
         designer_5: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
         designer_10: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)' },
         designer_15: { bg: '#fdf4ff', border: '#f0abfc', icon: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #c084fc)' },
+        designer_30: { bg: '#fef2f2', border: '#fca5a5', icon: '#dc2626', gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)' },
         contractor_pro: { bg: '#fff7ed', border: '#fdba74', icon: '#ea580c', gradient: 'linear-gradient(135deg, #ea580c, #f97316)' },
         ai_analysis_daily_weekly: { bg: '#ecfeff', border: '#67e8f9', icon: '#0891b2', gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)' },
         ai_analysis_monthly: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
@@ -8429,7 +8431,7 @@ function renderPlanCards(plans) {
             detailsHtml = `
                 <div class="sub-plan-quota">
                     <span class="sub-quota-label">Quotes Allowed</span>
-                    <span class="sub-quota-value">${plan.quotesAllowed}</span>
+                    <span class="sub-quota-value">${plan.quotesAllowed || 'Unlimited'}</span>
                 </div>`;
         }
 
@@ -8476,7 +8478,8 @@ function renderSubscriptionsTable(subs) {
         designer_free: 'Designer Free',
         designer_5: 'Designer $5',
         designer_10: 'Designer $10',
-        designer_15: 'Designer $15',
+        designer_15: 'Designer Plus $15',
+        designer_30: 'Designer Premium $30',
         contractor_pro: 'Contractor Pro',
         ai_analysis_daily_weekly: 'AI Daily/Weekly $5',
         ai_analysis_monthly: 'AI Monthly $10',
@@ -8762,7 +8765,8 @@ function showCreateSubscriptionModal() {
                             <option value="designer_free">Designer Free (1 quote)</option>
                             <option value="designer_5">Designer Basic - $5/mo (5 quotes)</option>
                             <option value="designer_10">Designer Standard - $10/mo (10 quotes)</option>
-                            <option value="designer_15">Designer Premium - $15/mo (20 quotes)</option>
+                            <option value="designer_15">Designer Plus - $15/mo (20 quotes)</option>
+                            <option value="designer_30">Designer Premium - $30/mo (Unlimited quotes)</option>
                             <option value="contractor_pro">Contractor Pro - $49/mo</option>
                             <option value="ai_analysis_daily_weekly">AI Analysis Daily/Weekly - $5/wk</option>
                             <option value="ai_analysis_monthly">AI Analysis Monthly - $10/mo</option>
