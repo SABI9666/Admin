@@ -2128,9 +2128,14 @@ async function loadVoiceCallLogsData() {
     const container = document.getElementById('voice-call-logs-tab');
     showLoader(container);
     try {
-        const { data, stats } = await apiCall('/voice-calls/admin/all?limit=200');
-        state.voiceCallLogs = data || [];
-        state.voiceCallStats = stats || {};
+        const [logsRes, activeRes] = await Promise.all([
+            apiCall('/voice-calls/admin/all?limit=200'),
+            fetch(API_BASE_URL + '/api/voice-calls/active-count').then(r => r.json()).catch(() => ({ activeCalls: 0, onlineUsers: 0 }))
+        ]);
+        state.voiceCallLogs = logsRes.data || [];
+        state.voiceCallStats = logsRes.stats || {};
+        state.voiceCallStats.activeCalls = activeRes.activeCalls || 0;
+        state.voiceCallStats.onlineUsers = activeRes.onlineUsers || 0;
         renderVoiceCallLogsTab();
     } catch (error) {
         container.innerHTML = `<p class="error">Failed to load voice call logs.</p><button class="btn" onclick="loadVoiceCallLogsData()">Retry</button>`;
@@ -2173,6 +2178,14 @@ function renderVoiceCallLogsTab() {
             <div class="call-stat-card">
                 <div class="call-stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"><i class="fas fa-clock"></i></div>
                 <div class="call-stat-info"><span class="call-stat-number">${avgMins}m ${avgSecs}s</span><span class="call-stat-label">Avg Duration</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2)"><i class="fas fa-broadcast-tower"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.activeCalls || 0}</span><span class="call-stat-label">Active Now</span></div>
+            </div>
+            <div class="call-stat-card">
+                <div class="call-stat-icon" style="background: linear-gradient(135deg, #84cc16, #65a30d)"><i class="fas fa-users"></i></div>
+                <div class="call-stat-info"><span class="call-stat-number">${stats.onlineUsers || 0}</span><span class="call-stat-label">Online Users</span></div>
             </div>
         </div>
         <div id="call-logs-table-container">
