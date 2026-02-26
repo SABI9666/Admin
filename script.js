@@ -8219,14 +8219,16 @@ async function loadSubscriptionsData() {
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading subscriptions...</div>';
 
     try {
-        const [subsResponse, plansResponse] = await Promise.all([
+        const [subsResponse, plansResponse, planSettingsResponse] = await Promise.all([
             subscriptionApiCall('/admin/all'),
             subscriptionApiCall('/admin/plans'),
+            subscriptionApiCall('/plan-settings').catch(() => ({ planSettings: {} })),
         ]);
 
         state.subscriptions = subsResponse.subscriptions || [];
         state.subscriptionStats = subsResponse.stats || {};
         state.subscriptionPlans = plansResponse.plans || {};
+        state.planSettings = planSettingsResponse.planSettings || {};
 
         renderSubscriptionsTab();
 
@@ -8453,9 +8455,13 @@ function renderPlanCards(plans) {
                 </div>`;
         }
 
+        const planSetting = (state.planSettings || {})[key];
+        const isEnabled = planSetting ? planSetting.enabled !== false : true;
+
         return `
-            <div class="sub-plan-card" style="border-color:${color.border}; background:${color.bg};">
-                <div class="sub-plan-header" style="background:${color.gradient};">
+            <div class="sub-plan-card" style="border-color:${isEnabled ? color.border : '#d1d5db'}; background:${isEnabled ? color.bg : '#f9fafb'}; ${!isEnabled ? 'opacity:0.7;' : ''}">
+                ${!isEnabled ? '<div style="position:absolute; top:8px; right:8px; background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; z-index:1;">STOPPED</div>' : ''}
+                <div class="sub-plan-header" style="background:${isEnabled ? color.gradient : 'linear-gradient(135deg, #9ca3af, #6b7280)'};">
                     <div class="sub-plan-price">${priceDisplay}</div>
                     <div class="sub-plan-name">${plan.label}</div>
                 </div>
@@ -8469,6 +8475,18 @@ function renderPlanCards(plans) {
                         <span>${count} active subscriber${count !== 1 ? 's' : ''}</span>
                     </div>
                     ${detailsHtml}
+                    ${!isEnabled && planSetting?.stoppedBy ? `<div style="font-size:11px; color:#9ca3af; margin-top:6px;"><i class="fas fa-info-circle"></i> Stopped by ${planSetting.stoppedBy}</div>` : ''}
+                    <div style="margin-top:12px; padding-top:12px; border-top:1px solid ${isEnabled ? '#e5e7eb' : '#d1d5db'};">
+                        ${isEnabled ? `
+                            <button class="btn btn-sm" onclick="togglePlan('${key}', false)" style="width:100%; background:#fef3c7; color:#b45309; border:1px solid #fbbf24; font-weight:700; padding:8px 12px; font-size:13px; border-radius:8px; cursor:pointer;">
+                                <i class="fas fa-pause-circle"></i> Stop This Plan
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm" onclick="togglePlan('${key}', true)" style="width:100%; background:#ecfdf5; color:#059669; border:1px solid #6ee7b7; font-weight:700; padding:8px 12px; font-size:13px; border-radius:8px; cursor:pointer;">
+                                <i class="fas fa-play-circle"></i> Activate This Plan
+                            </button>
+                        `}
+                    </div>
                 </div>
             </div>
         `;
@@ -8630,6 +8648,28 @@ function filterSubscriptions() {
     const tableContainer = document.getElementById('subscriptionsTableContainer');
     if (tableContainer) {
         tableContainer.innerHTML = renderSubscriptionsTable(filtered);
+    }
+}
+
+async function togglePlan(planId, enable) {
+    const action = enable ? 'ACTIVATE' : 'STOP';
+    const planLabel = state.subscriptionPlans[planId]?.label || planId;
+    const msg = enable
+        ? `Activate "${planLabel}"? All stopped subscriptions on this plan will be reactivated.`
+        : `Stop "${planLabel}"? All active subscriptions on this plan will be stopped immediately.`;
+
+    if (!confirm(msg)) return;
+
+    try {
+        const result = await subscriptionApiCall('/admin/toggle-plan', 'POST', {
+            planId,
+            enabled: enable,
+        });
+
+        showNotification(result.message || `Plan ${action === 'STOP' ? 'stopped' : 'activated'}`, 'success');
+        loadSubscriptionsData();
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
     }
 }
 
