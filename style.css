@@ -5140,6 +5140,7 @@ table tbody tr:last-child td {
 }
 
 .sub-plan-card {
+    position: relative;
     border-radius: 12px;
     border: 2px solid;
     overflow: hidden;
