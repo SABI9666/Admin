@@ -550,6 +550,7 @@ function renderUsersTab() {
                         <td class="action-buttons">
                             <button class="btn btn-sm ${user.isActive ? 'btn-danger' : 'btn-success'}" onclick="toggleUserStatus('${user._id}', ${!user.isActive})">${user.isActive ? 'Deactivate' : 'Activate'}</button>
                             <button class="btn btn-sm ${user.isBlocked ? 'btn-success' : 'btn-warning'}" onclick="showBlockUserModal('${user._id}', '${user.email}', ${user.isBlocked})">${user.isBlocked ? 'Unblock' : 'Block'}</button>
+                            ${user.profileStatus === 'approved' || user.profileStatus === 'pending' ? `<button class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;" onclick="showRequireProfileUpdateModal('${user._id}', '${(user.name || '').replace(/'/g, "\\'")}', '${user.email}')" title="Request profile update"><i class="fas fa-user-edit"></i> Update Profile</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -605,6 +606,42 @@ async function confirmBlockUser(email, block) {
             await loadMessagesData();
         }
     } catch (error) {}
+}
+
+// --- REQUIRE PROFILE UPDATE ---
+function showRequireProfileUpdateModal(userId, userName, userEmail) {
+    const modalContent = `
+        <div class="modal-body">
+            <h3><i class="fas fa-user-edit" style="color:#f59e0b;margin-right:8px;"></i>Request Profile Update</h3>
+            <p>User: <strong>${userName || userEmail}</strong></p>
+            <p style="color:#64748b;font-size:0.9rem;">This will reset the user's profile status to <strong>Incomplete</strong>. Next time they log in, they will be redirected to complete their profile before accessing any features.</p>
+            <div class="form-group">
+                <label for="profile-update-reason">Reason (shown to user):</label>
+                <textarea id="profile-update-reason" rows="3" placeholder="e.g., Please update your company details, upload latest certificates..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-warning" style="background:#f59e0b;color:#fff;border:none;" onclick="confirmRequireProfileUpdate('${userId}')">
+                    <i class="fas fa-paper-plane"></i> Require Profile Update
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+    showModal(modalContent);
+}
+
+async function confirmRequireProfileUpdate(userId) {
+    const reason = document.getElementById('profile-update-reason')?.value || '';
+    try {
+        const data = await apiCall(`/users/${userId}/require-profile-update`, 'POST', {
+            reason: sanitizeInput(reason)
+        });
+        showNotification(data.message, 'success');
+        closeModal();
+        await loadUsersData();
+    } catch (error) {
+        showNotification('Failed to update profile status.', 'error');
+    }
 }
 
 // --- INCOMPLETE PROFILE USERS ---
