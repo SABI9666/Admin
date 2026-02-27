@@ -129,7 +129,7 @@ const state = {
 async function initializeAdminPanel() {
     const token = getToken();
     const user = JSON.parse(localStorage.getItem('currentUser'));
-    if (!token || !user || user.role !== 'admin') {
+    if (!token || !user || (user.role !== 'admin' && user.type !== 'admin')) {
         window.location.href = 'index.html';
         return;
     }
