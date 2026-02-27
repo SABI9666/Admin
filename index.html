@@ -231,6 +231,44 @@
             margin-top: 12px;
         }
 
+        .otp-timer .timer-active {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .otp-timer .timer-expired {
+            color: #c53030;
+            font-weight: 600;
+        }
+
+        .otp-warning {
+            background: #fffbeb;
+            color: #92400e;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #fcd34d;
+            font-size: 13px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .resend-link {
+            cursor: pointer;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .resend-link:hover {
+            text-decoration: underline;
+        }
+
+        .resend-link.disabled {
+            color: #aaa;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .spinner {
             display: inline-block;
             width: 20px;
@@ -336,6 +374,7 @@
                 <div class="otp-icon"><i class="fas fa-lock"></i></div>
                 <p>A verification code has been sent to<br><span class="otp-email" id="otpEmailDisplay"></span></p>
             </div>
+            <div id="otpWarning" class="otp-warning"></div>
             <form id="otpVerifyForm">
                 <input type="hidden" id="otpEmail" name="otpEmail">
 
@@ -348,11 +387,11 @@
                     <i class="fas fa-check-circle"></i> Verify & Login
                 </button>
             </form>
-            <div class="otp-timer">
-                <i class="fas fa-clock"></i> Code expires in 5 minutes
+            <div class="otp-timer" id="otpTimerContainer">
+                <i class="fas fa-clock"></i> <span id="otpTimerText">Code expires in <span class="timer-active" id="otpCountdown">5:00</span></span>
             </div>
             <div class="back-to-login">
-                <a onclick="resendOTP()"><i class="fas fa-redo"></i> Resend Code</a> &nbsp;|&nbsp;
+                <a id="resendLink" class="resend-link" onclick="resendOTP()"><i class="fas fa-redo"></i> Resend Code</a> &nbsp;|&nbsp;
                 <a onclick="showLoginView()"><i class="fas fa-arrow-left"></i> Back to Login</a>
             </div>
         </div>
@@ -363,6 +402,8 @@
 
         // View switching functions
         let pendingOTPEmail = '';
+        let otpCountdownInterval = null;
+        let resendCooldown = false;
 
         function hideAllViews() {
             document.getElementById('login-view').style.display = 'none';
@@ -396,7 +437,7 @@
             hideMessages();
         }
 
-        function showOTPView(email, otpSentToEmail) {
+        function showOTPView(email, otpSentToEmail, emailSent) {
             hideAllViews();
             document.getElementById('otp-view').style.display = 'block';
             document.getElementById('otpEmail').value = email;
@@ -409,10 +450,51 @@
             document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-lock"></i> Verification';
             document.querySelector('.login-header p').textContent = 'Two-factor authentication required';
             hideMessages();
+
+            // Show warning if email delivery failed
+            const warningEl = document.getElementById('otpWarning');
+            if (emailSent === false) {
+                warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Email delivery could not be confirmed. Please check your spam folder or click <a class="resend-link" onclick="resendOTP()">Resend Code</a>.';
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+
+            // Start countdown timer
+            startOTPCountdown(300); // 5 minutes
             // Auto-focus OTP input for better UX
             setTimeout(() => {
                 document.getElementById('otpCode').focus();
             }, 100);
+        }
+
+        function startOTPCountdown(seconds) {
+            // Clear any existing countdown
+            if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+
+            let remaining = seconds;
+            const countdownEl = document.getElementById('otpCountdown');
+            const timerTextEl = document.getElementById('otpTimerText');
+
+            function updateTimer() {
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                countdownEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+                if (remaining <= 0) {
+                    clearInterval(otpCountdownInterval);
+                    otpCountdownInterval = null;
+                    timerTextEl.innerHTML = '<span class="timer-expired">Code expired. Please resend to get a new code.</span>';
+                } else if (remaining <= 60) {
+                    countdownEl.className = 'timer-expired';
+                } else {
+                    countdownEl.className = 'timer-active';
+                }
+                remaining--;
+            }
+
+            updateTimer();
+            otpCountdownInterval = setInterval(updateTimer, 1000);
         }
 
         function hideMessages() {
@@ -473,13 +555,17 @@
 
                 // Check if 2FA is required
                 if (data.requires2FA) {
-                    console.log('2FA required, showing OTP view');
-                    showMessage('Verification code sent to your email!', 'success');
+                    console.log('2FA required, showing OTP view, emailSent:', data.emailSent);
+                    if (data.emailSent === false) {
+                        showMessage('Code generated but email delivery failed. Try resending.', 'error');
+                    } else {
+                        showMessage('Verification code sent to your email!', 'success');
+                    }
                     // Re-enable login button so user can retry if they go back
                     loginButton.disabled = false;
                     loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
                     setTimeout(() => {
-                        showOTPView(email, data.email);
+                        showOTPView(email, data.email, data.emailSent);
                     }, 1500);
                     return;
                 }
@@ -656,7 +742,7 @@
             }
         });
 
-        // Resend OTP handler
+        // Resend OTP handler with cooldown
         async function resendOTP() {
             if (!pendingOTPEmail) {
                 showMessage('Session expired. Please login again.', 'error');
@@ -664,7 +750,19 @@
                 return;
             }
 
+            if (resendCooldown) return;
+
+            // Set cooldown to prevent spam
+            resendCooldown = true;
+            const resendLink = document.getElementById('resendLink');
+            if (resendLink) resendLink.classList.add('disabled');
+            setTimeout(() => {
+                resendCooldown = false;
+                if (resendLink) resendLink.classList.remove('disabled');
+            }, 30000); // 30 second cooldown
+
             showMessage('Sending new code...', 'success');
+            const warningEl = document.getElementById('otpWarning');
 
             try {
                 const response = await fetch(`${API_BASE}/auth/resend-otp`, {
@@ -679,8 +777,21 @@
                     throw new Error(data.message || 'Failed to resend code');
                 }
 
-                showMessage('New verification code sent to your email!', 'success');
+                if (data.emailSent === false) {
+                    showMessage('Code generated but email delivery failed. Check spam folder or try again later.', 'error');
+                    if (warningEl) {
+                        warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Email delivery issue detected. Check your spam/junk folder.';
+                        warningEl.style.display = 'block';
+                    }
+                } else {
+                    showMessage('New verification code sent! Check your inbox.', 'success');
+                    if (warningEl) warningEl.style.display = 'none';
+                }
+
                 document.getElementById('otpCode').value = '';
+                document.getElementById('otpCode').focus();
+                // Restart the countdown timer
+                startOTPCountdown(300);
 
             } catch (error) {
                 showMessage(error.message || 'Failed to resend code. Please try again.', 'error');
