@@ -396,18 +396,23 @@
             hideMessages();
         }
 
-        function showOTPView(email) {
+        function showOTPView(email, otpSentToEmail) {
             hideAllViews();
             document.getElementById('otp-view').style.display = 'block';
             document.getElementById('otpEmail').value = email;
             pendingOTPEmail = email;
-            // Mask email for display
-            const parts = email.split('@');
+            // Mask the email where OTP was actually sent (use otpSentToEmail if provided)
+            const displayEmail = otpSentToEmail || email;
+            const parts = displayEmail.split('@');
             const masked = parts[0].substring(0, 2) + '***@' + parts[1];
             document.getElementById('otpEmailDisplay').textContent = masked;
             document.querySelector('.login-header h1').innerHTML = '<i class="fas fa-lock"></i> Verification';
             document.querySelector('.login-header p').textContent = 'Two-factor authentication required';
             hideMessages();
+            // Auto-focus OTP input for better UX
+            setTimeout(() => {
+                document.getElementById('otpCode').focus();
+            }, 100);
         }
 
         function hideMessages() {
@@ -470,8 +475,11 @@
                 if (data.requires2FA) {
                     console.log('2FA required, showing OTP view');
                     showMessage('Verification code sent to your email!', 'success');
+                    // Re-enable login button so user can retry if they go back
+                    loginButton.disabled = false;
+                    loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
                     setTimeout(() => {
-                        showOTPView(email);
+                        showOTPView(email, data.email);
                     }, 1500);
                     return;
                 }
