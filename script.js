@@ -400,6 +400,10 @@ function showTab(tabName) {
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
         manualLoadMap[tabName].loader();
     }
+
+    // Always reload users and profile reviews for fresh data (new signups)
+    if (tabName === 'users') loadUsersData();
+    if (tabName === 'profile-reviews') loadProfileReviewsData();
 }
 
 // --- DASHBOARD ---
@@ -518,6 +522,12 @@ async function loadUsersData() {
         const { users } = await apiCall('/users');
         state.users = users;
         renderUsersTab();
+        // Update sidebar badge with count of new users (registered in last 24h)
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const newCount = users.filter(u => u.createdAt && (now - new Date(u.createdAt).getTime()) < oneDayMs).length;
+        const badge = document.getElementById('newUsersBadge');
+        if (badge) badge.textContent = newCount > 0 ? newCount : '';
     } catch (error) {
         container.innerHTML = `<p class="error">Failed to load users.</p><button class="btn" onclick="loadUsersData()">Retry</button>`;
     }
@@ -525,6 +535,9 @@ async function loadUsersData() {
 
 function renderUsersTab() {
     const container = document.getElementById('users-tab');
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const newGoogleUsers = state.users.filter(u => u.authProvider === 'google' && u.createdAt && (now - new Date(u.createdAt).getTime()) < oneDayMs);
     container.innerHTML = `
         <div class="section-header">
             <h3>All Users (${state.users.length})</h3>
@@ -533,12 +546,23 @@ function renderUsersTab() {
                 <button class="btn btn-primary" onclick="exportData('users')">Export Users</button>
             </div>
         </div>
+        ${newGoogleUsers.length > 0 ? `
+        <div style="padding:14px 18px;margin:0 0 16px 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;display:flex;align-items:center;gap:10px;">
+            <i class="fas fa-user-plus" style="color:#2563eb;font-size:18px;"></i>
+            <div>
+                <strong style="color:#1e40af;">${newGoogleUsers.length} new Google sign-up${newGoogleUsers.length > 1 ? 's' : ''} in the last 24 hours</strong>
+                <span style="color:#3b82f6;margin-left:8px;font-size:0.9rem;">${newGoogleUsers.map(u => u.email + ' (' + (u.role || 'N/A') + ')').join(', ')}</span>
+            </div>
+        </div>` : ''}
         <table>
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Auth</th><th>Profile</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-                ${state.users.map(user => `
-                    <tr>
-                        <td>${user.name || 'N/A'}</td>
+                ${state.users.map(user => {
+                    const isNew = user.createdAt && (now - new Date(user.createdAt).getTime()) < oneDayMs;
+                    const newBadge = isNew ? ' <span style="background:#22c55e;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle;margin-left:4px;">NEW</span>' : '';
+                    return `
+                    <tr${isNew ? ' style="background:#f0fdf4;"' : ''}>
+                        <td>${user.name || 'N/A'}${newBadge}</td>
                         <td>${user.email}</td>
                         <td>${user.role}</td>
                         <td>${user.authProvider === 'google' ? '<span class="iu-badge" style="background:#fff;border:1px solid #dadce0;color:#3c4043;font-size:0.75rem;padding:2px 8px;gap:4px;"><svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:middle;margin-right:3px;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google</span>' : '<span class="iu-badge" style="background:#f1f5f9;color:#64748b;font-size:0.75rem;padding:2px 8px;"><i class="fas fa-envelope" style="font-size:11px;margin-right:3px;"></i>Email</span>'}</td>
@@ -552,8 +576,8 @@ function renderUsersTab() {
                             <button class="btn btn-sm ${user.isBlocked ? 'btn-success' : 'btn-warning'}" onclick="showBlockUserModal('${user._id}', '${user.email}', ${user.isBlocked})">${user.isBlocked ? 'Unblock' : 'Block'}</button>
                             ${user.profileStatus === 'approved' || user.profileStatus === 'pending' ? `<button class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;" onclick="showRequireProfileUpdateModal('${user._id}', '${(user.name || '').replace(/'/g, "\\'")}', '${user.email}')" title="Request profile update"><i class="fas fa-user-edit"></i> Update Profile</button>` : ''}
                         </td>
-                    </tr>
-                `).join('')}
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>`;
 }
@@ -3530,6 +3554,10 @@ function initializeRealTimeUpdates() {
                     loadSupportMessagesData();
                 } else if (currentActiveTab === 'dashboard-tab') {
                     loadDashboardStats();
+                } else if (currentActiveTab === 'users-tab') {
+                    loadUsersData();
+                } else if (currentActiveTab === 'incomplete-users-tab') {
+                    loadIncompleteUsersData();
                 }
             } catch (error) {
                 console.log('Error in real-time updates:', error);
