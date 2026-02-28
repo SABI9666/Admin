@@ -416,21 +416,8 @@ async function loadDashboardStats() {
         const supportCount = stats.totalSupportTickets || stats.totalSupportMessages || 0;
         const criticalCount = stats.criticalSupportTickets || 0;
         
-        // Update review badge in sidebar
-        const reviewsBadge = document.getElementById('reviewsBadge');
-        if (reviewsBadge && stats.pendingProfileReviews > 0) {
-            reviewsBadge.textContent = stats.pendingProfileReviews;
-        }
-
-        // Update incomplete profiles badge
-        const incBadge = document.getElementById('incompleteUsersBadge');
-        if (incBadge) incBadge.textContent = (stats.incompleteProfileUsers || 0) > 0 ? stats.incompleteProfileUsers : '';
-
-        // Update community feed badge in sidebar
-        const communityBadge = document.getElementById('communityPendingBadge');
-        if (communityBadge) {
-            communityBadge.textContent = (stats.pendingCommunityPosts || 0) > 0 ? stats.pendingCommunityPosts : '';
-        }
+        // Update all sidebar badges with counts
+        updateAdminSidebarBadges(stats);
 
         statsGrid.innerHTML = `
             <div class="stat-card stat-card-indigo">
@@ -522,6 +509,37 @@ async function loadDashboardStats() {
     }
 }
 
+
+// --- ADMIN SIDEBAR BADGE UPDATER ---
+function updateAdminSidebarBadges(stats) {
+    const badgeMap = {
+        'reviewsBadge': stats.pendingProfileReviews || 0,
+        'incompleteUsersBadge': stats.incompleteProfileUsers || 0,
+        'communityPendingBadge': stats.pendingCommunityPosts || 0,
+        'jobsBadge': stats.totalJobs || 0,
+        'quotesBadge': stats.totalQuotes || 0,
+        'estimationsBadge': stats.pendingEstimations || 0,
+        'supportBadge': stats.pendingSupportTickets || 0,
+        'analysisBadge': stats.pendingAnalysisRequests || 0,
+    };
+    Object.entries(badgeMap).forEach(([id, count]) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (count > 0) {
+                el.textContent = count > 99 ? '99+' : count;
+                el.style.display = 'inline-flex';
+                // Pulse effect for attention-worthy counts
+                if (['reviewsBadge', 'estimationsBadge', 'supportBadge', 'analysisBadge'].includes(id) && count > 0) {
+                    el.classList.add('badge-pulse');
+                    setTimeout(() => el.classList.remove('badge-pulse'), 2000);
+                }
+            } else {
+                el.textContent = '';
+                el.style.display = 'none';
+            }
+        }
+    });
+}
 
 // --- USER MANAGEMENT ---
 async function loadUsersData() {
