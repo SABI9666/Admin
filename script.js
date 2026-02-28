@@ -1209,9 +1209,12 @@ function renderEstimationsTab() {
                             </td>
                             <td>
                                 ${est.resultFile ? `
-                                    <a href="${est.resultFile.url}" target="_blank" class="result-link">
+                                    <button class="btn btn-xs result-link" onclick="viewEstimationResult('${est._id}')">
                                         <i class="fas fa-file-alt"></i> View Result
-                                    </a>
+                                    </button>
+                                    <button class="btn btn-xs" onclick="downloadEstimationResult('${est._id}')" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </button>
                                 ` : '<span class="pending-result">Pending</span>'}
                             </td>
                             <td>
@@ -1343,6 +1346,34 @@ async function downloadEstimationFile(estimationId, fileIndex, fileName) {
         }
     } catch (error) {
         showNotification('Failed to download file: ' + error.message, 'error');
+    }
+}
+
+async function viewEstimationResult(estimationId) {
+    try {
+        showNotification('Loading result file...', 'info');
+        const data = await apiCall(`/estimations/${estimationId}/result/download`);
+        if (data.file && data.file.url) {
+            window.open(data.file.url, '_blank');
+        } else {
+            showNotification('Could not generate file link.', 'error');
+        }
+    } catch (error) {
+        showNotification('Failed to load result file: ' + error.message, 'error');
+    }
+}
+
+async function downloadEstimationResult(estimationId) {
+    try {
+        showNotification('Preparing download...', 'info');
+        const data = await apiCall(`/estimations/${estimationId}/result/download`);
+        if (data.file && data.file.url) {
+            await downloadFileSilent(data.file.url, data.file.name || 'estimation_result.pdf');
+        } else {
+            showNotification('Could not generate download link.', 'error');
+        }
+    } catch (error) {
+        showNotification('Failed to download result: ' + error.message, 'error');
     }
 }
 
