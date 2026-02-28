@@ -481,11 +481,20 @@ async function loadDashboardStats() {
                     <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('conversations')"><i class="fas fa-arrow-right"></i> View</button></div>
                 </div>
             </div>
+            <div class="stat-card stat-card-teal" style="border-left:4px solid #14b8a6">
+                <div class="stat-icon" style="background:rgba(20,184,166,0.1)"><i class="fas fa-calculator" style="color:#14b8a6"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.pendingEstimations || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalEstimations || 0}</small></div>
+                    <div class="stat-label">Pending Estimations</div>
+                    ${(stats.completedEstimations || 0) > 0 ? `<small style="color:#10b981"><i class="fas fa-check-circle"></i> ${stats.completedEstimations} Completed</small>` : ''}
+                    <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('estimations')"><i class="fas fa-arrow-right"></i> Review</button></div>
+                </div>
+            </div>
             <div class="stat-card stat-card-rose">
                 <div class="stat-icon support"><i class="fas fa-headset"></i></div>
                 <div class="stat-content">
-                    <div class="stat-number">${supportCount}</div>
-                    <div class="stat-label">Support Tickets</div>
+                    <div class="stat-number">${stats.pendingSupportTickets || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${supportCount}</small></div>
+                    <div class="stat-label">Pending Support Tickets</div>
                     ${criticalCount > 0 ? `<small class="critical-indicator"><i class="fas fa-exclamation-triangle"></i> ${criticalCount} Critical</small>` : ''}
                     <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('support-messages')"><i class="fas fa-arrow-right"></i> Manage</button></div>
                 </div>
