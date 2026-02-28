@@ -199,6 +199,19 @@ body {
 .nav-badge:not(:empty) {
     display: inline-block;
 }
+.nav-badge-blue { background: #3b82f6 !important; }
+.nav-badge-violet { background: #8b5cf6 !important; }
+.nav-badge-teal { background: #14b8a6 !important; }
+.nav-badge-rose { background: #f43f5e !important; }
+.nav-badge-orange { background: #f97316 !important; }
+.nav-badge.badge-pulse {
+    animation: adminBadgePulse 0.6s ease-out;
+}
+@keyframes adminBadgePulse {
+    0% { transform: scale(0.7); opacity: 0.5; }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); opacity: 1; }
+}
 
 /* Sidebar Footer */
 .sidebar-footer {
