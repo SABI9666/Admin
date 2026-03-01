@@ -5959,6 +5959,119 @@ table tbody tr:last-child td {
     .announcements-empty i {
         font-size: 2.5rem;
     }
+
+    /* == Notifications → Mobile Premium Toast == */
+    #notification-container {
+        top: auto;
+        bottom: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+    .notification {
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        font-size: 13px;
+        gap: 12px;
+        border-left-width: 4px;
+    }
+    .notification-close {
+        min-width: 36px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .notification-close:active {
+        background: #f3f4f6;
+    }
+    .notification-actions {
+        flex-wrap: wrap;
+    }
+    .notification-actions button {
+        border-radius: 8px;
+        min-height: 36px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    @keyframes notifSlideIn {
+        from { transform: translateY(30px) scale(0.95); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    /* == Portal Page Headers Mobile == */
+    .section-header,
+    .tab-header,
+    [class*="-header"] h2,
+    [class*="-header"] h3 {
+        font-size: clamp(15px, 4vw, 18px);
+    }
+
+    /* == Action Bars / Toolbars Mobile == */
+    .sa-header-actions,
+    .ann-header-actions,
+    .sub-header-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .sa-header-actions .btn,
+    .ann-header-actions .btn,
+    .sub-header-actions .btn {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+        border-radius: 10px;
+    }
+
+    /* == Status Badges Mobile == */
+    .status-badge,
+    [class*="badge"],
+    [class*="tag"] {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    /* == Detail Views Mobile == */
+    .sa-detail-content {
+        padding: 16px;
+    }
+    .sa-detail-header {
+        padding: 16px;
+        border-radius: 14px 14px 0 0;
+    }
+    .sa-detail-body {
+        padding: 16px;
+    }
+    .sa-detail-field label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .sa-detail-field .field-value {
+        font-size: 13.5px;
+    }
+
+    /* == Tabs Mobile Premium == */
+    .ann-tabs,
+    .sub-tabs,
+    [class*="-tabs"] {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .ann-tab-btn,
+    .sub-tab-btn,
+    [class*="-tab-btn"] {
+        padding: 10px 14px;
+        font-size: 12.5px;
+        min-height: 42px;
+    }
 }
 
 /* --- 480px: SMALL PHONE COMPREHENSIVE POLISH --- */
@@ -6110,6 +6223,11 @@ table tbody tr:last-child td {
         width: 100%;
         min-width: 0;
     }
+
+    /* == Notifications Small Phone == */
+    #notification-container { right: 8px; left: 8px; bottom: 12px; }
+    .notification { padding: 12px 14px; border-radius: 12px; font-size: 12.5px; }
+    .notification-close { min-width: 32px; min-height: 32px; font-size: 13px; }
 
     /* == Safe Area Bottom Padding == */
     .content-area {
