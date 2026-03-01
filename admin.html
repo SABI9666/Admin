@@ -75,6 +75,11 @@
             </button>
 
             <div class="nav-section-label">Communication</div>
+            <button class="sidebar-link" onclick="showTab('meetings')" data-tab="meetings">
+                <i class="fas fa-calendar-check"></i>
+                <span>Meetings</span>
+                <span class="nav-badge nav-badge-blue" id="meetingsBadge"></span>
+            </button>
             <button class="sidebar-link" onclick="showTab('conversations')" data-tab="conversations">
                 <i class="fas fa-comments"></i>
                 <span>Conversations</span>
@@ -245,6 +250,7 @@
             <div id="users-tab" class="tab-content"></div>
             <div id="incomplete-users-tab" class="tab-content"></div>
             <div id="profile-reviews-tab" class="tab-content"></div>
+            <div id="meetings-tab" class="tab-content"></div>
             <div id="conversations-tab" class="tab-content"></div>
             <div id="estimations-tab" class="tab-content"></div>
             <div id="jobs-tab" class="tab-content"></div>

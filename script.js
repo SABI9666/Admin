@@ -123,6 +123,7 @@ const state = {
     subscriptions: [],
     subscriptionStats: {},
     subscriptionPlans: {},
+    meetings: [],
 };
 
 // --- INITIALIZATION ---
@@ -341,6 +342,7 @@ function showTab(tabName) {
         'users': { title: 'Users', subtitle: 'Manage all registered users' },
         'incomplete-users': { title: 'Incomplete Profiles', subtitle: 'Users who registered but haven\'t completed their profile' },
         'profile-reviews': { title: 'Profile Reviews', subtitle: 'Review pending profile submissions' },
+        'meetings': { title: 'Meetings', subtitle: 'View and manage all scheduled meetings across projects' },
         'conversations': { title: 'Conversations', subtitle: 'Monitor user conversations' },
         'estimations': { title: 'Estimations', subtitle: 'Manage estimation requests' },
         'jobs': { title: 'Jobs', subtitle: 'View and manage all jobs' },
@@ -395,6 +397,7 @@ function showTab(tabName) {
         'activity-logs': { data: state.activityLogs, loader: loadActivityLogsData },
         'subscriptions': { data: state.subscriptions || [], loader: loadSubscriptionsData },
         'whatsapp-marketing': { data: state.whatsappRecipients || [], loader: loadWhatsAppMarketingData },
+        'meetings': { data: state.meetings || [], loader: loadMeetingsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -9233,4 +9236,239 @@ async function regenerateInvoicePDF(invoiceId) {
     } catch (error) {
         showNotification('Error: ' + error.message, 'error');
     }
+}
+
+// ============================================
+// MEETINGS MANAGEMENT
+// ============================================
+let meetingsFilter = 'all';
+
+async function loadMeetingsData() {
+    const container = document.getElementById('meetings-tab');
+    showLoader(container);
+    try {
+        const response = await apiCall('/meetings');
+        state.meetings = response.data || response.meetings || [];
+        renderMeetingsTab();
+    } catch (error) {
+        container.innerHTML = `<div class="error-state"><p>Failed to load meetings data.</p><button class="btn btn-primary" onclick="loadMeetingsData()">Retry</button></div>`;
+    }
+}
+
+function renderMeetingsTab() {
+    const container = document.getElementById('meetings-tab');
+    const meetings = state.meetings || [];
+
+    const totalMeetings = meetings.length;
+    const upcoming = meetings.filter(m => m.status === 'scheduled' && new Date(m.meetingDateTime) >= new Date()).length;
+    const completed = meetings.filter(m => m.status === 'completed' || (m.status === 'scheduled' && new Date(m.meetingDateTime) < new Date())).length;
+    const cancelled = meetings.filter(m => m.status === 'cancelled').length;
+
+    let filtered = meetings;
+    if (meetingsFilter === 'upcoming') filtered = meetings.filter(m => m.status === 'scheduled' && new Date(m.meetingDateTime) >= new Date());
+    else if (meetingsFilter === 'past') filtered = meetings.filter(m => m.status === 'completed' || (m.status === 'scheduled' && new Date(m.meetingDateTime) < new Date()));
+    else if (meetingsFilter === 'cancelled') filtered = meetings.filter(m => m.status === 'cancelled');
+
+    filtered.sort((a, b) => new Date(b.meetingDateTime) - new Date(a.meetingDateTime));
+
+    container.innerHTML = `
+        <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div class="stat-card stat-card-blue" style="cursor:pointer" onclick="filterMeetingsAdmin('all')">
+                <div class="stat-icon" style="background:rgba(59,130,246,0.1)"><i class="fas fa-calendar-check" style="color:#3b82f6"></i></div>
+                <div class="stat-content"><div class="stat-number">${totalMeetings}</div><div class="stat-label">Total Meetings</div></div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid #10b981;cursor:pointer" onclick="filterMeetingsAdmin('upcoming')">
+                <div class="stat-icon" style="background:rgba(16,185,129,0.1)"><i class="fas fa-clock" style="color:#10b981"></i></div>
+                <div class="stat-content"><div class="stat-number">${upcoming}</div><div class="stat-label">Upcoming</div></div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid #6366f1;cursor:pointer" onclick="filterMeetingsAdmin('past')">
+                <div class="stat-icon" style="background:rgba(99,102,241,0.1)"><i class="fas fa-history" style="color:#6366f1"></i></div>
+                <div class="stat-content"><div class="stat-number">${completed}</div><div class="stat-label">Completed</div></div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid #ef4444;cursor:pointer" onclick="filterMeetingsAdmin('cancelled')">
+                <div class="stat-icon" style="background:rgba(239,68,68,0.1)"><i class="fas fa-times-circle" style="color:#ef4444"></i></div>
+                <div class="stat-content"><div class="stat-number">${cancelled}</div><div class="stat-label">Cancelled</div></div>
+            </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-sm ${meetingsFilter === 'all' ? 'btn-primary' : 'btn-outline'}" onclick="filterMeetingsAdmin('all')">All</button>
+                <button class="btn btn-sm ${meetingsFilter === 'upcoming' ? 'btn-primary' : 'btn-outline'}" onclick="filterMeetingsAdmin('upcoming')">Upcoming</button>
+                <button class="btn btn-sm ${meetingsFilter === 'past' ? 'btn-primary' : 'btn-outline'}" onclick="filterMeetingsAdmin('past')">Past</button>
+                <button class="btn btn-sm ${meetingsFilter === 'cancelled' ? 'btn-primary' : 'btn-outline'}" onclick="filterMeetingsAdmin('cancelled')">Cancelled</button>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="loadMeetingsData()" style="margin-left:auto;"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+
+        ${filtered.length === 0 ? `
+            <div class="empty-state" style="text-align:center; padding:60px 20px;">
+                <i class="fas fa-calendar-day" style="font-size:48px; color:#cbd5e1; margin-bottom:16px;"></i>
+                <h3 style="color:#64748b;">No Meetings Found</h3>
+                <p style="color:#94a3b8;">No meetings match the current filter.</p>
+            </div>
+        ` : `
+            <div class="table-container" style="overflow-x:auto;">
+                <table class="data-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Meeting</th>
+                            <th>Date & Time</th>
+                            <th>Duration</th>
+                            <th>Organizer</th>
+                            <th>Project</th>
+                            <th>Attendees</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(m => {
+                            const mDate = new Date(m.meetingDateTime);
+                            const isPast = mDate < new Date();
+                            const dateStr = mDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                            const acceptedCount = (m.attendees || []).filter(a => a.status === 'accepted').length;
+                            const totalAtt = (m.attendees || []).length;
+                            const statusClass = m.status === 'cancelled' ? 'color:#ef4444' : isPast ? 'color:#6366f1' : 'color:#10b981';
+                            const statusLabel = m.status === 'cancelled' ? 'Cancelled' : isPast ? 'Completed' : 'Upcoming';
+                            const statusIcon = m.status === 'cancelled' ? 'fa-times-circle' : isPast ? 'fa-check-circle' : 'fa-clock';
+
+                            const meetingTypeLabels = {
+                                'project_discussion': 'Discussion',
+                                'design_review': 'Design Review',
+                                'progress_update': 'Progress Update',
+                                'kickoff': 'Kickoff',
+                                'final_review': 'Final Review',
+                                'other': 'Other'
+                            };
+
+                            return `<tr>
+                                <td>
+                                    <div style="font-weight:600;color:#1e293b;">${sanitizeInput(m.title)}</div>
+                                    <small style="color:#94a3b8;">${meetingTypeLabels[m.meetingType] || m.meetingType || 'Meeting'}</small>
+                                </td>
+                                <td>
+                                    <div style="font-weight:500;">${dateStr}</div>
+                                    <small style="color:#64748b;">${timeStr}</small>
+                                </td>
+                                <td>${m.duration || 30} min</td>
+                                <td>
+                                    <div style="font-weight:500;">${sanitizeInput(m.organizerName || 'Unknown')}</div>
+                                    <small style="color:#94a3b8;">${m.organizerType || ''}</small>
+                                </td>
+                                <td>${m.jobTitle ? sanitizeInput(m.jobTitle) : '<span style="color:#94a3b8;">—</span>'}</td>
+                                <td>
+                                    <span style="font-weight:500;">${acceptedCount}/${totalAtt}</span>
+                                    <small style="color:#64748b;"> accepted</small>
+                                </td>
+                                <td><span style="${statusClass}; font-weight:600;"><i class="fas ${statusIcon}"></i> ${statusLabel}</span></td>
+                                <td><button class="btn btn-sm btn-outline" onclick="viewMeetingDetails('${m.id}')"><i class="fas fa-eye"></i></button></td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `}
+    `;
+}
+
+function filterMeetingsAdmin(filter) {
+    meetingsFilter = filter;
+    renderMeetingsTab();
+}
+
+function viewMeetingDetails(meetingId) {
+    const meeting = state.meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    const mDate = new Date(meeting.meetingDateTime);
+    const endDate = new Date(meeting.endDateTime);
+    const dateStr = mDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const timeStr = mDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const endTimeStr = endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const isPast = mDate < new Date();
+
+    const meetingTypeLabels = {
+        'project_discussion': 'Project Discussion',
+        'design_review': 'Design Review',
+        'progress_update': 'Progress Update',
+        'kickoff': 'Project Kickoff',
+        'final_review': 'Final Review',
+        'other': 'Other'
+    };
+
+    const attendeesHTML = (meeting.attendees || []).map(a => {
+        const statusColor = a.status === 'accepted' ? '#10b981' : a.status === 'declined' ? '#ef4444' : '#f59e0b';
+        const statusIcon = a.status === 'accepted' ? 'fa-check-circle' : a.status === 'declined' ? 'fa-times-circle' : 'fa-clock';
+        return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f8fafc; border-radius:8px; margin-bottom:8px;">
+            <div>
+                <strong>${sanitizeInput(a.name)}</strong>
+                <span style="color:#94a3b8; margin-left:8px; font-size:13px;">${sanitizeInput(a.email || '')}</span>
+                <span style="display:inline-block; background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:4px; font-size:11px; margin-left:8px;">${a.type || 'user'}</span>
+            </div>
+            <span style="color:${statusColor}; font-weight:600; font-size:13px;"><i class="fas ${statusIcon}"></i> ${a.status}</span>
+        </div>`;
+    }).join('');
+
+    const content = `
+        <div style="padding:28px;">
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:24px;">
+                <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-calendar-check" style="color:#fff;font-size:20px;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;color:#1e293b;font-size:20px;">${sanitizeInput(meeting.title)}</h3>
+                    <p style="margin:4px 0 0;color:#64748b;font-size:14px;">${meetingTypeLabels[meeting.meetingType] || 'Meeting'}</p>
+                </div>
+                <span style="margin-left:auto; padding:6px 14px; border-radius:20px; font-weight:600; font-size:13px; background:${meeting.status === 'cancelled' ? '#fef2f2; color:#ef4444' : isPast ? '#f0f0ff; color:#6366f1' : '#f0fdf4; color:#10b981'}">
+                    ${meeting.status === 'cancelled' ? 'Cancelled' : isPast ? 'Completed' : 'Upcoming'}
+                </span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px;">
+                    <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Date & Time</div>
+                    <div style="font-weight:600; color:#1e293b;">${dateStr}</div>
+                    <div style="color:#64748b;">${timeStr} — ${endTimeStr} (${meeting.duration} min)</div>
+                </div>
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px;">
+                    <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Location</div>
+                    <div style="font-weight:600; color:#1e293b;">${sanitizeInput(meeting.location || 'Online')}</div>
+                </div>
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px;">
+                    <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Organizer</div>
+                    <div style="font-weight:600; color:#1e293b;">${sanitizeInput(meeting.organizerName)}</div>
+                    <div style="color:#64748b; font-size:13px;">${sanitizeInput(meeting.organizerEmail || '')}</div>
+                </div>
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px;">
+                    <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Project</div>
+                    <div style="font-weight:600; color:#1e293b;">${meeting.jobTitle ? sanitizeInput(meeting.jobTitle) : 'No project linked'}</div>
+                </div>
+            </div>
+
+            ${meeting.agenda ? `
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 8px; color:#1e293b;"><i class="fas fa-list-ul" style="color:#6366f1; margin-right:6px;"></i> Agenda</h4>
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px; color:#334155; line-height:1.7; white-space:pre-wrap;">${sanitizeInput(meeting.agenda)}</div>
+            </div>` : ''}
+
+            ${meeting.description ? `
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 8px; color:#1e293b;"><i class="fas fa-sticky-note" style="color:#f59e0b; margin-right:6px;"></i> Notes</h4>
+                <div style="background:#f8fafc; padding:14px 18px; border-radius:10px; color:#334155;">${sanitizeInput(meeting.description)}</div>
+            </div>` : ''}
+
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 12px; color:#1e293b;"><i class="fas fa-users" style="color:#3b82f6; margin-right:6px;"></i> Attendees (${(meeting.attendees || []).length})</h4>
+                ${attendeesHTML || '<p style="color:#94a3b8;">No attendees</p>'}
+            </div>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid #f1f5f9;">
+                <small style="color:#94a3b8; margin-right:auto;">Created: ${formatAdminDate(meeting.createdAt)}</small>
+                <button class="btn btn-outline" onclick="closeModal()">Close</button>
+            </div>
+        </div>`;
+
+    showModal(content);
 }
