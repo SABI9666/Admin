@@ -5552,3 +5552,574 @@ table tbody tr:last-child td {
     background: #ede9fe;
     color: #4f46e5;
 }
+
+/* ================================================================
+   PROFESSIONAL MOBILE DESIGN OVERHAUL
+   World-class admin mobile experience
+   ================================================================ */
+
+/* --- SAFE AREA SUPPORT --- */
+@supports (padding: env(safe-area-inset-bottom)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    .sidebar {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* --- 1024px: ENHANCED TABLET/MOBILE TRANSITIONS --- */
+@media (max-width: 1024px) {
+
+    /* == Better Sidebar Overlay == */
+    .sidebar-overlay {
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        transition: opacity 0.3s ease;
+    }
+
+    /* == Sidebar Smooth Animation == */
+    .sidebar {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 32px rgba(0, 0, 0, 0.3);
+    }
+
+    /* == iOS Input Zoom Prevention == */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* --- 768px: COMPREHENSIVE MOBILE POLISH --- */
+@media (max-width: 768px) {
+
+    /* == iOS Tap Highlight == */
+    * {
+        -webkit-tap-highlight-color: rgba(79, 70, 229, 0.08);
+    }
+
+    /* == Global Touch Target Enforcement == */
+    button,
+    [role="button"],
+    a.btn,
+    .btn,
+    .sidebar-link,
+    select {
+        min-height: 44px;
+    }
+
+    /* == Mobile Header Enhancement == */
+    .mobile-header {
+        padding: 0 16px;
+        padding-top: env(safe-area-inset-top, 0);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .mobile-menu-btn,
+    .mobile-logout {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        transition: background 0.2s;
+    }
+    .mobile-menu-btn:active,
+    .mobile-logout:active {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .mobile-brand {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+    }
+
+    /* == Topbar Mobile Enhancement == */
+    .topbar {
+        padding: 0 16px;
+        height: 56px;
+        top: 56px;
+    }
+    .page-title h1 {
+        font-size: 17px;
+    }
+    .topbar-date {
+        display: none;
+    }
+
+    /* == Better Form Inputs == */
+    .form-group input,
+    .form-group select,
+    .form-group textarea,
+    .form-input,
+    .sa-search-input,
+    .sa-filter-select {
+        border-radius: 10px;
+        padding: 12px 14px;
+        min-height: 48px;
+        border: 1.5px solid var(--gray-200);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        outline: none;
+    }
+    .form-group label {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    /* == Better Card Styling == */
+    .stat-card,
+    .ann-stat-card,
+    .sub-stat-card,
+    .sa-collection-card {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* == Modal → Bottom Sheet == */
+    .modal-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+    .modal-content {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        margin: 0 !important;
+        max-height: 92vh !important;
+        padding: 20px !important;
+        animation: adminModalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    @keyframes adminModalSlide {
+        from { transform: translateY(100%); opacity: 0.5; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* == Modal Close Button Touch Target == */
+    .modal-close,
+    .btn-close,
+    [class*="modal"] [class*="close"] {
+        min-width: 40px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+    }
+
+    /* == Table Mobile Enhancement == */
+    .sa-table-wrapper {
+        border-radius: 12px;
+        position: relative;
+    }
+    .sa-table th {
+        font-size: 0.7rem;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+    .sa-table td {
+        padding: 10px;
+        font-size: 0.8rem;
+    }
+    .sa-table input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* == Better Button Sizing == */
+    .btn {
+        padding: 10px 16px;
+        font-size: 13px;
+        border-radius: 10px;
+    }
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-height: 36px;
+    }
+
+    /* == Smooth Scrolling == */
+    .sa-table-wrapper,
+    .sa-detail-table-wrap,
+    .modal-content,
+    .sidebar-nav {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    /* == Announcement Stats == */
+    .announcements-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .ann-stat-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .ann-stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        font-size: 1rem;
+    }
+    .ann-stat-number {
+        font-size: 1.25rem;
+    }
+    .ann-stat-label {
+        font-size: 0.72rem;
+    }
+    .announcements-header {
+        padding: 1.25rem 1rem;
+        border-radius: 16px;
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    .announcements-header-left h3 {
+        font-size: 1.1rem;
+        justify-content: center;
+    }
+
+    /* == Subscription Stats == */
+    .sub-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .sub-stat-card {
+        padding: 14px;
+        border-radius: 14px;
+        gap: 10px;
+    }
+    .sub-stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+
+    /* == Incomplete Users / Marketing / Prospect Stats == */
+    .iu-stats-row,
+    .po-stats-row,
+    .me-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    /* == Better Welcome Header == */
+    .admin-dash-welcome {
+        padding: 20px 16px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+    .admin-dash-welcome-left h2 {
+        font-size: 18px;
+    }
+    .admin-dash-welcome-left p {
+        font-size: 13px;
+    }
+
+    /* == Better Sidebar for Mobile == */
+    .sidebar {
+        padding-top: env(safe-area-inset-top, 0);
+    }
+    .sidebar-brand {
+        padding: 18px 16px 14px;
+    }
+    .brand-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 15px;
+    }
+    .brand-text h2 {
+        font-size: 15px;
+    }
+    .sidebar-link {
+        padding: 11px 16px;
+        font-size: 13px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    .nav-section-label {
+        padding: 14px 16px 4px;
+        font-size: 9px;
+    }
+
+    /* == Admin Inactivity Warning Mobile == */
+    .admin-inactivity-overlay .modal-content,
+    .admin-inactivity-modal {
+        border-radius: 20px 20px 0 0;
+    }
+
+    /* == Analysis Portal Mobile == */
+    .ap-stats-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .ap-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    /* == Visitor Analytics Mobile == */
+    .va-top {
+        padding: 14px 16px;
+        border-radius: 12px;
+    }
+    .va-title {
+        font-size: 16px;
+    }
+
+    /* == Chatbot Reports Mobile == */
+    .ec-banner {
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    /* == Better Empty States == */
+    .announcements-empty,
+    .sa-empty {
+        padding: 2rem 1rem;
+        border-radius: 16px;
+    }
+    .announcements-empty i {
+        font-size: 2.5rem;
+    }
+}
+
+/* --- 480px: SMALL PHONE COMPREHENSIVE POLISH --- */
+@media (max-width: 480px) {
+
+    /* == Topbar Ultra-Compact == */
+    .topbar {
+        padding: 0 12px;
+        height: 50px;
+    }
+    .page-title h1 {
+        font-size: 15px;
+    }
+    .page-subtitle {
+        font-size: 11px;
+    }
+
+    /* == All Stats Grids → Single Column == */
+    .announcements-stats-row,
+    .iu-stats-row,
+    .po-stats-row,
+    .me-stats-row,
+    .sub-stats-grid,
+    .ec-stats-row,
+    .ap-stats-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* == Cards Ultra-Compact == */
+    .stat-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .stat-card .stat-number {
+        font-size: 20px;
+    }
+    .ann-stat-card {
+        flex-direction: row;
+        padding: 12px;
+        gap: 10px;
+    }
+    .sub-stat-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    /* == Content Area Ultra-Compact == */
+    .content-area {
+        padding: 10px;
+    }
+
+    /* == Better Buttons at Small Size == */
+    .action-buttons,
+    .sa-header-actions,
+    .sa-detail-actions,
+    .sa-modal-actions,
+    .review-actions {
+        flex-direction: column;
+        gap: 6px;
+    }
+    .action-buttons .btn,
+    .sa-header-actions .btn,
+    .sa-modal-actions .btn,
+    .review-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* == Table Ultra-Compact == */
+    .sa-table th {
+        font-size: 0.65rem;
+        padding: 6px 8px;
+    }
+    .sa-table td {
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+
+    /* == Modal Ultra-Compact == */
+    .modal-content {
+        padding: 16px !important;
+        border-radius: 16px 16px 0 0 !important;
+    }
+    .modal-body {
+        padding: 14px;
+    }
+
+    /* == Welcome Header == */
+    .admin-dash-welcome {
+        padding: 16px 14px;
+        border-radius: 14px;
+    }
+    .admin-dash-welcome-left h2 {
+        font-size: 16px;
+    }
+    .admin-dash-welcome-left p {
+        font-size: 12px;
+    }
+
+    /* == System Admin Compact == */
+    .sa-overview-grid {
+        gap: 10px;
+    }
+    .sa-collection-card {
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+    .sa-card-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+    .sa-card-info h4 {
+        font-size: 0.85rem;
+    }
+    .sa-shield {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        font-size: 1.2rem;
+    }
+    .sa-header-left h2 {
+        font-size: 1.1rem;
+    }
+
+    /* == Subscription Plans == */
+    .sub-plans-grid {
+        gap: 10px;
+    }
+
+    /* == Visitor Analytics Compact == */
+    .va-kpis {
+        gap: 8px;
+    }
+    .va-top {
+        padding: 12px 14px;
+    }
+    .va-title {
+        font-size: 14px;
+    }
+    .va-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    /* == Better Search Inputs == */
+    .sa-search-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* == Safe Area Bottom Padding == */
+    .content-area {
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* --- 360px: EXTRA SMALL PHONE --- */
+@media (max-width: 360px) {
+    .content-area {
+        padding: 8px;
+    }
+    .stat-card {
+        padding: 12px;
+    }
+    .stat-card .stat-number {
+        font-size: 18px;
+    }
+    .admin-dash-welcome {
+        padding: 14px 12px;
+    }
+    .admin-dash-welcome-left h2 {
+        font-size: 15px;
+    }
+    .sa-collection-card {
+        padding: 10px 12px;
+    }
+    .btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    .topbar {
+        height: 46px;
+    }
+    .page-title h1 {
+        font-size: 14px;
+    }
+    .mobile-brand {
+        font-size: 14px;
+    }
+}
+
+/* --- LANDSCAPE PHONE OPTIMIZATION --- */
+@media (max-height: 500px) and (orientation: landscape) {
+    .sidebar {
+        max-height: 100vh;
+        max-height: 100dvh;
+    }
+    .modal-content {
+        max-height: 85vh !important;
+    }
+    .mobile-header {
+        height: 48px;
+    }
+    .topbar {
+        top: 48px;
+        height: 50px;
+    }
+}
+
+/* --- PRINT STYLES --- */
+@media print {
+    .sidebar, .mobile-header, .topbar, .sidebar-overlay { display: none !important; }
+    .main-content { margin-left: 0 !important; padding-top: 0 !important; }
+    .content-area { padding: 0 !important; }
+}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SteelConnect - Admin Login</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -281,6 +281,57 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* Mobile Responsive Enhancements */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px;
+                padding-top: env(safe-area-inset-top, 16px);
+                padding-bottom: env(safe-area-inset-bottom, 16px);
+            }
+            .login-container {
+                padding: 28px 20px;
+                border-radius: 20px;
+                box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            }
+            .login-header h1 {
+                font-size: 22px;
+            }
+            .login-header p {
+                font-size: 14px;
+            }
+            .form-group input {
+                padding: 14px;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+            .login-btn {
+                padding: 14px;
+                font-size: 15px;
+                border-radius: 10px;
+                min-height: 48px;
+            }
+            .otp-input {
+                font-size: 24px !important;
+                letter-spacing: 8px;
+            }
+            .reset-code-input {
+                font-size: 20px !important;
+                letter-spacing: 6px;
+            }
+        }
+        @media (max-width: 360px) {
+            .login-container {
+                padding: 24px 16px;
+            }
+            .login-header h1 {
+                font-size: 20px;
+            }
+            .otp-input {
+                font-size: 20px !important;
+                letter-spacing: 6px;
+            }
         }
     </style>
 </head>
