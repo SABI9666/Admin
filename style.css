@@ -5572,10 +5572,31 @@ table tbody tr:last-child td {
 /* --- 1024px: ENHANCED TABLET/MOBILE TRANSITIONS --- */
 @media (max-width: 1024px) {
 
+    /* == Premium Touch Feedback == */
+    button:active,
+    .btn:active,
+    .sidebar-link:active,
+    .stat-card:active,
+    .ann-stat-card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+
+    /* == Disable hover transforms on touch == */
+    @media (hover: none) {
+        .stat-card:hover,
+        .ann-stat-card:hover,
+        .sub-stat-card:hover,
+        .sub-plan-card:hover,
+        .sa-collection-card:hover {
+            transform: none !important;
+        }
+    }
+
     /* == Better Sidebar Overlay == */
     .sidebar-overlay {
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         transition: opacity 0.3s ease;
     }
 
@@ -5603,6 +5624,9 @@ table tbody tr:last-child td {
 
 /* --- 768px: COMPREHENSIVE MOBILE POLISH --- */
 @media (max-width: 768px) {
+
+    /* == Disable smooth scroll on touch == */
+    html { scroll-behavior: auto; }
 
     /* == iOS Tap Highlight == */
     * {
@@ -5694,7 +5718,7 @@ table tbody tr:last-child td {
         border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
-    /* == Modal → Bottom Sheet == */
+    /* == Modal → Bottom Sheet with Drag Handle == */
     .modal-overlay {
         align-items: flex-end !important;
         padding: 0 !important;
@@ -5706,8 +5730,18 @@ table tbody tr:last-child td {
         margin: 0 !important;
         max-height: 92vh !important;
         padding: 20px !important;
+        padding-top: 12px !important;
         animation: adminModalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .modal-content::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 0 auto 14px;
     }
     @keyframes adminModalSlide {
         from { transform: translateY(100%); opacity: 0.5; }
@@ -5724,6 +5758,25 @@ table tbody tr:last-child td {
         align-items: center;
         justify-content: center;
         border-radius: 10px;
+    }
+
+    /* == Premium Card Styling == */
+    .stat-card {
+        border-radius: 16px;
+        transition: transform 0.15s;
+    }
+    .review-card,
+    .conversation-card {
+        border-radius: 14px;
+    }
+    .ann-stat-card {
+        border-radius: 16px;
+    }
+    .sub-stat-card {
+        border-radius: 16px;
+    }
+    .sub-plan-card {
+        border-radius: 16px;
     }
 
     /* == Table Mobile Enhancement == */
