@@ -3034,13 +3034,17 @@ function renderGenericTab(type) {
                         <th>Title</th>
                         <th>Client</th>
                         <th>Budget</th>
+                        <th>Completion</th>
                         <th>Status</th>
                         <th>Files</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${items.map(job => `
+                    ${items.map(job => {
+                        const completionPct = job.status === 'completed' ? 100 : (job.completionPercentage || 0);
+                        const hasPending = job.completionUpdate && job.completionUpdate.status === 'pending';
+                        return `
                         <tr>
                             <td>
                                 <div class="job-title-cell">
@@ -3055,6 +3059,15 @@ function renderGenericTab(type) {
                                 </div>
                             </td>
                             <td><span class="budget-amount">${job.budget || 'N/A'}</span></td>
+                            <td>
+                                <div class="completion-cell">
+                                    <div class="completion-bar-mini">
+                                        <div class="completion-bar-fill" style="width: ${completionPct}%; background: ${completionPct >= 75 ? '#10b981' : completionPct >= 40 ? '#f59e0b' : '#3b82f6'}"></div>
+                                    </div>
+                                    <span class="completion-pct-text">${completionPct}%</span>
+                                    ${hasPending ? `<span class="completion-pending-badge" title="Pending: ${job.completionUpdate.percentage}%">⏳</span>` : ''}
+                                </div>
+                            </td>
                             <td><span class="status ${job.status || 'unknown'}">${job.status || 'Unknown'}</span></td>
                             <td>
                                 ${getJobFilesCell(job)}
@@ -3063,8 +3076,8 @@ function renderGenericTab(type) {
                                 <button class="btn btn-sm" onclick="viewJobDetails('${job._id}')">View Details</button>
                                 <button class="btn btn-sm btn-danger" onclick="confirmDeleteJob('${job._id}')">Delete</button>
                             </td>
-                        </tr>
-                    `).join('')}
+                        </tr>`;
+                    }).join('')}
                 </tbody>
             </table>`;
     } else if (type === 'quotes') {
@@ -3254,6 +3267,9 @@ function viewJobDetails(jobId) {
                         <div><label>Email:</label><span>${job.posterEmail || 'N/A'}</span></div>
                         <div><label>Budget:</label><span>${job.budget || 'N/A'}</span></div>
                         <div><label>Status:</label><span class="status ${job.status}">${job.status}</span></div>
+                        <div><label>Completion:</label><span style="font-weight:700;color:${(job.status === 'completed' ? 100 : (job.completionPercentage || 0)) >= 75 ? '#10b981' : '#f59e0b'}">${job.status === 'completed' ? 100 : (job.completionPercentage || 0)}%</span></div>
+                        ${job.completionDetails ? `<div><label>Completion Details:</label><span>${job.completionDetails}</span></div>` : ''}
+                        ${job.completionUpdate && job.completionUpdate.status === 'pending' ? `<div><label>Pending Update:</label><span style="color:#d97706;font-weight:600">${job.completionUpdate.percentage}% - ${job.completionUpdate.details} (by ${job.completionUpdate.submittedByName})</span></div>` : ''}
                         ${job.deadline ? `<div><label>Deadline:</label><span>${formatAdminDate(job.deadline)}</span></div>` : ''}
                         ${job.skills ? `<div><label>Skills:</label><span>${job.skills}</span></div>` : ''}
                     </div>
