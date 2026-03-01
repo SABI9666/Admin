@@ -5572,10 +5572,31 @@ table tbody tr:last-child td {
 /* --- 1024px: ENHANCED TABLET/MOBILE TRANSITIONS --- */
 @media (max-width: 1024px) {
 
+    /* == Premium Touch Feedback == */
+    button:active,
+    .btn:active,
+    .sidebar-link:active,
+    .stat-card:active,
+    .ann-stat-card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+
+    /* == Disable hover transforms on touch == */
+    @media (hover: none) {
+        .stat-card:hover,
+        .ann-stat-card:hover,
+        .sub-stat-card:hover,
+        .sub-plan-card:hover,
+        .sa-collection-card:hover {
+            transform: none !important;
+        }
+    }
+
     /* == Better Sidebar Overlay == */
     .sidebar-overlay {
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         transition: opacity 0.3s ease;
     }
 
@@ -5603,6 +5624,9 @@ table tbody tr:last-child td {
 
 /* --- 768px: COMPREHENSIVE MOBILE POLISH --- */
 @media (max-width: 768px) {
+
+    /* == Disable smooth scroll on touch == */
+    html { scroll-behavior: auto; }
 
     /* == iOS Tap Highlight == */
     * {
@@ -5694,7 +5718,7 @@ table tbody tr:last-child td {
         border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
-    /* == Modal → Bottom Sheet == */
+    /* == Modal → Bottom Sheet with Drag Handle == */
     .modal-overlay {
         align-items: flex-end !important;
         padding: 0 !important;
@@ -5706,8 +5730,18 @@ table tbody tr:last-child td {
         margin: 0 !important;
         max-height: 92vh !important;
         padding: 20px !important;
+        padding-top: 12px !important;
         animation: adminModalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .modal-content::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 0 auto 14px;
     }
     @keyframes adminModalSlide {
         from { transform: translateY(100%); opacity: 0.5; }
@@ -5724,6 +5758,25 @@ table tbody tr:last-child td {
         align-items: center;
         justify-content: center;
         border-radius: 10px;
+    }
+
+    /* == Premium Card Styling == */
+    .stat-card {
+        border-radius: 16px;
+        transition: transform 0.15s;
+    }
+    .review-card,
+    .conversation-card {
+        border-radius: 14px;
+    }
+    .ann-stat-card {
+        border-radius: 16px;
+    }
+    .sub-stat-card {
+        border-radius: 16px;
+    }
+    .sub-plan-card {
+        border-radius: 16px;
     }
 
     /* == Table Mobile Enhancement == */
@@ -5906,6 +5959,119 @@ table tbody tr:last-child td {
     .announcements-empty i {
         font-size: 2.5rem;
     }
+
+    /* == Notifications → Mobile Premium Toast == */
+    #notification-container {
+        top: auto;
+        bottom: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+    .notification {
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        font-size: 13px;
+        gap: 12px;
+        border-left-width: 4px;
+    }
+    .notification-close {
+        min-width: 36px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .notification-close:active {
+        background: #f3f4f6;
+    }
+    .notification-actions {
+        flex-wrap: wrap;
+    }
+    .notification-actions button {
+        border-radius: 8px;
+        min-height: 36px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    @keyframes notifSlideIn {
+        from { transform: translateY(30px) scale(0.95); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    /* == Portal Page Headers Mobile == */
+    .section-header,
+    .tab-header,
+    [class*="-header"] h2,
+    [class*="-header"] h3 {
+        font-size: clamp(15px, 4vw, 18px);
+    }
+
+    /* == Action Bars / Toolbars Mobile == */
+    .sa-header-actions,
+    .ann-header-actions,
+    .sub-header-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .sa-header-actions .btn,
+    .ann-header-actions .btn,
+    .sub-header-actions .btn {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+        border-radius: 10px;
+    }
+
+    /* == Status Badges Mobile == */
+    .status-badge,
+    [class*="badge"],
+    [class*="tag"] {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    /* == Detail Views Mobile == */
+    .sa-detail-content {
+        padding: 16px;
+    }
+    .sa-detail-header {
+        padding: 16px;
+        border-radius: 14px 14px 0 0;
+    }
+    .sa-detail-body {
+        padding: 16px;
+    }
+    .sa-detail-field label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .sa-detail-field .field-value {
+        font-size: 13.5px;
+    }
+
+    /* == Tabs Mobile Premium == */
+    .ann-tabs,
+    .sub-tabs,
+    [class*="-tabs"] {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .ann-tab-btn,
+    .sub-tab-btn,
+    [class*="-tab-btn"] {
+        padding: 10px 14px;
+        font-size: 12.5px;
+        min-height: 42px;
+    }
 }
 
 /* --- 480px: SMALL PHONE COMPREHENSIVE POLISH --- */
@@ -6057,6 +6223,11 @@ table tbody tr:last-child td {
         width: 100%;
         min-width: 0;
     }
+
+    /* == Notifications Small Phone == */
+    #notification-container { right: 8px; left: 8px; bottom: 12px; }
+    .notification { padding: 12px 14px; border-radius: 12px; font-size: 12.5px; }
+    .notification-close { min-width: 32px; min-height: 32px; font-size: 13px; }
 
     /* == Safe Area Bottom Padding == */
     .content-area {
