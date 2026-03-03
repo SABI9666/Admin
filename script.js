@@ -5603,7 +5603,7 @@ const ME_TEMPLATES = {
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">We have a couple of updates on SteelConnect that are relevant to you as a designer:</p>
 <p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>More Projects Available</strong> — Contractors are posting new steel construction projects regularly. Browse and submit your quotes to win work.</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Enhanced Profile</strong> — Your profile is now more visible to contractors looking for qualified engineers and designers.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;"><strong>Enhanced Profile</strong> — Your profile is now more visible to contractors looking for qualified professionals.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
     },
@@ -5613,8 +5613,8 @@ const ME_TEMPLATES = {
         subject: 'Quick update from SteelConnect',
         body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">We wanted to check in</h2>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. Since your last visit, we have improved our AI cost estimation tool and several new designers have joined the platform.</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">You can post your project requirements and start receiving quotes from verified structural engineers and designers.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">It has been a while since you last visited SteelConnect. Since your last visit, we have improved our AI cost estimation tool and several new professionals have joined the platform.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">You can post your project requirements and start receiving quotes from verified structural professionals.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Go to Dashboard</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you need help with anything, just reply to this email.</p>`
     },
@@ -5632,10 +5632,10 @@ const ME_TEMPLATES = {
     'opportunity-contractor': {
         name: 'Opportunity (Contractor)',
         icon: 'fa-briefcase',
-        subject: 'New designers available on SteelConnect',
-        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">New designers joined the platform</h2>
+        subject: 'New professionals available on SteelConnect',
+        body: `<h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 16px 0;">New professionals joined the platform</h2>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">Hi {{name}},</p>
-<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New structural engineers and designers have joined SteelConnect recently. If you have upcoming steel construction projects, now is a good time to post them and get competitive quotes.</p>
+<p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">New structural professionals have joined SteelConnect recently. If you have upcoming steel construction projects, now is a good time to post them and get competitive quotes.</p>
 <p style="font-size:15px;color:#334155;margin:0 0 14px 0;line-height:1.7;">You can also use our AI estimation tool to get an instant cost estimate before posting your project.</p>
 <p style="margin:24px 0 0 0;"><a href="https://steelconnectapp.com" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Post a Project</a></p>
 <p style="font-size:14px;color:#64748b;margin-top:16px;">If you have any questions, just reply to this email.</p>`
@@ -6399,7 +6399,7 @@ function crShowDraftReply(email, reportIdx) {
 <p style="font-size:15px;color:#334155;margin:0 0 8px 0;line-height:1.7;"><strong>What SteelConnect Offers:</strong></p>
 <ul style="font-size:14px;color:#334155;line-height:1.8;padding-left:20px;margin:0 0 14px 0;">
 <li><strong>AI-Powered Cost Estimation</strong> — Upload PDF drawings and get instant, detailed cost breakdowns</li>
-<li><strong>Global Marketplace</strong> — Connect with 2,500+ verified structural engineers across 50+ countries</li>
+<li><strong>Global Marketplace</strong> — Connect with 2,500+ verified structural professionals across 50+ countries</li>
 <li><strong>Business Analytics</strong> — Real-time dashboards, predictive forecasting, and KPI tracking</li>
 <li><strong>Secure Collaboration</strong> — End-to-end encrypted messaging and file sharing</li>
 <li><strong>Project Management</strong> — Track milestones, deliverables, and payments in one place</li>
@@ -6490,13 +6490,13 @@ const BULK_EMAIL_TEMPLATE = `<p style="font-size:15px;color:#1a1a1a;line-height:
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">My name is Smith and I am the Director of Business Development at SteelConnectApp. I am reaching out to introduce our platform, which we developed specifically for construction industry professionals worldwide.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">SteelConnectApp is an AI-powered construction management platform that streamlines how contractors, structural engineers, and steel designers collaborate on projects. We serve professionals across the USA, United Kingdom, Australia, GCC countries, Asia, and Europe — over 50 countries and growing.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">SteelConnectApp is an AI-powered construction management platform that streamlines how contractors and steel construction professionals collaborate on projects. We serve professionals across the USA, United Kingdom, Australia, GCC countries, Asia, and Europe — over 50 countries and growing.</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 16px;">I wanted to highlight a few capabilities that our clients have found particularly valuable:</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>AI-Powered Cost Estimation</strong> — Our proprietary AI engine analyzes PDF construction drawings and delivers comprehensive cost breakdowns within minutes. The output includes trade-by-trade estimates covering structural steel, concrete, MEP systems, and finishes, along with a procurement-ready Bill of Quantities. To date, we have processed over 12,000 estimates with a verified accuracy rate above 95%.</p>
 
-<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Vetted Professional Network</strong> — Our marketplace includes over 2,500 PE-licensed structural engineers, detailers, and certified designers across the USA, UK, Australia, GCC, Asia, and Europe. Every professional undergoes credential verification, license checks, and insurance validation before being approved on the platform.</p>
+<p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Vetted Professional Network</strong> — Our marketplace includes over 2,500 verified structural professionals, detailers, and certified specialists across the USA, UK, Australia, GCC, Asia, and Europe. Every professional undergoes credential verification, license checks, and insurance validation before being approved on the platform.</p>
 
 <p style="font-size:15px;color:#1a1a1a;line-height:1.75;margin:0 0 8px;"><strong>Integrated Project Management</strong> — Manage your entire project lifecycle from a single dashboard. Post project requirements, receive competitive bids, communicate through encrypted channels, share documents securely, and track milestones and deliverables in real time.</p>
 
