@@ -304,10 +304,16 @@ function closeModal() { document.getElementById('modal-container').innerHTML = '
 // --- INPUT VALIDATION & SANITIZATION ---
 function sanitizeInput(input) {
     if (typeof input !== 'string') return input;
-    return input
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/javascript:/gi, '')
-        .replace(/on\w+=/gi, '');
+    const div = document.createElement('div');
+    div.textContent = input;
+    return div.innerHTML;
+}
+
+// Escape string for safe use in HTML attributes (onclick handlers, etc.)
+function escapeAttr(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;')
+              .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/`/g, '&#96;');
 }
 
 function debounce(func, wait) {
@@ -359,9 +365,9 @@ function showTab(tabName) {
         'bulk-email': { title: 'Bulk Email Campaign', subtitle: 'Send professional emails to up to 1,000 recipients at once' },
         'email-collection': { title: 'Email Collection', subtitle: 'Intelligent discovery of contractor company emails worldwide' },
         'visitor-analytics': { title: 'Visitor Analytics', subtitle: 'Track who browses your website, how long they stay, and where they come from' },
-        'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to sabincn676@gmail.com / 9895909666' },
+        'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to admin (configured via env) / (configured via env)' },
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
-        'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: 9895909666 (testing)' },
+        'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: (configured via env) (testing)' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -5031,7 +5037,7 @@ async function unholdSAItem(key, docId) {
     }
 }
 
-// Permanent Delete from live data - requires password 9666
+// Permanent Delete from live data - requires admin password
 async function permanentDeleteLiveSAItem(key, docId) {
     showModal(`
         <div class="sa-modal-detail">
@@ -6902,7 +6908,7 @@ function renderWhatsAppMarketingTab() {
             <div style="display:flex; align-items:center; gap:12px;">
                 <i class="fab fa-whatsapp" style="color:#25d366; font-size:22px;"></i>
                 <div style="font-size:13px; color:#065f46; line-height:1.6;">
-                    <strong>WhatsApp Cloud API Connected</strong> — Sender: <strong>${waApiStatus.senderNumber || '9895909666'}</strong> (testing — will change to Dubai number).
+                    <strong>WhatsApp Cloud API Connected</strong> — Sender: <strong>${waApiStatus.senderNumber || '(configured via env)'}</strong> (testing — will change to Dubai number).
                     Phone ID: ${waApiStatus.phoneNumberId || 'N/A'}
                 </div>
             </div>
@@ -6923,7 +6929,7 @@ function renderWhatsAppMarketingTab() {
                 <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; border:1px solid #fca5a5;">WHATSAPP_ACCESS_TOKEN</code> — Permanent access token from Meta Business<br><br>
                 <strong>How to get these:</strong><br>
                 1. Go to <a href="https://developers.facebook.com" target="_blank" style="color:#2563eb;">developers.facebook.com</a> → Create App → WhatsApp<br>
-                2. Add your phone number (9895909666 for testing)<br>
+                2. Add your phone number ((configured via env) for testing)<br>
                 3. Get Phone Number ID + Access Token from API Setup page<br>
                 4. Add them to your Render.com environment variables
             </div>
@@ -6936,7 +6942,7 @@ function renderWhatsAppMarketingTab() {
             <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 16px 0;"><i class="fab fa-whatsapp" style="color:#25d366; margin-right:8px;"></i>Quick Send</h3>
             <div style="margin-bottom:12px;">
                 <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Phone Number (with country code)</label>
-                <input type="text" id="waQuickPhone" placeholder="e.g. 919895909666" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                <input type="text" id="waQuickPhone" placeholder="e.g. (configured via env)" style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
             </div>
             <div style="margin-bottom:12px;">
                 <label style="font-size:13px; color:#64748b; font-weight:500; display:block; margin-bottom:4px;">Message</label>
@@ -7333,10 +7339,10 @@ async function waTestConnection() {
     const resultDiv = document.getElementById('waTestResult');
     if (!resultDiv) return;
     resultDiv.style.display = 'block';
-    resultDiv.innerHTML = '<div style="padding:14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1;"><i class="fas fa-spinner fa-spin"></i> Testing WhatsApp connection... sending test to 919895909666...</div>';
+    resultDiv.innerHTML = '<div style="padding:14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1;"><i class="fas fa-spinner fa-spin"></i> Testing WhatsApp connection... sending test to (configured via env)...</div>';
 
     try {
-        const response = await apiCall('/whatsapp/test', 'POST', { phone: '919895909666' });
+        const response = await apiCall('/whatsapp/test', 'POST', { phone: '(configured via env)' });
 
         let html = `<div style="padding:16px; background:white; border:1px solid #e2e8f0; border-radius:10px;">
             <h4 style="font-size:15px; margin:0 0 12px 0; color:#0f172a;">WhatsApp Test Results</h4>
@@ -7363,9 +7369,9 @@ async function waTestConnection() {
         if (!text?.sent && !tmpl?.sent) {
             html += `<div style="padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; font-size:13px; color:#92400e;">
                 <strong>Troubleshooting:</strong><br>
-                1. Make sure your phone number 9895909666 is added to WhatsApp Business account<br>
+                1. Make sure your phone number (configured via env) is added to WhatsApp Business account<br>
                 2. The access token may have expired — regenerate on Meta Developer Portal<br>
-                3. For first-time messages, you MUST first send "hello" from 9895909666 to your WhatsApp Business number<br>
+                3. For first-time messages, you MUST first send "hello" from (configured via env) to your WhatsApp Business number<br>
                 4. Check that the phone number ID matches the number registered in Meta Business
             </div>`;
         }
@@ -7485,7 +7491,7 @@ function renderActivityLogsTab() {
     <div style="padding:14px 18px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
         <i class="fas fa-bell" style="color:#0284c7; font-size:18px;"></i>
         <div style="font-size:13px; color:#0369a1; line-height:1.6;">
-            <strong>Real-time notifications</strong> are sent to <strong>sabincn676@gmail.com</strong> &amp; <strong>9895909666</strong> (WhatsApp) for every activity.
+            <strong>Real-time notifications</strong> are sent to <strong>admin (configured via env)</strong> &amp; <strong>(configured via env)</strong> (WhatsApp) for every activity.
             All activities (admin actions, user registrations, logins, job posts, quotes, estimations, visitor sessions) are tracked with visitor analytics included.
         </div>
     </div>
@@ -7721,7 +7727,7 @@ async function sendActivityReportNow() {
         showNotification('Sending activity report...', 'info');
         const response = await apiCall('/activity-report/send-now', 'POST');
         if (response.success) {
-            showNotification('Activity report sent to sabincn676@gmail.com', 'success');
+            showNotification('Activity report sent to admin (configured via env)', 'success');
         } else {
             showNotification('Failed to send report: ' + (response.message || 'Unknown error'), 'error');
         }
