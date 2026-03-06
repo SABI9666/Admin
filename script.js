@@ -154,6 +154,32 @@ async function initializeAdminPanel() {
 // --- API & UTILITY FUNCTIONS ---
 function getToken() { return localStorage.getItem('jwtToken'); }
 
+// === SCALABILITY: Admin API Response Cache ===
+const _adminCache = new Map();
+const _ADMIN_CACHE_TTL = 20000; // 20 seconds for admin data
+const _adminInflight = new Map();
+
+function _getAdminCached(key) {
+    const entry = _adminCache.get(key);
+    if (!entry || Date.now() - entry.ts > _ADMIN_CACHE_TTL) { _adminCache.delete(key); return null; }
+    return entry.data;
+}
+
+function _setAdminCached(key, data) {
+    if (_adminCache.size > 100) { const k = _adminCache.keys().next().value; _adminCache.delete(k); }
+    _adminCache.set(key, { data, ts: Date.now() });
+}
+
+function invalidateAdminCache(pattern) {
+    for (const key of _adminCache.keys()) { if (key.includes(pattern)) _adminCache.delete(key); }
+}
+
+// === SCALABILITY: Debounce for search inputs ===
+function debounce(fn, delay = 300) {
+    let timer;
+    return function (...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
+}
+
 async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = false) {
     const token = getToken();
     if (!token) {
@@ -161,6 +187,16 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
         logout();
         throw new Error('No token');
     }
+
+    const cacheKey = `${method}:${endpoint}`;
+
+    // Cache GET responses to reduce server load
+    if (method === 'GET') {
+        const cached = _getAdminCached(cacheKey);
+        if (cached) return cached;
+        if (_adminInflight.has(cacheKey)) return _adminInflight.get(cacheKey);
+    }
+
     const controller = new AbortController();
     const isFormData = isFileUpload || body instanceof FormData;
     const timeout = isFormData ? 120000 : 30000;
@@ -174,30 +210,53 @@ async function apiCall(endpoint, method = 'GET', body = null, isFileUpload = fal
             options.body = JSON.stringify(body);
         }
     }
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/admin${endpoint}`, options);
-        clearTimeout(timeoutId);
-        if (response.status === 401) {
-             logout();
-             throw new Error('Session expired. Please log in again.');
+
+    const requestPromise = (async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/admin${endpoint}`, options);
+            clearTimeout(timeoutId);
+            if (response.status === 401) {
+                 logout();
+                 throw new Error('Session expired. Please log in again.');
+            }
+            if (response.status === 429) {
+                showNotification('Too many requests. Please wait a moment.', 'warning');
+                throw new Error('Rate limited. Please wait and try again.');
+            }
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.message || 'An API error occurred.');
+            }
+
+            // Cache successful GET responses
+            if (method === 'GET') _setAdminCached(cacheKey, responseData);
+
+            // Invalidate related caches on mutations
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                const base = endpoint.split('?')[0].split('/').slice(0, 2).join('/');
+                invalidateAdminCache(base);
+                invalidateAdminCache('/dashboard'); // Dashboard stats may change
+            }
+
+            return responseData;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                const msg = 'Request timed out. The file may be too large or the connection is slow. Please try again.';
+                console.error(`API Call Timeout (${endpoint})`);
+                showNotification(msg, 'error');
+                throw new Error(msg);
+            }
+            console.error(`API Call Failed (${endpoint}):`, error);
+            showNotification(error.message, 'error');
+            throw error;
+        } finally {
+            _adminInflight.delete(cacheKey);
         }
-        const responseData = await response.json();
-        if (!response.ok) {
-            throw new Error(responseData.message || 'An API error occurred.');
-        }
-        return responseData;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            const msg = 'Request timed out. The file may be too large or the connection is slow. Please try again.';
-            console.error(`API Call Timeout (${endpoint})`);
-            showNotification(msg, 'error');
-            throw new Error(msg);
-        }
-        console.error(`API Call Failed (${endpoint}):`, error);
-        showNotification(error.message, 'error');
-        throw error;
-    }
+    })();
+
+    if (method === 'GET') _adminInflight.set(cacheKey, requestPromise);
+    return requestPromise;
 }
 
 function logout() {
@@ -3704,8 +3763,12 @@ const WS_BASE_DELAY = 5000;
 function initializeRealTimeUpdates() {
     if (!_pollingInitialized) {
         _pollingInitialized = true;
+        // Optimized: 60s polling (up from 30s) and only when tab is visible
         setInterval(async () => {
             try {
+                // Skip polling when admin tab is in background (saves server load)
+                if (document.hidden) return;
+
                 const activeEl = document.querySelector('.tab-content.active');
                 if (!activeEl) return;
                 const currentActiveTab = activeEl.id;
@@ -3722,7 +3785,15 @@ function initializeRealTimeUpdates() {
             } catch (error) {
                 console.log('Error in real-time updates:', error);
             }
-        }, 30000);
+        }, 60000); // Increased from 30s to 60s for scalability
+
+        // Re-fetch immediately when tab becomes visible after being hidden
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                const activeEl = document.querySelector('.tab-content.active');
+                if (activeEl?.id === 'dashboard-tab') loadDashboardStats();
+            }
+        });
     }
 
     connectWebSocket();
@@ -8195,24 +8266,25 @@ async function loadVisitorAnalyticsData() {
     if (!container) return;
     showLoader(container);
     try {
-        const result = await apiCall(`/visitors?days=${visitorFilterDays}&limit=500`);
+        const result = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`);
         state.visitors = result.visitors || [];
         state.visitorStats = result.stats || {};
         const badge = document.getElementById('visitorLiveBadge');
         if (badge) badge.textContent = result.stats?.activeNow > 0 ? result.stats.activeNow + ' live' : '';
         renderVisitorAnalyticsTab();
-        // Auto-refresh every 60 seconds
+        // Auto-refresh every 90 seconds (only when tab visible)
         if (visitorAutoRefresh) clearInterval(visitorAutoRefresh);
         visitorAutoRefresh = setInterval(async () => {
+            if (document.hidden) return; // Skip refresh when tab is hidden
             try {
-                const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=500`);
+                const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`); // Reduced limit from 500 to 200
                 state.visitors = r.visitors || [];
                 state.visitorStats = r.stats || {};
                 const b = document.getElementById('visitorLiveBadge');
                 if (b) b.textContent = r.stats?.activeNow > 0 ? r.stats.activeNow + ' live' : '';
                 renderVisitorAnalyticsTab();
             } catch(e) {}
-        }, 60000);
+        }, 90000); // Increased from 60s to 90s
     } catch (error) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading visitor data</h3><p>${error.message}</p></div>`;
     }
