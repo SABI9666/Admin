@@ -8266,25 +8266,30 @@ async function loadVisitorAnalyticsData() {
     if (!container) return;
     showLoader(container);
     try {
+        // Invalidate cache to ensure fresh data on manual load
+        invalidateAdminCache('/visitors');
         const result = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`);
         state.visitors = result.visitors || [];
         state.visitorStats = result.stats || {};
+        state.visitorTotal = result.total || result.visitors?.length || 0;
         const badge = document.getElementById('visitorLiveBadge');
         if (badge) badge.textContent = result.stats?.activeNow > 0 ? result.stats.activeNow + ' live' : '';
         renderVisitorAnalyticsTab();
-        // Auto-refresh every 90 seconds (only when tab visible)
+        // Auto-refresh every 60 seconds (only when tab visible)
         if (visitorAutoRefresh) clearInterval(visitorAutoRefresh);
         visitorAutoRefresh = setInterval(async () => {
-            if (document.hidden) return; // Skip refresh when tab is hidden
+            if (document.hidden) return;
             try {
-                const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`); // Reduced limit from 500 to 200
+                invalidateAdminCache('/visitors');
+                const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`);
                 state.visitors = r.visitors || [];
                 state.visitorStats = r.stats || {};
+                state.visitorTotal = r.total || r.visitors?.length || 0;
                 const b = document.getElementById('visitorLiveBadge');
                 if (b) b.textContent = r.stats?.activeNow > 0 ? r.stats.activeNow + ' live' : '';
                 renderVisitorAnalyticsTab();
             } catch(e) {}
-        }, 90000); // Increased from 60s to 90s
+        }, 60000);
     } catch (error) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading visitor data</h3><p>${error.message}</p></div>`;
     }
@@ -8316,6 +8321,7 @@ function renderVisitorAnalyticsTab() {
     const now = new Date();
     const total = s.totalVisitors || 1;
     const countriesData = s.countries || [];
+    const regionsData = s.regions || [];
     const citiesData = s.cities || [];
     const devices = s.devices || {};
     const browsers = s.browsers || {};
@@ -8413,11 +8419,14 @@ function renderVisitorAnalyticsTab() {
             <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-chart-area"></i> Daily Trend</h4></div><div style="height:200px"><canvas id="vaChartTrend"></canvas></div></div>
             <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-clock"></i> Peak Hours</h4></div><div style="height:200px"><canvas id="vaChartHourly"></canvas></div></div>
         </div>
-        <div class="va-g2">
+        <div class="va-g3">
             <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-globe-americas"></i> Top Countries</h4></div><div class="va-scroll-list">${countriesData.map(([k,c]) => {
                 const pts = k.split('|'); const nm = pts[0]; const cd = pts[1]||''; const fl = countryFlag(cd); const p = Math.round((c/total)*100);
                 return `<div class="vc-row"><span class="vc-flag">${fl}</span><span class="vc-name">${nm}</span><div class="vc-bar"><div class="vc-fill" style="width:${Math.max(p,4)}%"></div></div><span class="vc-num">${c}</span></div>`;
             }).join('') || '<div class="va-empty">No location data yet</div>'}</div></div>
+            <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-map"></i> Top Regions</h4></div><div class="va-scroll-list">${regionsData.map(([region,c]) => {
+                return `<div class="vc-row"><i class="fas fa-map-signs" style="color:#8b5cf6"></i><span class="vc-name">${region}</span><span class="vc-num">${c}</span></div>`;
+            }).join('') || '<div class="va-empty">No region data yet</div>'}</div></div>
             <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-city"></i> Top Cities</h4></div><div class="va-scroll-list">${citiesData.map(([city,c]) => {
                 return `<div class="vc-row"><i class="fas fa-map-marker-alt" style="color:#f59e0b"></i><span class="vc-name">${city}</span><span class="vc-num">${c}</span></div>`;
             }).join('') || '<div class="va-empty">No city data yet</div>'}</div></div>
@@ -8432,7 +8441,7 @@ function renderVisitorAnalyticsTab() {
             <div class="va-pnl"><div class="va-pnl-h"><h4><i class="fas fa-file-alt"></i> Top Pages</h4></div><div class="va-scroll-list">${(s.topPages||[]).map(([p,c]) => `<div class="vr-row"><span class="vr-name" title="${p}">${p.length>40?'...'+p.substring(p.length-40):p}</span><span class="vr-cnt">${c}</span></div>`).join('') || '<div class="va-empty">No data</div>'}</div></div>
         </div>
         <div class="va-pnl va-full">
-            <div class="va-pnl-h va-pnl-h-tbl"><h4><i class="fas fa-users"></i> All Visitors <span class="va-badge-count">${recentVisitors.length}</span></h4><div><span class="va-hint">Click row for details</span><button onclick="vaClearOldData()" class="va-btn-del"><i class="fas fa-trash-alt"></i> Clear Old</button></div></div>
+            <div class="va-pnl-h va-pnl-h-tbl"><h4><i class="fas fa-users"></i> All Visitors <span class="va-badge-count">${recentVisitors.length}${s.totalVisitors > recentVisitors.length ? ' of ' + s.totalVisitors : ''}</span></h4><div>${s.missingLocation ? '<span class="va-hint" style="color:#f59e0b" title="Geo-resolving on next refresh"><i class="fas fa-map-marker-alt"></i> ' + s.missingLocation + ' pending geo</span>' : ''}<span class="va-hint">Click row for details</span><button onclick="vaClearOldData()" class="va-btn-del"><i class="fas fa-trash-alt"></i> Clear Old</button></div></div>
             <div class="vt-wrap"><table class="vt"><thead><tr>
                 <th width="80">Status</th><th width="190">Location</th><th>Contact / Identity</th><th width="150">Device</th><th width="50">Pgs</th><th width="70">Time</th><th width="80">When</th>
             </tr></thead><tbody>${tableRows || '<tr><td colspan="7" class="vt-empty"><i class="fas fa-satellite-dish" style="font-size:24px;margin-bottom:8px;color:#cbd5e1"></i><br>No visitors yet<br><small>Data appears after someone visits your website</small></td></tr>'}</tbody></table></div>
@@ -8458,7 +8467,7 @@ function renderVisitorCharts(s) {
     }
 }
 
-function vaChangeDays(d) { visitorFilterDays = parseInt(d); state.visitors = []; loadVisitorAnalyticsData(); }
+function vaChangeDays(d) { visitorFilterDays = parseInt(d); state.visitors = []; invalidateAdminCache('/visitors'); loadVisitorAnalyticsData(); }
 
 async function vaClearOldData() {
     const d = prompt('Delete records older than how many days?', '30');
