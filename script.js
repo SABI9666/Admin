@@ -4124,6 +4124,14 @@ function renderAnalysisPortalTab() {
                                     <i class="fas fa-times"></i> Reject
                                 </button>
                             ` : ''}
+                            <input type="file" id="ap-card-pdf-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="cardUploadPdf(this,'${db._id}')">
+                            <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('ap-card-pdf-${db._id}').click()" title="Upload PDF Report">
+                                <i class="fas fa-file-pdf"></i> Upload PDF
+                            </button>
+                            <input type="file" id="ap-card-html-${db._id}" accept=".html,.htm,text/html" style="display:none" onchange="cardUploadHtml(this,'${db._id}')">
+                            <button class="ap-action-btn ap-btn-upload-html" onclick="document.getElementById('ap-card-html-${db._id}').click()" title="Upload HTML Report">
+                                <i class="fas fa-code"></i> Upload HTML
+                            </button>
                             <button class="ap-action-btn ap-btn-delete" onclick="deleteDashboard('${db._id}')">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
@@ -4850,6 +4858,81 @@ async function uploadHtmlReport(dashboardId) {
         console.error('HTML upload error:', error);
         showNotification('Failed to upload HTML report', 'error');
     }
+}
+
+// Card-level PDF upload (directly from dashboard card)
+async function cardUploadPdf(input, dashboardId) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showNotification('Only PDF files are allowed', 'error');
+        input.value = '';
+        return;
+    }
+    if (!confirm(`Upload "${file.name}" as PDF report for this dashboard? This will approve the dashboard with this PDF.`)) {
+        input.value = '';
+        return;
+    }
+    try {
+        showNotification('Uploading PDF report...', 'info');
+        const formData = new FormData();
+        formData.append('pdfFile', file);
+        const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        const response = await fetch(`https://steelconnect-backend.onrender.com/api/admin/dashboards/${dashboardId}/upload-pdf`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('PDF report uploaded! Dashboard approved with PDF.', 'success');
+            await loadAnalysisPortalData();
+        } else {
+            showNotification(result.message || 'Failed to upload PDF', 'error');
+        }
+    } catch (error) {
+        console.error('Card PDF upload error:', error);
+        showNotification('Failed to upload PDF report', 'error');
+    }
+    input.value = '';
+}
+
+// Card-level HTML upload (directly from dashboard card)
+async function cardUploadHtml(input, dashboardId) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith('.html') && !ext.endsWith('.htm')) {
+        showNotification('Only HTML files are allowed', 'error');
+        input.value = '';
+        return;
+    }
+    if (!confirm(`Upload "${file.name}" as HTML report? This will approve the dashboard with this HTML template.`)) {
+        input.value = '';
+        return;
+    }
+    try {
+        showNotification('Uploading HTML report...', 'info');
+        const formData = new FormData();
+        formData.append('htmlFile', file);
+        const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        const response = await fetch(`https://steelconnect-backend.onrender.com/api/admin/dashboards/${dashboardId}/upload-html`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('HTML report uploaded! Dashboard approved.', 'success');
+            await loadAnalysisPortalData();
+        } else {
+            showNotification(result.message || 'Failed to upload HTML', 'error');
+        }
+    } catch (error) {
+        console.error('Card HTML upload error:', error);
+        showNotification('Failed to upload HTML report', 'error');
+    }
+    input.value = '';
 }
 
 async function deleteDashboard(id) {
