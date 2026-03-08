@@ -4291,14 +4291,21 @@ async function previewDashboard(dashboardId) {
         const db = response.dashboard;
         if (!db) { showNotification('Dashboard not found', 'error'); return; }
 
-        // For link-based dashboards with no stored charts, fetch live data from the sheet
-        if (db.googleSheetUrl && (!db.charts || db.charts.length === 0)) {
+        // For dashboards with no/empty/stripped charts, fetch live data on-demand
+        // Works for link-based (fetches from sheet URL) and file-based (regenerates from Firebase Storage)
+        const chartsEmpty = !db.charts || db.charts.length === 0;
+        const chartsStripped = !chartsEmpty && db.charts.every(c => (!c.labels || c.labels.length === 0) && (!c.datasets || c.datasets.length === 0 || c.datasets.every(ds => !ds.data || ds.data.length === 0)));
+        if (chartsEmpty || chartsStripped || (!db.predictiveAnalysis && (db.googleSheetUrl || db.dataSource === 'file' || db.storagePath))) {
             try {
-                showNotification('Fetching live data from linked sheet...', 'info');
+                showNotification(chartsStripped ? 'Regenerating dashboard charts...' : 'Fetching live data...', 'info');
                 const liveData = await apiCall(`/dashboards/${dashboardId}/live-data`, 'GET');
                 if (liveData.charts && liveData.charts.length > 0) {
                     db.charts = liveData.charts;
-                    db.predictiveAnalysis = liveData.predictiveAnalysis || db.predictiveAnalysis;
+                }
+                if (liveData.predictiveAnalysis) {
+                    db.predictiveAnalysis = liveData.predictiveAnalysis;
+                }
+                if (liveData.sheetNames) {
                     db.sheetNames = liveData.sheetNames || db.sheetNames;
                 }
             } catch (liveErr) {
