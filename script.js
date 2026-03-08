@@ -437,6 +437,7 @@ function showTab(tabName) {
     // Always reload dashboard stats to reflect latest data
     if (tabName === 'dashboard') {
         loadDashboardStats();
+        startDashboardAutoRefresh();
         return;
     }
 
@@ -475,6 +476,38 @@ function showTab(tabName) {
 }
 
 // --- DASHBOARD ---
+// Auto-refresh dashboard stats every 60 seconds when dashboard tab is visible
+let dashboardAutoRefresh = null;
+function startDashboardAutoRefresh() {
+    if (dashboardAutoRefresh) clearInterval(dashboardAutoRefresh);
+    dashboardAutoRefresh = setInterval(async () => {
+        if (document.hidden) return;
+        const dashTab = document.getElementById('dashboard-tab');
+        if (!dashTab || !dashTab.classList.contains('active')) return;
+        try {
+            invalidateAdminCache('/dashboard');
+            const { stats } = await apiCall('/dashboard');
+            updateAdminSidebarBadges(stats);
+            // Silently update the stats grid without full re-render flicker
+            const statsGrid = document.getElementById('statsGrid');
+            if (!statsGrid) return;
+            // Update visitor card numbers in-place
+            const cards = statsGrid.querySelectorAll('.stat-card');
+            cards.forEach(card => {
+                const label = card.querySelector('.stat-label');
+                if (!label) return;
+                const numEl = card.querySelector('.stat-number');
+                if (!numEl) return;
+                if (label.textContent.includes('Visitors Today')) {
+                    numEl.innerHTML = `${stats.todayVisitors || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalVisitors30d || 0}</small>`;
+                } else if (label.textContent.includes('Logins Today')) {
+                    numEl.innerHTML = `${stats.todayLogins || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalLogins30d || 0}</small>`;
+                }
+            });
+        } catch(e) { /* silent refresh */ }
+    }, 60000);
+}
+
 async function loadDashboardStats() {
     const statsGrid = document.getElementById('statsGrid');
     try {
@@ -570,6 +603,23 @@ async function loadDashboardStats() {
                     <div class="stat-action"><button class="btn btn-sm btn-primary" onclick="showTab('community-feed')"><i class="fas fa-arrow-right"></i> Moderate</button></div>
                 </div>
             </div>
+            <div class="stat-card" style="border-left:4px solid #06b6d4">
+                <div class="stat-icon" style="background:rgba(6,182,212,0.1)"><i class="fas fa-eye" style="color:#06b6d4"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.todayVisitors || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalVisitors30d || 0}</small></div>
+                    <div class="stat-label">Visitors Today / 30d</div>
+                    ${(stats.activeVisitorsNow || 0) > 0 ? `<small style="color:#10b981"><i class="fas fa-broadcast-tower"></i> ${stats.activeVisitorsNow} Live Now</small>` : ''}
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('visitor-analytics')"><i class="fas fa-arrow-right"></i> View</button></div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid #8b5cf6">
+                <div class="stat-icon" style="background:rgba(139,92,246,0.1)"><i class="fas fa-sign-in-alt" style="color:#8b5cf6"></i></div>
+                <div class="stat-content">
+                    <div class="stat-number">${stats.todayLogins || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${stats.totalLogins30d || 0}</small></div>
+                    <div class="stat-label">Logins Today / 30d</div>
+                    <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('activity-logs')"><i class="fas fa-arrow-right"></i> Logs</button></div>
+                </div>
+            </div>
         `;
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
@@ -590,6 +640,19 @@ function updateAdminSidebarBadges(stats) {
         'supportBadge': stats.pendingSupportTickets || 0,
         'analysisBadge': stats.pendingAnalysisRequests || 0,
     };
+    // Update visitor analytics live badge from dashboard stats
+    const visitorBadge = document.getElementById('visitorLiveBadge');
+    if (visitorBadge) {
+        if ((stats.activeVisitorsNow || 0) > 0) {
+            visitorBadge.textContent = stats.activeVisitorsNow + ' live';
+            visitorBadge.style.display = 'inline-flex';
+        } else if ((stats.todayVisitors || 0) > 0) {
+            visitorBadge.textContent = stats.todayVisitors + ' today';
+            visitorBadge.style.display = 'inline-flex';
+        } else {
+            visitorBadge.style.display = 'none';
+        }
+    }
     Object.entries(badgeMap).forEach(([id, count]) => {
         const el = document.getElementById(id);
         if (el) {
