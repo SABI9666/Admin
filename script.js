@@ -4144,12 +4144,16 @@ function renderAnalysisPortalTab() {
                                 <i class="fas fa-download"></i> Download Data
                             </button>
                             <input type="file" id="ap-card-pdf-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="cardUploadPdf(this,'${db._id}')">
-                            <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('ap-card-pdf-${db._id}').click()" title="Upload PDF Report">
-                                <i class="fas fa-file-pdf"></i> Upload PDF
+                            <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('ap-card-pdf-${db._id}').click()" title="${db.reportType === 'pdf' ? 'Re-upload/Edit PDF Report' : 'Upload PDF Report'}">
+                                <i class="fas ${db.reportType === 'pdf' ? 'fa-edit' : 'fa-file-pdf'}"></i> ${db.reportType === 'pdf' ? 'Edit PDF' : 'Upload PDF'}
                             </button>
                             <input type="file" id="ap-card-html-${db._id}" accept=".html,.htm,text/html" style="display:none" onchange="cardUploadHtml(this,'${db._id}')">
-                            <button class="ap-action-btn ap-btn-upload-html" onclick="document.getElementById('ap-card-html-${db._id}').click()" title="Upload HTML Report">
-                                <i class="fas fa-code"></i> Upload HTML
+                            <button class="ap-action-btn ap-btn-upload-html" onclick="document.getElementById('ap-card-html-${db._id}').click()" title="${db.reportType === 'html' ? 'Re-upload/Edit HTML Report' : 'Upload HTML Report'}">
+                                <i class="fas ${db.reportType === 'html' ? 'fa-edit' : 'fa-code'}"></i> ${db.reportType === 'html' ? 'Edit HTML' : 'Upload HTML'}
+                            </button>
+                            <input type="file" id="ap-card-source-${db._id}" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="cardReuploadSource(this,'${db._id}')">
+                            <button class="ap-action-btn ap-btn-edit-source" onclick="document.getElementById('ap-card-source-${db._id}').click()" title="Re-upload/Edit user data file (Excel/CSV)">
+                                <i class="fas fa-file-excel"></i> Edit Source
                             </button>
                             <button class="ap-action-btn ap-btn-delete" onclick="deleteDashboard('${db._id}')">
                                 <i class="fas fa-trash-alt"></i>
@@ -4656,12 +4660,28 @@ async function previewDashboard(dashboardId) {
                     </div>
                 </div>
                 ` : `
-                <div class="adm-preview-actions-panel" style="text-align:center;padding:20px 28px">
-                    <span class="ap-status-badge ap-status-${db.status}" style="font-size:.85rem;padding:8px 20px;margin-right:12px">
-                        <i class="fas fa-${db.status === 'approved' ? 'check-circle' : 'times-circle'}"></i>
-                        ${db.status === 'approved' ? 'Approved' : 'Rejected'}
-                    </span>
-                    <button class="btn btn-secondary" onclick="closeModal()" style="min-width:160px">Close Preview</button>
+                <div class="adm-preview-actions-panel" style="padding:20px 28px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                        <span class="ap-status-badge ap-status-${db.status}" style="font-size:.85rem;padding:8px 20px">
+                            <i class="fas fa-${db.status === 'approved' ? 'check-circle' : 'times-circle'}"></i>
+                            ${db.status === 'approved' ? 'Approved' : 'Rejected'}
+                        </span>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <input type="file" id="adm-modal-pdf-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="cardUploadPdf(this,'${db._id}');closeModal()">
+                            <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('adm-modal-pdf-${db._id}').click()" title="${db.reportType === 'pdf' ? 'Re-upload PDF' : 'Upload PDF'}">
+                                <i class="fas ${db.reportType === 'pdf' ? 'fa-edit' : 'fa-file-pdf'}"></i> ${db.reportType === 'pdf' ? 'Edit PDF' : 'Upload PDF'}
+                            </button>
+                            <input type="file" id="adm-modal-html-${db._id}" accept=".html,.htm,text/html" style="display:none" onchange="cardUploadHtml(this,'${db._id}');closeModal()">
+                            <button class="ap-action-btn ap-btn-upload-html" onclick="document.getElementById('adm-modal-html-${db._id}').click()" title="${db.reportType === 'html' ? 'Re-upload HTML' : 'Upload HTML'}">
+                                <i class="fas ${db.reportType === 'html' ? 'fa-edit' : 'fa-code'}"></i> ${db.reportType === 'html' ? 'Edit HTML' : 'Upload HTML'}
+                            </button>
+                            <input type="file" id="adm-modal-source-${db._id}" accept=".xlsx,.xls,.csv" style="display:none" onchange="cardReuploadSource(this,'${db._id}');closeModal()">
+                            <button class="ap-action-btn ap-btn-edit-source" onclick="document.getElementById('adm-modal-source-${db._id}').click()" title="Re-upload source data file">
+                                <i class="fas fa-file-excel"></i> Edit Source
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeModal()" style="min-width:120px">Close</button>
+                        </div>
+                    </div>
                 </div>
                 `}
             </div>
@@ -4980,6 +5000,44 @@ async function downloadDashboardSource(dashboardId) {
         console.error('Download source error:', error);
         showNotification('Failed to get source file. The user may have only provided a sheet link.', 'error');
     }
+}
+
+// Card-level source file re-upload (edit user's data file)
+async function cardReuploadSource(input, dashboardId) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls') && !ext.endsWith('.csv')) {
+        showNotification('Only Excel (.xlsx, .xls) or CSV files are allowed', 'error');
+        input.value = '';
+        return;
+    }
+    if (!confirm(`Re-upload "${file.name}" as the source data file for this dashboard? This will replace the user's original uploaded file.`)) {
+        input.value = '';
+        return;
+    }
+    try {
+        showNotification('Uploading source file...', 'info');
+        const formData = new FormData();
+        formData.append('sourceFile', file);
+        const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        const response = await fetch(`https://steelconnect-backend.onrender.com/api/admin/dashboards/${dashboardId}/reupload-source`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Source file re-uploaded successfully!', 'success');
+            await loadAnalysisPortalData();
+        } else {
+            showNotification(result.message || 'Failed to re-upload source file', 'error');
+        }
+    } catch (error) {
+        console.error('Source file re-upload error:', error);
+        showNotification('Failed to re-upload source file', 'error');
+    }
+    input.value = '';
 }
 
 async function deleteDashboard(id) {
