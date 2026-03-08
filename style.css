@@ -843,6 +843,35 @@ table tbody tr:last-child td {
     color: var(--gray-900);
 }
 
+/* Completion percentage cell */
+.completion-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.completion-bar-mini {
+    width: 60px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.completion-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+.completion-pct-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray-700);
+    min-width: 30px;
+}
+.completion-pending-badge {
+    font-size: 12px;
+    cursor: help;
+}
+
 .no-files {
     color: var(--gray-400);
     font-size: 12px;
