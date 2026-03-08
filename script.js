@@ -4143,6 +4143,9 @@ function renderAnalysisPortalTab() {
                             <button class="ap-action-btn ap-btn-download" onclick="downloadDashboardSource('${db._id}')" title="Download uploaded Excel/data file">
                                 <i class="fas fa-download"></i> Download Data
                             </button>
+                            ${db.reportType === 'html' || db.reportType === 'pdf' ? `<button class="ap-action-btn" onclick="adminDownloadReportPdf('${db._id}')" title="Download report as PDF" style="color:#ef4444;border-color:rgba(239,68,68,.25)">
+                                <i class="fas fa-file-pdf"></i> Download Report PDF
+                            </button>` : ''}
                             <input type="file" id="ap-card-pdf-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="cardUploadPdf(this,'${db._id}')">
                             <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('ap-card-pdf-${db._id}').click()" title="${db.reportType === 'pdf' ? 'Re-upload/Edit PDF Report' : 'Upload PDF Report'}">
                                 <i class="fas ${db.reportType === 'pdf' ? 'fa-edit' : 'fa-file-pdf'}"></i> ${db.reportType === 'pdf' ? 'Edit PDF' : 'Upload PDF'}
@@ -4999,6 +5002,108 @@ async function downloadDashboardSource(dashboardId) {
     } catch (error) {
         console.error('Download source error:', error);
         showNotification('Failed to get source file. The user may have only provided a sheet link.', 'error');
+    }
+}
+
+// Admin: Download report as PDF (works for both PDF and HTML reports)
+async function adminDownloadReportPdf(dashboardId) {
+    try {
+        showNotification('Fetching report...', 'info');
+        const db = state.contractorRequests ? null : null;
+
+        // Try to get PDF report first
+        try {
+            const result = await apiCall(`/dashboards/${dashboardId}/report-file`, 'GET');
+            if (result.signedUrl) {
+                // Download via blob for reliability
+                try {
+                    const fetchResp = await fetch(result.signedUrl, { mode: 'cors' });
+                    if (fetchResp.ok) {
+                        const blob = await fetchResp.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = result.originalName || `report_${new Date().toISOString().slice(0, 10)}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        showNotification('PDF downloaded successfully!', 'success');
+                        return;
+                    }
+                } catch (e) {
+                    // Fallback to direct link
+                    const a = document.createElement('a');
+                    a.href = result.signedUrl;
+                    a.download = result.originalName || 'report.pdf';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showNotification('PDF download started', 'success');
+                    return;
+                }
+            }
+        } catch (e) {
+            console.log('[ADMIN] No stored PDF, trying HTML report...');
+        }
+
+        // For HTML reports: fetch HTML content and generate PDF with html2pdf
+        try {
+            const htmlResult = await apiCall(`/dashboards/${dashboardId}/html-content`, 'GET');
+            if (htmlResult.htmlContent && typeof html2pdf !== 'undefined') {
+                showNotification('Generating PDF from HTML report...', 'info');
+
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;z-index:-1;background:white;';
+                document.body.appendChild(wrapper);
+
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'width:1100px;min-height:800px;border:none;';
+                wrapper.appendChild(iframe);
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(htmlResult.htmlContent);
+                iframeDoc.close();
+
+                await new Promise(resolve => {
+                    iframe.onload = () => setTimeout(resolve, 2500);
+                    setTimeout(resolve, 5000);
+                });
+
+                try {
+                    const contentHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight || 800;
+                    iframe.style.height = contentHeight + 'px';
+                } catch (e) { iframe.style.height = '2000px'; }
+
+                await new Promise(r => setTimeout(r, 500));
+
+                try {
+                    const targetElement = iframeDoc.body || iframeDoc.documentElement;
+                    const opt = {
+                        margin: [10, 8, 10, 8],
+                        filename: `report_${new Date().toISOString().slice(0, 10)}.pdf`,
+                        image: { type: 'jpeg', quality: 0.95 },
+                        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, width: 1100, windowWidth: 1100 },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                    };
+                    await html2pdf().set(opt).from(targetElement).save();
+                    showNotification('PDF downloaded successfully!', 'success');
+                } finally {
+                    if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+                }
+                return;
+            }
+        } catch (htmlErr) {
+            console.log('[ADMIN] HTML report fetch failed:', htmlErr.message);
+        }
+
+        showNotification('No report found for this dashboard', 'warning');
+    } catch (error) {
+        console.error('Admin report PDF download error:', error);
+        showNotification('Failed to download report PDF: ' + error.message, 'error');
     }
 }
 
