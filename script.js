@@ -4105,7 +4105,7 @@ function renderAnalysisPortalTab() {
                             </span>
                         </div>
                         <div class="ap-db-meta-row">
-                            <div class="ap-db-meta-item"><i class="fas fa-file-excel"></i><span>${db.fileName || 'No file'}</span></div>
+                            <div class="ap-db-meta-item" style="cursor:pointer" onclick="downloadDashboardSource('${db._id}')" title="Download uploaded file"><i class="fas fa-file-excel" style="color:#10b981"></i><span style="color:#10b981;font-weight:600;text-decoration:underline">${db.fileName || 'No file'}</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-chart-bar"></i><span>${db.chartCount || 0} charts</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-sync-alt"></i><span>${db.frequency || 'daily'}</span></div>
                             <div class="ap-db-meta-item"><i class="fas fa-calendar-alt"></i><span>${formatAdminDate(db.createdAt)}</span></div>
@@ -4124,6 +4124,9 @@ function renderAnalysisPortalTab() {
                                     <i class="fas fa-times"></i> Reject
                                 </button>
                             ` : ''}
+                            <button class="ap-action-btn ap-btn-download" onclick="downloadDashboardSource('${db._id}')" title="Download uploaded Excel/data file">
+                                <i class="fas fa-download"></i> Download Data
+                            </button>
                             <input type="file" id="ap-card-pdf-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="cardUploadPdf(this,'${db._id}')">
                             <button class="ap-action-btn ap-btn-upload-pdf" onclick="document.getElementById('ap-card-pdf-${db._id}').click()" title="Upload PDF Report">
                                 <i class="fas fa-file-pdf"></i> Upload PDF
@@ -4562,7 +4565,7 @@ async function previewDashboard(dashboardId) {
                     <div class="adm-preview-info-item"><i class="fas fa-user"></i> <strong>${db.contractorName || 'Unknown'}</strong> <span>${db.contractorEmail || ''}</span></div>
                     <div class="adm-preview-info-item"><i class="fas fa-sync-alt"></i> ${db.frequency || 'monthly'}</div>
                     <div class="adm-preview-info-item"><i class="fas fa-chart-pie"></i> ${(db.charts || []).length || db.totalChartsGenerated || 0} charts</div>
-                    <div class="adm-preview-info-item"><i class="fas fa-file-excel"></i> ${db.fileName || 'No file'}</div>
+                    <div class="adm-preview-info-item" style="cursor:pointer" onclick="downloadDashboardSource('${db._id}')"><i class="fas fa-file-excel" style="color:#10b981"></i> <span style="color:#10b981;text-decoration:underline;font-weight:600">${db.fileName || 'No file'}</span> <i class="fas fa-download" style="color:#10b981;font-size:10px;margin-left:4px"></i></div>
                     ${sheetBadge}
                     ${db.syncInterval && db.syncInterval !== 'manual' ? `<div class="adm-preview-info-item" style="color:#6366f1"><i class="fas fa-sync"></i> Auto-sync: ${db.syncInterval}</div>` : ''}
                     ${db.lastSyncedAt ? `<div class="adm-preview-info-item" style="color:#64748b"><i class="fas fa-clock"></i> Last synced: ${new Date(db.lastSyncedAt).toLocaleString()}</div>` : ''}
@@ -4933,6 +4936,34 @@ async function cardUploadHtml(input, dashboardId) {
         showNotification('Failed to upload HTML report', 'error');
     }
     input.value = '';
+}
+
+// Download user's uploaded Excel/data file or open Google Sheet link
+async function downloadDashboardSource(dashboardId) {
+    try {
+        showNotification('Fetching source file...', 'info');
+        const result = await apiCall(`/dashboards/${dashboardId}/download-source`, 'GET');
+        if (result.type === 'link') {
+            // Open Google Sheet / SharePoint link in new tab
+            window.open(result.url, '_blank');
+            showNotification(`Opening ${result.linkType === 'sharepoint' ? 'SharePoint' : result.linkType === 'google' ? 'Google Sheet' : 'linked sheet'}...`, 'success');
+        } else if (result.type === 'file' && result.signedUrl) {
+            // Download the file
+            const a = document.createElement('a');
+            a.href = result.signedUrl;
+            a.download = result.fileName || 'data-file.xlsx';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showNotification(`Downloading ${result.fileName || 'file'}...`, 'success');
+        } else {
+            showNotification('No source file or link found for this dashboard', 'warning');
+        }
+    } catch (error) {
+        console.error('Download source error:', error);
+        showNotification('Failed to get source file. The user may have only provided a sheet link.', 'error');
+    }
 }
 
 async function deleteDashboard(id) {
