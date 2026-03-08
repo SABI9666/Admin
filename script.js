@@ -8338,7 +8338,7 @@ async function loadVisitorAnalyticsData() {
         const badge = document.getElementById('visitorLiveBadge');
         if (badge) badge.textContent = result.stats?.activeNow > 0 ? result.stats.activeNow + ' live' : '';
         renderVisitorAnalyticsTab();
-        // Auto-refresh every 60 seconds (only when tab visible)
+        // Auto-refresh every 30 seconds for more responsive live data
         if (visitorAutoRefresh) clearInterval(visitorAutoRefresh);
         visitorAutoRefresh = setInterval(async () => {
             if (document.hidden) return;
@@ -8352,7 +8352,25 @@ async function loadVisitorAnalyticsData() {
                 if (b) b.textContent = r.stats?.activeNow > 0 ? r.stats.activeNow + ' live' : '';
                 renderVisitorAnalyticsTab();
             } catch(e) {}
-        }, 60000);
+        }, 30000);
+        // Also refresh when page becomes visible (user switches back to admin tab)
+        if (!window._vaVisibilityHandler) {
+            window._vaVisibilityHandler = async function() {
+                if (!document.hidden && document.getElementById('visitor-analytics-tab')?.innerHTML.includes('va-dash')) {
+                    try {
+                        invalidateAdminCache('/visitors');
+                        const r = await apiCall(`/visitors?days=${visitorFilterDays}&limit=200`);
+                        state.visitors = r.visitors || [];
+                        state.visitorStats = r.stats || {};
+                        state.visitorTotal = r.total || r.visitors?.length || 0;
+                        const b = document.getElementById('visitorLiveBadge');
+                        if (b) b.textContent = r.stats?.activeNow > 0 ? r.stats.activeNow + ' live' : '';
+                        renderVisitorAnalyticsTab();
+                    } catch(e) {}
+                }
+            };
+            document.addEventListener('visibilitychange', window._vaVisibilityHandler);
+        }
     } catch (error) {
         container.innerHTML = `<div class="empty-state"><h3>Error loading visitor data</h3><p>${error.message}</p></div>`;
     }
@@ -8458,7 +8476,7 @@ function renderVisitorAnalyticsTab() {
 
     container.innerHTML = `<div class="va-dash">
         <div class="va-top">
-            <div><h3 class="va-title"><i class="fas fa-chart-pie"></i> Visitor Analytics</h3><p class="va-sub">Real-time tracking &mdash; auto-refreshes every 60s</p></div>
+            <div><h3 class="va-title"><i class="fas fa-chart-pie"></i> Visitor Analytics</h3><p class="va-sub">Real-time tracking &mdash; auto-refreshes every 30s</p></div>
             <div class="va-actions">
                 <select class="va-sel" onchange="vaChangeDays(this.value)">
                     <option value="1" ${visitorFilterDays===1?'selected':''}>Today</option>
