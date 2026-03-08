@@ -3465,6 +3465,8 @@ table tbody tr:last-child td {
 .ap-btn-upload-pdf:hover { background:rgba(239,68,68,.1); border-color:#ef4444; }
 .ap-btn-upload-html { color:#f59e0b; border-color:rgba(245,158,11,.25); background:rgba(245,158,11,.04); font-size:.75rem; }
 .ap-btn-upload-html:hover { background:rgba(245,158,11,.1); border-color:#f59e0b; }
+.ap-btn-edit-source { color:#6366f1; border-color:rgba(99,102,241,.25); background:rgba(99,102,241,.04); font-size:.75rem; }
+.ap-btn-edit-source:hover { background:rgba(99,102,241,.1); border-color:#6366f1; }
 
 /* Empty State */
 .ap-empty-state { grid-column:1/-1; text-align:center; padding:60px 20px; background:#fff; border-radius:18px;
