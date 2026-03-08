@@ -3488,6 +3488,8 @@ table tbody tr:last-child td {
 .ap-btn-reject:hover { background:#dc2626; color:#fff; border-color:#dc2626; }
 .ap-btn-delete { color:#94a3b8; border-color:transparent; padding:7px 10px; }
 .ap-btn-delete:hover { color:#dc2626; background:rgba(239,68,68,.05); }
+.ap-btn-download { color:#10b981; border-color:rgba(16,185,129,.25); background:rgba(16,185,129,.04); font-size:.75rem; }
+.ap-btn-download:hover { background:rgba(16,185,129,.1); border-color:#10b981; }
 .ap-btn-upload-pdf { color:#ef4444; border-color:rgba(239,68,68,.25); background:rgba(239,68,68,.04); font-size:.75rem; }
 .ap-btn-upload-pdf:hover { background:rgba(239,68,68,.1); border-color:#ef4444; }
 .ap-btn-upload-html { color:#f59e0b; border-color:rgba(245,158,11,.25); background:rgba(245,158,11,.04); font-size:.75rem; }
