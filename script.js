@@ -4004,6 +4004,8 @@ function renderAnalysisPortalTab() {
     const pendingCount = dashboards.filter(d => d.status === 'pending').length;
     const approvedCount = dashboards.filter(d => d.status === 'approved').length;
     const rejectedCount = dashboards.filter(d => d.status === 'rejected').length;
+    const pdfCount = dashboards.filter(d => d.reportType === 'pdf').length;
+    const htmlCount = dashboards.filter(d => d.reportType === 'html').length;
 
     container.innerHTML = `
         <div class="ap-header">
@@ -4052,6 +4054,14 @@ function renderAnalysisPortalTab() {
                     <div class="ap-stat-label">Client Requests</div>
                 </div>
             </div>
+            ${pdfCount + htmlCount > 0 ? `<div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.05));color:#8b5cf6"><i class="fas fa-file-alt"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${pdfCount + htmlCount}</div>
+                    <div class="ap-stat-label">Custom Reports</div>
+                </div>
+                <div style="font-size:10px;color:#64748b;margin-top:4px">${pdfCount > 0 ? pdfCount + ' PDF' : ''}${pdfCount > 0 && htmlCount > 0 ? ' · ' : ''}${htmlCount > 0 ? htmlCount + ' HTML' : ''}</div>
+            </div>` : ''}
         </div>
 
         <div class="ap-filter-bar">
@@ -4102,6 +4112,8 @@ function renderAnalysisPortalTab() {
                             ${db.googleSheetUrl ? `<div class="ap-db-meta-item"><a href="${db.googleSheetUrl}" target="_blank" rel="noopener" style="color:${db.linkType === 'sharepoint' ? '#0078d4' : '#34a853'};font-weight:600;display:flex;align-items:center;gap:4px;text-decoration:none"><i class="${db.linkType === 'sharepoint' ? 'fas fa-cloud' : 'fab fa-google-drive'}"></i> ${db.linkType === 'sharepoint' ? 'SharePoint' : db.linkType === 'google' ? 'Google Sheet' : 'Linked Sheet'}</a></div>` : ''}
                             ${db.syncInterval && db.syncInterval !== 'manual' ? `<div class="ap-db-meta-item" style="color:#6366f1"><i class="fas fa-sync"></i><span>Auto: ${db.syncInterval}</span></div>` : ''}
                         </div>
+                        ${db.reportType === 'pdf' ? `<div class="ap-db-report-badge" style="background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(239,68,68,.03));border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;font-size:12px"><i class="fas fa-file-pdf" style="color:#ef4444"></i> <strong style="color:#ef4444">PDF Report</strong> <span style="color:#64748b">${db.pdfReport?.originalName || ''}</span></div>` : ''}
+                        ${db.reportType === 'html' ? `<div class="ap-db-report-badge" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.03));border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:6px 12px;margin-top:6px;display:flex;align-items:center;gap:8px;font-size:12px"><i class="fas fa-code" style="color:#f59e0b"></i> <strong style="color:#f59e0b">HTML Template</strong> <span style="color:#64748b">${db.htmlReport?.originalName || ''} &middot; Auto-updates with new data</span></div>` : ''}
                         ${db.manualDashboardUrl ? `<div class="ap-db-manual-link"><i class="fas fa-external-link-alt"></i> Manual: <a href="${db.manualDashboardUrl}" target="_blank" rel="noopener">${db.manualDashboardUrl.length > 50 ? db.manualDashboardUrl.substring(0, 50) + '...' : db.manualDashboardUrl}</a></div>` : ''}
                         <div class="ap-db-actions-row">
                             <button class="ap-action-btn ap-btn-preview" onclick="previewDashboard('${db._id}')">
@@ -4584,6 +4596,31 @@ async function previewDashboard(dashboardId) {
                                 <small>Client will view this custom URL instead of auto-generated charts</small>
                             </div>
                         </div>
+                        <div class="adm-approve-divider"><span>OR UPLOAD REPORT FILE</span></div>
+                        <div class="adm-approve-option">
+                            <div class="adm-report-upload-group" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                                <div class="adm-report-upload-card" style="border:2px dashed #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='#ef4444';this.style.background='#fef2f208'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='transparent'">
+                                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="fas fa-file-pdf" style="color:#ef4444;font-size:20px"></i></div>
+                                    <h4 style="margin:0 0 6px;font-size:14px;color:#1e293b">Upload PDF Report</h4>
+                                    <p style="margin:0 0 12px;font-size:12px;color:#64748b">Upload a PDF file as the report. Client will view/download it.</p>
+                                    <input type="file" id="adm-pdf-upload-${db._id}" accept=".pdf,application/pdf" style="display:none" onchange="adminHandlePdfSelect(this,'${db._id}')">
+                                    <button class="adm-approve-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);font-size:13px;padding:8px 16px" onclick="document.getElementById('adm-pdf-upload-${db._id}').click()">
+                                        <i class="fas fa-upload"></i> Choose PDF
+                                    </button>
+                                    <div id="adm-pdf-preview-${db._id}" style="margin-top:8px;font-size:12px;color:#64748b"></div>
+                                </div>
+                                <div class="adm-report-upload-card" style="border:2px dashed #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='#f59e0b';this.style.background='#fffbeb08'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='transparent'">
+                                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.05));display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="fas fa-code" style="color:#f59e0b;font-size:20px"></i></div>
+                                    <h4 style="margin:0 0 6px;font-size:14px;color:#1e293b">Upload HTML Report</h4>
+                                    <p style="margin:0 0 12px;font-size:12px;color:#64748b">Upload HTML template. When user uploads new data, report auto-updates.</p>
+                                    <input type="file" id="adm-html-upload-${db._id}" accept=".html,.htm,text/html" style="display:none" onchange="adminHandleHtmlSelect(this,'${db._id}')">
+                                    <button class="adm-approve-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:13px;padding:8px 16px" onclick="document.getElementById('adm-html-upload-${db._id}').click()">
+                                        <i class="fas fa-upload"></i> Choose HTML
+                                    </button>
+                                    <div id="adm-html-preview-${db._id}" style="margin-top:8px;font-size:12px;color:#64748b"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="adm-reject-row">
                         <button class="adm-approve-btn adm-btn-reject" onclick="rejectDashboard('${db._id}');closeModal()">
@@ -4711,6 +4748,107 @@ async function rejectDashboard(id) {
         await loadAnalysisPortalData();
     } catch (error) {
         showNotification('Failed to reject dashboard', 'error');
+    }
+}
+
+// PDF file selected - show preview and upload
+function adminHandlePdfSelect(input, dashboardId) {
+    const preview = document.getElementById(`adm-pdf-preview-${dashboardId}`);
+    if (!input.files || !input.files[0]) { if (preview) preview.innerHTML = ''; return; }
+    const file = input.files[0];
+    if (preview) {
+        preview.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><i class="fas fa-file-pdf" style="color:#ef4444"></i> <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)}KB)</div>
+        <button class="adm-approve-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);margin-top:8px;font-size:12px;padding:6px 14px" onclick="uploadPdfReport('${dashboardId}')"><i class="fas fa-check-circle"></i> Upload & Approve with PDF</button>`;
+    }
+}
+
+// HTML file selected - show preview and upload
+function adminHandleHtmlSelect(input, dashboardId) {
+    const preview = document.getElementById(`adm-html-preview-${dashboardId}`);
+    if (!input.files || !input.files[0]) { if (preview) preview.innerHTML = ''; return; }
+    const file = input.files[0];
+    if (preview) {
+        preview.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><i class="fas fa-code" style="color:#f59e0b"></i> <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)}KB)</div>
+        <button class="adm-approve-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);margin-top:8px;font-size:12px;padding:6px 14px" onclick="uploadHtmlReport('${dashboardId}')"><i class="fas fa-check-circle"></i> Upload & Approve with HTML</button>`;
+    }
+}
+
+// Upload PDF report and approve dashboard
+async function uploadPdfReport(dashboardId) {
+    const fileInput = document.getElementById(`adm-pdf-upload-${dashboardId}`);
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showNotification('Please select a PDF file first', 'error');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showNotification('Only PDF files are allowed', 'error');
+        return;
+    }
+    if (!confirm('Upload this PDF and approve the dashboard? The client will see this PDF report.')) return;
+
+    try {
+        showNotification('Uploading PDF report...', 'info');
+        const formData = new FormData();
+        formData.append('pdfFile', file);
+
+        const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        const response = await fetch(`https://steelconnect-backend.onrender.com/api/admin/dashboards/${dashboardId}/upload-pdf`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('PDF report uploaded! Dashboard approved with PDF report.', 'success');
+            closeModal();
+            await loadAnalysisPortalData();
+        } else {
+            showNotification(result.message || 'Failed to upload PDF', 'error');
+        }
+    } catch (error) {
+        console.error('PDF upload error:', error);
+        showNotification('Failed to upload PDF report', 'error');
+    }
+}
+
+// Upload HTML report template and approve dashboard
+async function uploadHtmlReport(dashboardId) {
+    const fileInput = document.getElementById(`adm-html-upload-${dashboardId}`);
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showNotification('Please select an HTML file first', 'error');
+        return;
+    }
+    const file = fileInput.files[0];
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith('.html') && !ext.endsWith('.htm')) {
+        showNotification('Only HTML files are allowed', 'error');
+        return;
+    }
+    if (!confirm('Upload this HTML template and approve? The client will see this report and can auto-update it with new data.')) return;
+
+    try {
+        showNotification('Uploading HTML report template...', 'info');
+        const formData = new FormData();
+        formData.append('htmlFile', file);
+
+        const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+        const response = await fetch(`https://steelconnect-backend.onrender.com/api/admin/dashboards/${dashboardId}/upload-html`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('HTML report uploaded! Dashboard approved. Client can auto-update with new data.', 'success');
+            closeModal();
+            await loadAnalysisPortalData();
+        } else {
+            showNotification(result.message || 'Failed to upload HTML', 'error');
+        }
+    } catch (error) {
+        console.error('HTML upload error:', error);
+        showNotification('Failed to upload HTML report', 'error');
     }
 }
 
