@@ -592,6 +592,7 @@ async function loadDashboardStats() {
                 <div class="stat-content">
                     <div class="stat-number">${analysisStats.pending || 0}<small style="font-size:14px;color:#6b7280;font-weight:400"> / ${analysisStats.total || 0}</small></div>
                     <div class="stat-label">Pending Analysis</div>
+                    ${(analysisStats.completed || 0) > 0 ? `<small style="color:#10b981"><i class="fas fa-check-circle"></i> ${analysisStats.completed} Completed</small>` : ''}
                     <div class="stat-action"><button class="btn btn-sm btn-outline" onclick="showTab('analysis-portal')"><i class="fas fa-arrow-right"></i> View Portal</button></div>
                 </div>
             </div>
@@ -4023,6 +4024,12 @@ function renderAnalysisPortalTab() {
     const pdfCount = dashboards.filter(d => d.reportType === 'pdf').length;
     const htmlCount = dashboards.filter(d => d.reportType === 'html').length;
 
+    // Analysis request stats
+    const pendingRequests = requests.filter(r => r.status === 'pending').length;
+    const completedRequests = requests.filter(r => r.status === 'completed').length;
+    const filteredRequests = state.analysisFilterStatus && state.analysisFilterStatus !== 'all'
+        ? requests.filter(r => r.status === state.analysisFilterStatus) : requests;
+
     container.innerHTML = `
         <div class="ap-header">
             <div class="ap-header-left">
@@ -4070,6 +4077,21 @@ function renderAnalysisPortalTab() {
                     <div class="ap-stat-label">Client Requests</div>
                 </div>
             </div>
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(251,191,36,.05));color:#f59e0b"><i class="fas fa-hourglass-half"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${pendingRequests}</div>
+                    <div class="ap-stat-label">Pending Analysis</div>
+                </div>
+                ${pendingRequests > 0 ? '<div class="ap-stat-alert"></div>' : ''}
+            </div>
+            <div class="ap-stat-card">
+                <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05));color:#10b981"><i class="fas fa-check-double"></i></div>
+                <div class="ap-stat-info">
+                    <div class="ap-stat-num">${completedRequests}</div>
+                    <div class="ap-stat-label">Completed Analysis</div>
+                </div>
+            </div>
             ${pdfCount + htmlCount > 0 ? `<div class="ap-stat-card">
                 <div class="ap-stat-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.05));color:#8b5cf6"><i class="fas fa-file-alt"></i></div>
                 <div class="ap-stat-info">
@@ -4091,6 +4113,9 @@ function renderAnalysisPortalTab() {
                 <button class="ap-filter-tab ${state.dashboardFilter === 'approved' ? 'active' : ''}" onclick="filterDashboards('approved')">
                     <i class="fas fa-check-circle"></i> Approved <span class="ap-tab-count success">${approvedCount}</span>
                 </button>
+                ${rejectedCount > 0 ? `<button class="ap-filter-tab ${state.dashboardFilter === 'rejected' ? 'active' : ''}" onclick="filterDashboards('rejected')">
+                    <i class="fas fa-times-circle"></i> Rejected <span class="ap-tab-count" style="background:rgba(239,68,68,.1);color:#ef4444">${rejectedCount}</span>
+                </button>` : ''}
             </div>
         </div>
 
@@ -4170,7 +4195,20 @@ function renderAnalysisPortalTab() {
         ${requests.length > 0 ? `
         <div class="ap-section-divider">
             <div class="ap-section-title"><i class="fas fa-inbox"></i> Client Analysis Requests</div>
-            <span class="ap-section-count">${requests.length} request${requests.length !== 1 ? 's' : ''}</span>
+            <span class="ap-section-count">${filteredRequests.length} of ${requests.length} request${requests.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="ap-filter-bar" style="margin-bottom:12px">
+            <div class="ap-filter-tabs">
+                <button class="ap-filter-tab ${!state.analysisFilterStatus || state.analysisFilterStatus === 'all' ? 'active' : ''}" onclick="filterAnalysisRequests('all')">
+                    <i class="fas fa-layer-group"></i> All <span class="ap-tab-count">${requests.length}</span>
+                </button>
+                <button class="ap-filter-tab ${state.analysisFilterStatus === 'pending' ? 'active' : ''}" onclick="filterAnalysisRequests('pending')">
+                    <i class="fas fa-clock"></i> Pending <span class="ap-tab-count warning">${pendingRequests}</span>
+                </button>
+                <button class="ap-filter-tab ${state.analysisFilterStatus === 'completed' ? 'active' : ''}" onclick="filterAnalysisRequests('completed')">
+                    <i class="fas fa-check-circle"></i> Completed <span class="ap-tab-count success">${completedRequests}</span>
+                </button>
+            </div>
         </div>
         <div class="ap-requests-table-wrap">
             <table class="ap-requests-table">
@@ -4178,7 +4216,7 @@ function renderAnalysisPortalTab() {
                     <th>Contractor</th><th>Data Type</th><th>Frequency</th><th>Google Sheet</th><th>Status</th><th>Date</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
-                    ${requests.map(r => `<tr>
+                    ${filteredRequests.map(r => `<tr>
                         <td>
                             <div class="ap-contractor-cell">
                                 <div class="ap-contractor-avatar">${(r.contractorName || 'U').charAt(0).toUpperCase()}</div>
