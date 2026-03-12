@@ -3210,59 +3210,69 @@ function renderGenericTab(type) {
                 </tbody>
             </table>`;
     } else if (type === 'quotes') {
-        const submitted = items.filter(q => q.status === 'submitted').length;
-        const approved = items.filter(q => q.status === 'approved').length;
-        const rejected = items.filter(q => q.status === 'rejected').length;
-        const totalValue = items.reduce((s, q) => s + (parseFloat(q.quoteAmount) || 0), 0);
-        const avgValue = items.length > 0 ? totalValue / items.length : 0;
-
+        const submittedCount = items.filter(q => q.status === 'submitted').length;
+        const approvedCount = items.filter(q => q.status === 'approved').length;
+        const rejectedCount = items.filter(q => q.status === 'rejected').length;
         container.innerHTML = `
             <div class="section-header">
                 <h3>All Quotes (${items.length})</h3>
                 <div class="header-actions">
+                    <div class="aqv-table-stats">
+                        <span class="aqv-tstat"><span class="aqv-tstat-dot aqv-dot-amber"></span>${submittedCount} Pending</span>
+                        <span class="aqv-tstat"><span class="aqv-tstat-dot aqv-dot-green"></span>${approvedCount} Approved</span>
+                        <span class="aqv-tstat"><span class="aqv-tstat-dot aqv-dot-red"></span>${rejectedCount} Rejected</span>
+                    </div>
                     <button class="btn" onclick="loadGenericData('quotes')"><i class="fas fa-sync-alt"></i> Refresh</button>
                     <button class="btn btn-primary" onclick="exportData('quotes')"><i class="fas fa-download"></i> Export</button>
                 </div>
             </div>
-            <div class="aq-stats-row">
-                <div class="aq-stat aq-stat-total"><i class="fas fa-file-invoice-dollar"></i><div><span class="aq-stat-num">${items.length}</span><span class="aq-stat-label">Total</span></div></div>
-                <div class="aq-stat aq-stat-pending"><i class="fas fa-clock"></i><div><span class="aq-stat-num">${submitted}</span><span class="aq-stat-label">Pending</span></div></div>
-                <div class="aq-stat aq-stat-approved"><i class="fas fa-check-circle"></i><div><span class="aq-stat-num">${approved}</span><span class="aq-stat-label">Approved</span></div></div>
-                <div class="aq-stat aq-stat-rejected"><i class="fas fa-times-circle"></i><div><span class="aq-stat-num">${rejected}</span><span class="aq-stat-label">Rejected</span></div></div>
-                <div class="aq-stat aq-stat-value"><i class="fas fa-dollar-sign"></i><div><span class="aq-stat-num">$${totalValue.toLocaleString()}</span><span class="aq-stat-label">Total Value</span></div></div>
-                <div class="aq-stat aq-stat-avg"><i class="fas fa-chart-bar"></i><div><span class="aq-stat-num">$${avgValue.toLocaleString(undefined, {maximumFractionDigits: 0})}</span><span class="aq-stat-label">Avg Quote</span></div></div>
-            </div>
-            <div class="aq-toolbar">
-                <div class="aq-search-wrap">
-                    <i class="fas fa-search"></i>
-                    <input type="text" class="aq-search" id="aq-search-input" placeholder="Search by designer, job, or ID..." oninput="filterAdminQuotes()">
-                </div>
-                <div class="aq-filter-group">
-                    <button class="aq-filter-btn active" data-filter="all" onclick="setAdminQuoteFilter('all')">All</button>
-                    <button class="aq-filter-btn" data-filter="submitted" onclick="setAdminQuoteFilter('submitted')">Pending</button>
-                    <button class="aq-filter-btn" data-filter="approved" onclick="setAdminQuoteFilter('approved')">Approved</button>
-                    <button class="aq-filter-btn" data-filter="rejected" onclick="setAdminQuoteFilter('rejected')">Rejected</button>
-                </div>
-            </div>
-            <div class="aq-table-wrap">
-                <table class="aq-table">
-                    <thead>
-                        <tr>
-                            <th class="aq-th-info">Quote Info</th>
-                            <th class="aq-th-designer">Designer</th>
-                            <th class="aq-th-job">Job</th>
-                            <th class="aq-th-amount">Amount</th>
-                            <th class="aq-th-status">Status</th>
-                            <th class="aq-th-files">Files</th>
-                            <th class="aq-th-actions">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="aq-tbody">
-                        ${renderAdminQuoteRows(items)}
-                    </tbody>
-                </table>
-            </div>`;
-        state._adminQuoteFilter = 'all';
+            <table>
+                <thead>
+                    <tr>
+                        <th>Designer</th>
+                        <th>Project</th>
+                        <th>Amount</th>
+                        <th>Timeline</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Files</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(quote => {
+                        const avatarInitial = (quote.designerName || 'D').charAt(0).toUpperCase();
+                        const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+                        return `
+                        <tr class="aqv-table-row">
+                            <td>
+                                <div class="aqv-table-designer">
+                                    <div class="aqv-table-avatar">${avatarInitial}</div>
+                                    <div>
+                                        <strong>${quote.designerName || 'N/A'}</strong>
+                                        <small>${quote.userEmail || 'N/A'}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="aqv-table-project">
+                                    <strong>${quote.jobTitle || 'Unknown Job'}</strong>
+                                    ${quote.job ? `<small>Client: ${quote.job.posterName || 'N/A'}</small>` : ''}
+                                </div>
+                            </td>
+                            <td><span class="aqv-table-amount">$${quote.quoteAmount || 'N/A'}</span></td>
+                            <td>${quote.timeline ? `<span class="aqv-table-timeline">${quote.timeline} days</span>` : '<span class="aqv-table-na">-</span>'}</td>
+                            <td><span class="status ${quote.status || 'unknown'}"><i class="fas ${statusIcon}"></i> ${(quote.status || 'Unknown').charAt(0).toUpperCase() + (quote.status || '').slice(1)}</span></td>
+                            <td><span class="aqv-table-date">${formatAdminDate(quote.createdAt)}</span></td>
+                            <td>${getQuoteFilesCell(quote)}</td>
+                            <td class="action-buttons">
+                                <button class="btn btn-sm" onclick="viewQuoteDetails('${quote._id}')"><i class="fas fa-eye"></i> View</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteGenericItem('quotes', '${quote._id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
     }
 }
 
@@ -3648,94 +3658,91 @@ function viewQuoteDetails(quoteId) {
     const quote = state.quotes.find(q => q._id === quoteId);
     if (!quote) return showNotification('Quote not found.', 'error');
     const attachments = quote.attachments || [];
-    const statusIcon = { 'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle' }[quote.status] || 'fa-question-circle';
-    const totalSize = attachments.reduce((sum, f) => sum + (f.size || 0), 0);
-    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+    const statusIcon = {'submitted': 'fa-clock', 'approved': 'fa-check-circle', 'rejected': 'fa-times-circle'}[quote.status] || 'fa-question-circle';
+    const avatarInitial = (quote.designerName || 'D').charAt(0).toUpperCase();
+    const quoteTotalSize = attachments.reduce((sum, f) => sum + (f.size || 0), 0);
+    const totalSizeDisplay = quoteTotalSize > 0 ? (quoteTotalSize / (1024 * 1024)).toFixed(2) + ' MB' : '';
 
     const modalContent = `
-        <div class="qd-modal">
-            <div class="qd-header">
-                <div class="qd-header-top">
-                    <div class="qd-header-left">
-                        <div class="qd-header-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                        <div>
-                            <h3 class="qd-title">Quote Details</h3>
-                            <span class="qd-id">ID: #${(quote._id || '').slice(-6)}</span>
-                        </div>
+        <div class="aqv-modal">
+            <!-- Header -->
+            <div class="aqv-header">
+                <div class="aqv-header-left">
+                    <div class="aqv-header-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div>
+                        <h3 class="aqv-title">Quote Details</h3>
+                        <span class="aqv-quote-id">Quote #${quote._id.slice(-6)}</span>
                     </div>
-                    <span class="aq-status-badge aq-badge-${quote.status || 'unknown'}">
-                        <i class="fas ${statusIcon}"></i> ${(quote.status || 'Unknown').charAt(0).toUpperCase() + (quote.status || 'unknown').slice(1)}
-                    </span>
                 </div>
-                <div class="qd-highlight-bar">
-                    <div class="qd-highlight">
-                        <span class="qd-hl-label">Quote Amount</span>
-                        <span class="qd-hl-value">$${parseFloat(quote.quoteAmount || 0).toLocaleString()}</span>
+                <span class="aqv-status-badge aqv-badge-${quote.status}"><i class="fas ${statusIcon}"></i> ${(quote.status || 'unknown').charAt(0).toUpperCase() + (quote.status || '').slice(1)}</span>
+            </div>
+
+            <!-- Designer & Price Row -->
+            <div class="aqv-top-row">
+                <div class="aqv-designer-card">
+                    <div class="aqv-avatar">${avatarInitial}</div>
+                    <div class="aqv-designer-info">
+                        <h4>${quote.designerName || 'N/A'}</h4>
+                        <span class="aqv-designer-email">${quote.userEmail || 'N/A'}</span>
+                        ${quote.designer ? `
+                            ${quote.designer.phone ? `<span class="aqv-designer-phone"><i class="fas fa-phone"></i> ${quote.designer.phone}</span>` : ''}
+                            ${quote.designer.company ? `<span class="aqv-designer-company"><i class="fas fa-building"></i> ${quote.designer.company}</span>` : ''}
+                        ` : ''}
                     </div>
-                    <div class="qd-highlight">
-                        <span class="qd-hl-label">Timeline</span>
-                        <span class="qd-hl-value">${quote.timeline || 'N/A'} days</span>
-                    </div>
-                    <div class="qd-highlight">
-                        <span class="qd-hl-label">Submitted</span>
-                        <span class="qd-hl-value">${formatAdminDate(quote.createdAt)}</span>
-                    </div>
-                    ${quote.approvedAt ? `<div class="qd-highlight qd-hl-approved"><span class="qd-hl-label">Approved</span><span class="qd-hl-value">${formatAdminDate(quote.approvedAt)}</span></div>` : ''}
-                    ${quote.rejectedAt ? `<div class="qd-highlight qd-hl-rejected"><span class="qd-hl-label">Rejected</span><span class="qd-hl-value">${formatAdminDate(quote.rejectedAt)}</span></div>` : ''}
+                </div>
+                <div class="aqv-price-card">
+                    <span class="aqv-price-label">Quote Amount</span>
+                    <span class="aqv-price-value">$${quote.quoteAmount || 'N/A'}</span>
+                    ${quote.timeline ? `<span class="aqv-timeline"><i class="fas fa-calendar-alt"></i> ${quote.timeline} days delivery</span>` : ''}
                 </div>
             </div>
 
-            <div class="qd-body">
-                <div class="qd-section-grid">
-                    <div class="qd-section">
-                        <div class="qd-section-header"><i class="fas fa-user"></i> Designer</div>
-                        <div class="qd-section-content">
-                            <div class="qd-designer-row">
-                                <div class="qd-avatar">${(quote.designerName || 'D').charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <strong>${quote.designerName || 'N/A'}</strong>
-                                    <span class="qd-email">${quote.userEmail || 'N/A'}</span>
-                                    ${quote.designer?.phone ? `<span class="qd-phone"><i class="fas fa-phone"></i> ${quote.designer.phone}</span>` : ''}
-                                    ${quote.designer?.company ? `<span class="qd-company"><i class="fas fa-building"></i> ${quote.designer.company}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="qd-section">
-                        <div class="qd-section-header"><i class="fas fa-briefcase"></i> Job</div>
-                        <div class="qd-section-content">
-                            <div class="qd-field"><label>Title</label><span>${quote.jobTitle || 'N/A'}</span></div>
-                            ${quote.job ? `
-                                <div class="qd-field"><label>Budget</label><span>${quote.job.budget || 'N/A'}</span></div>
-                                <div class="qd-field"><label>Client</label><span>${quote.job.posterName || 'N/A'}</span></div>
-                                <div class="qd-field"><label>Status</label><span class="status ${quote.job.status}">${quote.job.status}</span></div>
-                            ` : ''}
-                        </div>
+            <!-- Info Cards Grid -->
+            <div class="aqv-info-grid">
+                <div class="aqv-info-card">
+                    <div class="aqv-info-card-header"><i class="fas fa-briefcase"></i> Project Details</div>
+                    <div class="aqv-info-rows">
+                        <div class="aqv-info-row"><span class="aqv-info-label">Job Title</span><span class="aqv-info-val">${quote.jobTitle || 'N/A'}</span></div>
+                        ${quote.job ? `
+                            <div class="aqv-info-row"><span class="aqv-info-label">Budget</span><span class="aqv-info-val">${quote.job.budget || 'N/A'}</span></div>
+                            <div class="aqv-info-row"><span class="aqv-info-label">Client</span><span class="aqv-info-val">${quote.job.posterName || 'N/A'}</span></div>
+                            <div class="aqv-info-row"><span class="aqv-info-label">Job Status</span><span class="status ${quote.job.status}">${quote.job.status}</span></div>
+                        ` : ''}
                     </div>
                 </div>
-
-                <div class="qd-section qd-full">
-                    <div class="qd-section-header"><i class="fas fa-file-alt"></i> Description</div>
-                    <div class="qd-section-content">
-                        <p class="qd-description">${quote.description || 'No description provided.'}</p>
-                    </div>
-                </div>
-
-                <div class="qd-section qd-full">
-                    <div class="qd-section-header"><i class="fas fa-paperclip"></i> Attachments (${attachments.length})</div>
-                    <div class="qd-section-content">
-                        ${attachments.length > 0 ? `
-                            <div class="qd-files-info">
-                                <span><i class="fas fa-file"></i> ${attachments.length} file${attachments.length > 1 ? 's' : ''}</span>
-                                ${totalSize > 0 ? `<span><i class="fas fa-database"></i> ${totalSizeMB} MB total</span>` : ''}
-                            </div>
-                            <button class="btn btn-outline btn-sm" onclick="viewQuoteFiles('${quoteId}')"><i class="fas fa-folder-open"></i> View All Files</button>
-                        ` : `<p class="qd-no-files">No files attached to this quote.</p>`}
+                <div class="aqv-info-card">
+                    <div class="aqv-info-card-header"><i class="fas fa-history"></i> Timeline</div>
+                    <div class="aqv-info-rows">
+                        <div class="aqv-info-row"><span class="aqv-info-label">Submitted</span><span class="aqv-info-val">${formatAdminDate(quote.createdAt)}</span></div>
+                        ${quote.approvedAt ? `<div class="aqv-info-row"><span class="aqv-info-label">Approved</span><span class="aqv-info-val aqv-text-green">${formatAdminDate(quote.approvedAt)}</span></div>` : ''}
+                        ${quote.rejectedAt ? `<div class="aqv-info-row"><span class="aqv-info-label">Rejected</span><span class="aqv-info-val aqv-text-red">${formatAdminDate(quote.rejectedAt)}</span></div>` : ''}
                     </div>
                 </div>
             </div>
 
-            <div class="qd-footer">
+            <!-- Proposal Description -->
+            <div class="aqv-section">
+                <div class="aqv-section-header"><i class="fas fa-file-alt"></i> Proposal Description</div>
+                <p class="aqv-description">${quote.description || 'No description provided.'}</p>
+            </div>
+
+            <!-- Attachments -->
+            <div class="aqv-section">
+                <div class="aqv-section-header"><i class="fas fa-paperclip"></i> Attachments (${attachments.length})</div>
+                ${attachments.length > 0 ? `
+                    <div class="aqv-attachments-bar">
+                        <span class="aqv-attach-count"><i class="fas fa-file"></i> ${attachments.length} file${attachments.length !== 1 ? 's' : ''} attached</span>
+                        ${totalSizeDisplay ? `<span class="aqv-attach-size"><i class="fas fa-database"></i> ${totalSizeDisplay}</span>` : ''}
+                        <div class="aqv-attach-actions">
+                            <button class="btn btn-sm" onclick="viewQuoteFiles('${quoteId}')"><i class="fas fa-folder-open"></i> View All</button>
+                            <button class="btn btn-sm btn-primary" onclick="downloadAllQuoteFiles('${quoteId}')"><i class="fas fa-download"></i> Download All</button>
+                        </div>
+                    </div>
+                ` : `<p class="aqv-no-attachments">No files attached to this quote.</p>`}
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="aqv-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Close</button>
                 <button class="btn btn-danger" onclick="confirmDeleteQuote('${quoteId}')"><i class="fas fa-trash"></i> Delete Quote</button>
             </div>
