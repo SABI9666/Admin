@@ -9165,16 +9165,16 @@ function renderSubscriptionsTab() {
                 </div>
             </div>
             <div class="sub-stat-card sub-stat-contractor">
-                <div class="sub-stat-icon"><i class="fas fa-hard-hat"></i></div>
+                <div class="sub-stat-icon"><i class="fas fa-drafting-compass"></i></div>
                 <div class="sub-stat-info">
-                    <span class="sub-stat-number">${stats.contractorProCount || 0}</span>
-                    <span class="sub-stat-label">Contractor Pro</span>
+                    <span class="sub-stat-number">${stats.estimationCount || 0}</span>
+                    <span class="sub-stat-label">AI Estimation Plans</span>
                 </div>
             </div>
             <div class="sub-stat-card" style="border-left:4px solid #7c3aed;">
-                <div class="sub-stat-icon" style="background:#f5f3ff; color:#7c3aed;"><i class="fas fa-brain"></i></div>
+                <div class="sub-stat-icon" style="background:#f5f3ff; color:#7c3aed;"><i class="fas fa-chart-bar"></i></div>
                 <div class="sub-stat-info">
-                    <span class="sub-stat-number">${stats.aiAnalysisCount || 0}</span>
+                    <span class="sub-stat-number">${stats.analysisCount || 0}</span>
                     <span class="sub-stat-label">AI Analysis Plans</span>
                 </div>
             </div>
@@ -9191,7 +9191,7 @@ function renderSubscriptionsTab() {
         <div class="sub-section">
             <div class="sub-section-header">
                 <h3><i class="fas fa-layer-group"></i> Subscription Plans</h3>
-                <p class="sub-section-desc">Designer Portal, Contractor Pro &amp; AI Analysis Plan definitions</p>
+                <p class="sub-section-desc">Designer Portal, AI Estimation &amp; AI Data Analysis Plan definitions</p>
             </div>
             <div class="sub-plans-grid">
                 ${renderPlanCards(plans)}
@@ -9223,18 +9223,27 @@ function renderSubscriptionsTab() {
                     </select>
                     <select id="subFilterPlan" onchange="filterSubscriptions()" class="sub-filter-select">
                         <option value="all">All Plans</option>
-                        <option value="designer_free">Designer Free</option>
-                        <option value="designer_5">Designer Basic ($5)</option>
-                        <option value="designer_10">Designer Standard ($10)</option>
-                        <option value="designer_15">Designer Plus ($15)</option>
-                        <option value="designer_30">Designer Premium ($30)</option>
-                        <option value="contractor_pro">Contractor Pro ($49)</option>
-                        <option value="contractor_ai_estimation">AI Estimation ($0.40/MB)</option>
-                        <option value="contractor_ai_analysis">AI Analysis ($0.08/MB)</option>
-                        <option value="ai_analysis_daily_weekly">AI Analysis Daily/Weekly ($5)</option>
-                        <option value="ai_analysis_monthly">AI Analysis Monthly ($10)</option>
-                        <option value="ai_analysis_premium">AI Analysis Premium ($49)</option>
-                        <option value="ai_analysis_pro">AI Analysis Pro ($99)</option>
+                        <optgroup label="Designer Plans">
+                            <option value="designer_free">Designer Free</option>
+                            <option value="designer_5">Designer Basic ($5)</option>
+                            <option value="designer_10">Designer Standard ($10)</option>
+                            <option value="designer_15">Designer Plus ($15)</option>
+                            <option value="designer_30">Designer Premium ($30)</option>
+                        </optgroup>
+                        <optgroup label="AI Estimation Plans">
+                            <option value="estimation_free">Estimation Free</option>
+                            <option value="estimation_starter">Starter ($29/mo)</option>
+                            <option value="estimation_professional">Professional ($79/mo)</option>
+                            <option value="estimation_business">Business ($149/mo)</option>
+                            <option value="estimation_payperuse">Pay-Per-Estimate ($9)</option>
+                        </optgroup>
+                        <optgroup label="AI Data Analysis Plans">
+                            <option value="analysis_free">Analysis Free</option>
+                            <option value="analysis_basic">Basic ($10)</option>
+                            <option value="analysis_advanced">Advanced ($20)</option>
+                            <option value="analysis_pro">Pro ($49/mo)</option>
+                            <option value="analysis_business">Business ($99/mo)</option>
+                        </optgroup>
                     </select>
                     <button class="btn btn-sm" onclick="viewAllInvoices()" style="background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;">
                         <i class="fas fa-file-invoice"></i> All Invoices
@@ -9255,20 +9264,27 @@ function renderSubscriptionsTab() {
 }
 
 function renderPlanCards(plans) {
-    const planOrder = ['designer_free', 'designer_5', 'designer_10', 'designer_15', 'designer_30', 'contractor_pro', 'contractor_ai_estimation', 'contractor_ai_analysis', 'ai_analysis_daily_weekly', 'ai_analysis_monthly', 'ai_analysis_premium', 'ai_analysis_pro'];
+    const planOrder = [
+        'designer_free', 'designer_5', 'designer_10', 'designer_15', 'designer_30',
+        'estimation_free', 'estimation_starter', 'estimation_professional', 'estimation_business', 'estimation_payperuse',
+        'analysis_free', 'analysis_basic', 'analysis_advanced', 'analysis_pro', 'analysis_business'
+    ];
     const planColors = {
         designer_free: { bg: '#f0fdf4', border: '#86efac', icon: '#16a34a', gradient: 'linear-gradient(135deg, #16a34a, #22c55e)' },
         designer_5: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
         designer_10: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)' },
         designer_15: { bg: '#fdf4ff', border: '#f0abfc', icon: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #c084fc)' },
         designer_30: { bg: '#fef2f2', border: '#fca5a5', icon: '#dc2626', gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)' },
-        contractor_pro: { bg: '#fff7ed', border: '#fdba74', icon: '#ea580c', gradient: 'linear-gradient(135deg, #ea580c, #f97316)' },
-        contractor_ai_estimation: { bg: '#f0fdfa', border: '#5eead4', icon: '#0d9488', gradient: 'linear-gradient(135deg, #0d9488, #14b8a6)' },
-        contractor_ai_analysis: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
-        ai_analysis_daily_weekly: { bg: '#ecfeff', border: '#67e8f9', icon: '#0891b2', gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)' },
-        ai_analysis_monthly: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
-        ai_analysis_premium: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
-        ai_analysis_pro: { bg: '#fef2f2', border: '#fca5a5', icon: '#dc2626', gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)' },
+        estimation_free: { bg: '#f3f4f6', border: '#d1d5db', icon: '#6b7280', gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)' },
+        estimation_starter: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
+        estimation_professional: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
+        estimation_business: { bg: '#fff7ed', border: '#fdba74', icon: '#ea580c', gradient: 'linear-gradient(135deg, #ea580c, #f97316)' },
+        estimation_payperuse: { bg: '#f0fdfa', border: '#5eead4', icon: '#0d9488', gradient: 'linear-gradient(135deg, #0d9488, #14b8a6)' },
+        analysis_free: { bg: '#f3f4f6', border: '#d1d5db', icon: '#6b7280', gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)' },
+        analysis_basic: { bg: '#eff6ff', border: '#93c5fd', icon: '#2563eb', gradient: 'linear-gradient(135deg, #2563eb, #3b82f6)' },
+        analysis_advanced: { bg: '#f5f3ff', border: '#c4b5fd', icon: '#7c3aed', gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
+        analysis_pro: { bg: '#fff7ed', border: '#fdba74', icon: '#ea580c', gradient: 'linear-gradient(135deg, #ea580c, #f97316)' },
+        analysis_business: { bg: '#fef2f2', border: '#fca5a5', icon: '#dc2626', gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)' },
     };
 
     return planOrder.map(key => {
@@ -9278,43 +9294,47 @@ function renderPlanCards(plans) {
         const breakdownStats = state.subscriptionStats.planBreakdown || {};
         const count = breakdownStats[key] || 0;
 
-        const isContractorPro = key === 'contractor_pro';
-        const isContractorPayPerUse = key === 'contractor_ai_estimation' || key === 'contractor_ai_analysis';
-        const isAiAnalysis = key.startsWith('ai_analysis_');
+        const isEstimation = key.startsWith('estimation_');
+        const isAnalysis = key.startsWith('analysis_');
+        const isDesigner = key.startsWith('designer_');
+        const isPayPerUse = plan.isPayPerUse;
         let priceDisplay;
-        if (isContractorPayPerUse) {
-            priceDisplay = plan.aiEstimationRate ? `$${plan.aiEstimationRate}/MB` : `$${plan.aiAnalysisRate}/MB`;
+        if (plan.price === 0) {
+            priceDisplay = 'Free';
+        } else if (isPayPerUse && isEstimation) {
+            priceDisplay = `$${plan.price}/est`;
+        } else if (isPayPerUse) {
+            priceDisplay = `$${plan.price}`;
         } else {
-            priceDisplay = plan.price === 0 ? 'Free' : `$${plan.price}/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}`;
+            priceDisplay = `$${plan.price}/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}`;
         }
 
         let detailsHtml = '';
-        if (isContractorPayPerUse) {
-            const rate = plan.aiEstimationRate || plan.aiAnalysisRate;
-            const rateLabel = plan.aiEstimationRate ? 'AI Estimation Rate' : 'AI Analysis Rate';
+        if (isEstimation) {
             detailsHtml = `
                 <div class="sub-plan-rates">
                     <div class="sub-rate-item">
-                        <span class="sub-rate-label">${rateLabel}</span>
-                        <span class="sub-rate-value">$${rate}/MB</span>
+                        <span class="sub-rate-label">Estimations</span>
+                        <span class="sub-rate-value">${plan.aiEstimationsAllowed || 0}${isPayPerUse ? '' : ' / month'}</span>
+                    </div>
+                    <div class="sub-rate-item">
+                        <span class="sub-rate-label">Max Upload</span>
+                        <span class="sub-rate-value">${plan.maxUploadMB || 25} MB</span>
                     </div>
                 </div>`;
-        } else if (isContractorPro) {
-            detailsHtml = '';
-        } else if (isAiAnalysis) {
+        } else if (isAnalysis) {
             detailsHtml = `
                 <div class="sub-plan-rates">
                     <div class="sub-rate-item">
-                        <span class="sub-rate-label">Free Analyses</span>
-                        <span class="sub-rate-value">${plan.aiAnalysisQuota || 0}/period</span>
+                        <span class="sub-rate-label">Analyses</span>
+                        <span class="sub-rate-value">${plan.aiAnalysisQuota || 0}${plan.billingCycle === 'monthly' ? ' / month' : ''}</span>
                     </div>
-                    ${plan.storageAllowedMB ? `
                     <div class="sub-rate-item">
-                        <span class="sub-rate-label">Max AI Estimation</span>
-                        <span class="sub-rate-value">${(plan.storageAllowedMB / 1024).toFixed(0)} GB</span>
-                    </div>` : ''}
+                        <span class="sub-rate-label">Max File Size</span>
+                        <span class="sub-rate-value">${plan.maxUploadMB || 10} MB</span>
+                    </div>
                 </div>`;
-        } else {
+        } else if (isDesigner) {
             detailsHtml = `
                 <div class="sub-plan-quota">
                     <span class="sub-quota-label">Quotes Allowed</span>
@@ -9325,8 +9345,11 @@ function renderPlanCards(plans) {
         const planSetting = (state.planSettings || {})[key];
         const isEnabled = planSetting ? planSetting.enabled !== false : true;
 
+        const isPopular = plan.badge === 'popular';
+
         return `
-            <div class="sub-plan-card" style="border-color:${isEnabled ? color.border : '#d1d5db'}; background:${isEnabled ? color.bg : '#f9fafb'}; ${!isEnabled ? 'opacity:0.7;' : ''}">
+            <div class="sub-plan-card" style="border-color:${isEnabled ? (isPopular ? color.icon : color.border) : '#d1d5db'}; background:${isEnabled ? color.bg : '#f9fafb'}; ${!isEnabled ? 'opacity:0.7;' : ''} ${isPopular && isEnabled ? 'box-shadow:0 0 0 2px ' + color.icon + '33;' : ''}">
+                ${isPopular && isEnabled ? `<div style="position:absolute; top:8px; right:8px; background:${color.gradient}; color:white; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; z-index:1;">POPULAR</div>` : ''}
                 ${!isEnabled ? '<div style="position:absolute; top:8px; right:8px; background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; z-index:1;">STOPPED</div>' : ''}
                 <div class="sub-plan-header" style="background:${isEnabled ? color.gradient : 'linear-gradient(135deg, #9ca3af, #6b7280)'};">
                     <div class="sub-plan-price">${priceDisplay}</div>
@@ -9337,6 +9360,7 @@ function renderPlanCards(plans) {
                     <ul class="sub-plan-features">
                         ${plan.features.map(f => `<li><i class="fas fa-check" style="color:${color.icon};"></i> ${f}</li>`).join('')}
                     </ul>
+                    ${plan.bestFor ? `<div style="font-size:12px; color:${color.icon}; font-weight:600; margin:8px 0; padding:6px 10px; background:${color.bg}; border-radius:6px; border:1px solid ${color.border};"><i class="fas fa-star" style="margin-right:4px;"></i>${plan.bestFor}</div>` : ''}
                     <div class="sub-plan-subscribers">
                         <i class="fas fa-users" style="color:${color.icon};"></i>
                         <span>${count} active subscriber${count !== 1 ? 's' : ''}</span>
@@ -9384,13 +9408,24 @@ function renderSubscriptionsTable(subs) {
         designer_10: 'Designer $10',
         designer_15: 'Designer Plus $15',
         designer_30: 'Designer Premium $30',
+        estimation_free: 'Est. Free',
+        estimation_starter: 'Est. Starter $29',
+        estimation_professional: 'Est. Professional $79',
+        estimation_business: 'Est. Business $149',
+        estimation_payperuse: 'Est. Pay-Per-Use $9',
+        analysis_free: 'Analysis Free',
+        analysis_basic: 'Analysis Basic $10',
+        analysis_advanced: 'Analysis Advanced $20',
+        analysis_pro: 'Analysis Pro $49',
+        analysis_business: 'Analysis Business $99',
+        // Legacy labels
         contractor_pro: 'Contractor Pro',
-        contractor_ai_estimation: 'AI Estimation $0.40/MB',
-        contractor_ai_analysis: 'AI Analysis $0.08/MB',
-        ai_analysis_daily_weekly: 'AI Daily/Weekly $5',
-        ai_analysis_monthly: 'AI Monthly $10',
-        ai_analysis_premium: 'AI Premium $49',
-        ai_analysis_pro: 'AI Pro $99',
+        contractor_ai_estimation: 'AI Estimation (Legacy)',
+        contractor_ai_analysis: 'AI Analysis (Legacy)',
+        ai_analysis_daily_weekly: 'AI Daily/Weekly (Legacy)',
+        ai_analysis_monthly: 'AI Monthly (Legacy)',
+        ai_analysis_premium: 'AI Premium (Legacy)',
+        ai_analysis_pro: 'AI Pro (Legacy)',
     };
 
     return `
@@ -9666,6 +9701,24 @@ function viewSubscriptionDetails(subscriptionId) {
                                 <span>${sub.quotesUsed || 0} / ${sub.quotesAllowed}</span>
                             </div>
                         ` : ''}
+                        ${sub.aiEstimationsAllowed ? `
+                            <div class="sub-detail-field">
+                                <label>Estimations Used</label>
+                                <span>${sub.aiEstimationsUsed || 0} / ${sub.aiEstimationsAllowed}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.aiAnalysisQuota ? `
+                            <div class="sub-detail-field">
+                                <label>Analyses Used</label>
+                                <span>${sub.aiAnalysesUsed || 0} / ${sub.aiAnalysisQuota}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.maxUploadMB ? `
+                            <div class="sub-detail-field">
+                                <label>Max Upload</label>
+                                <span>${sub.maxUploadMB} MB</span>
+                            </div>
+                        ` : ''}
                         ${sub.aiEstimationRate ? `
                             <div class="sub-detail-field">
                                 <label>AI Estimation Rate</label>
@@ -9761,18 +9814,27 @@ function showCreateSubscriptionModal() {
                         <label style="display:block; font-weight:600; margin-bottom:6px; font-size:14px; color:#374151;">Plan</label>
                         <select id="newSubPlan" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
                             <option value="">Select a plan...</option>
-                            <option value="designer_free">Designer Free (1 quote)</option>
-                            <option value="designer_5">Designer Basic - $5/mo (5 quotes)</option>
-                            <option value="designer_10">Designer Standard - $10/mo (10 quotes)</option>
-                            <option value="designer_15">Designer Plus - $15/mo (20 quotes)</option>
-                            <option value="designer_30">Designer Premium - $30/mo (Unlimited quotes)</option>
-                            <option value="contractor_pro">Contractor Pro - $49/mo</option>
-                            <option value="contractor_ai_estimation">AI Estimation - $0.40/MB (Pay Per Use)</option>
-                            <option value="contractor_ai_analysis">AI Analysis - $0.08/MB (Pay Per Use)</option>
-                            <option value="ai_analysis_daily_weekly">AI Analysis Daily/Weekly - $5/wk</option>
-                            <option value="ai_analysis_monthly">AI Analysis Monthly - $10/mo</option>
-                            <option value="ai_analysis_premium">AI Analysis Premium - $49/mo (100GB max estimation + 1 analysis)</option>
-                            <option value="ai_analysis_pro">AI Analysis Pro - $99/mo (500GB max estimation + 3 analyses)</option>
+                            <optgroup label="Designer Plans">
+                                <option value="designer_free">Designer Free (1 quote)</option>
+                                <option value="designer_5">Designer Basic - $5/mo (5 quotes)</option>
+                                <option value="designer_10">Designer Standard - $10/mo (10 quotes)</option>
+                                <option value="designer_15">Designer Plus - $15/mo (20 quotes)</option>
+                                <option value="designer_30">Designer Premium - $30/mo (Unlimited)</option>
+                            </optgroup>
+                            <optgroup label="AI Estimation (Drawing Based)">
+                                <option value="estimation_free">Free Plan - $0 (1 estimation)</option>
+                                <option value="estimation_starter">Starter - $29/mo (5 estimations)</option>
+                                <option value="estimation_professional">Professional - $79/mo (20 estimations)</option>
+                                <option value="estimation_business">Business - $149/mo (60 estimations)</option>
+                                <option value="estimation_payperuse">Pay-Per-Estimate - $9/estimate</option>
+                            </optgroup>
+                            <optgroup label="AI Data Analysis">
+                                <option value="analysis_free">Free Analysis (1 analysis)</option>
+                                <option value="analysis_basic">Basic - $10 (3 analyses)</option>
+                                <option value="analysis_advanced">Advanced - $20 (8 analyses)</option>
+                                <option value="analysis_pro">Pro - $49/mo (30 analyses/mo)</option>
+                                <option value="analysis_business">Business - $99/mo (80 analyses/mo)</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div style="margin-bottom:20px;">
