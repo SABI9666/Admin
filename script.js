@@ -10292,7 +10292,7 @@ async function loadWebsiteEstimationsData() {
     try {
         const container = document.getElementById('website-estimations-content');
         if (container) showLoader(container);
-        const response = await apiCall('/estimation/website-estimations');
+        const response = await apiCall('/website-estimations');
         state.websiteEstimations = response.estimations || response.data || [];
         renderWebsiteEstimationsTab();
         // Update badge
@@ -10395,7 +10395,7 @@ async function viewWebsiteEstimationFiles(estimationId) {
                 <strong>${sanitizeInput(name)}</strong>
                 <span style="color:#94a3b8;margin-left:8px;">(${size})</span>
             </div>
-            <button class="btn btn-sm btn-outline" onclick="window.open('${API_BASE_URL}/api/estimation/website-estimations/${estimationId}/files/${index}', '_blank')"><i class="fas fa-download"></i> Download</button>
+            <button class="btn btn-sm btn-outline" onclick="downloadWebsiteEstimationFile('${estimationId}', ${index}, '${sanitizeInput(name).replace(/'/g, "\\'")}')"><i class="fas fa-download"></i> Download</button>
         </div>`;
     }).join('');
 
@@ -10409,6 +10409,26 @@ async function viewWebsiteEstimationFiles(estimationId) {
             <button class="btn btn-secondary" onclick="closeModal()">Close</button>
         </div>
     `);
+}
+
+async function downloadWebsiteEstimationFile(estimationId, fileIndex, fileName) {
+    try {
+        const response = await apiCall(`/website-estimations/${estimationId}/files/${fileIndex}`);
+        if (response.success && response.downloadUrl) {
+            const a = document.createElement('a');
+            a.href = response.downloadUrl;
+            a.target = '_blank';
+            a.download = fileName || 'file';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            showNotification('Failed to get download link.', 'error');
+        }
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        showNotification('Failed to download file.', 'error');
+    }
 }
 
 function showUploadHtmlResultModal(estimationId) {
@@ -10474,7 +10494,7 @@ async function uploadHtmlResult(estimationId) {
             formData.append('htmlContent', htmlContent);
         }
 
-        const response = await apiCall(`/estimation/website-estimations/${estimationId}/upload-html-result`, 'POST', formData, true);
+        const response = await apiCall(`/website-estimations/${estimationId}/upload-html-result`, 'POST', formData, true);
 
         if (response.success) {
             showNotification('HTML result uploaded and notification email sent!', 'success');
@@ -10491,11 +10511,28 @@ async function uploadHtmlResult(estimationId) {
 
 async function previewHtmlResult(estimationId) {
     try {
-        const response = await apiCall(`/estimation/website-estimations/${estimationId}`);
-        if (response.success && response.data && response.data.htmlResultContent) {
+        const est = state.websiteEstimations.find(e => (e._id || e.id) === estimationId);
+        if (est && est.htmlResultContent) {
+            // Use cached data to avoid popup blocker (sync window.open)
             const previewWindow = window.open('', '_blank');
-            previewWindow.document.write(response.data.htmlResultContent);
-            previewWindow.document.close();
+            if (previewWindow) {
+                previewWindow.document.write(est.htmlResultContent);
+                previewWindow.document.close();
+            } else {
+                // Fallback: show in modal if popup blocked
+                showModal(`<div class="modal-header"><h3><i class="fas fa-eye"></i> HTML Result Preview</h3></div>
+                    <div style="padding:0;height:70vh;"><iframe srcdoc="${est.htmlResultContent.replace(/"/g, '&quot;')}" style="width:100%;height:100%;border:none;"></iframe></div>
+                    <div style="padding:16px;text-align:right;"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`);
+            }
+            return;
+        }
+        // Fallback: fetch from API and show in modal to avoid popup blocker
+        showNotification('Loading preview...', 'info');
+        const response = await apiCall(`/website-estimations/${estimationId}`);
+        if (response.success && response.data && response.data.htmlResultContent) {
+            showModal(`<div class="modal-header"><h3><i class="fas fa-eye"></i> HTML Result Preview</h3></div>
+                <div style="padding:0;height:70vh;"><iframe srcdoc="${response.data.htmlResultContent.replace(/"/g, '&quot;')}" style="width:100%;height:100%;border:none;"></iframe></div>
+                <div style="padding:16px;text-align:right;"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`);
         } else {
             showNotification('No HTML result available for preview.', 'warning');
         }
@@ -10509,7 +10546,7 @@ async function deleteWebsiteEstimation(estimationId) {
     if (!confirm('Are you sure you want to delete this website estimation request?')) return;
 
     try {
-        const response = await apiCall(`/estimation/website-estimations/${estimationId}`, 'DELETE');
+        const response = await apiCall(`/website-estimations/${estimationId}`, 'DELETE');
         if (response.success) {
             showNotification('Website estimation deleted.', 'success');
             loadWebsiteEstimationsData();
