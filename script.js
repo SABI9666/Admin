@@ -124,6 +124,7 @@ const state = {
     subscriptionStats: {},
     subscriptionPlans: {},
     meetings: [],
+    websiteEstimations: [],
 };
 
 // --- INITIALIZATION ---
@@ -427,6 +428,7 @@ function showTab(tabName) {
         'activity-logs': { title: 'Activity Reports & Notifications', subtitle: 'All activities (admin + user + visitors) with real-time email & WhatsApp alerts to admin (configured via env) / (configured via env)' },
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
         'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: (configured via env) (testing)' },
+        'website-estimations': { title: 'Website Estimation', subtitle: 'Manage estimation requests submitted from the landing page' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -464,6 +466,7 @@ function showTab(tabName) {
         'subscriptions': { data: state.subscriptions || [], loader: loadSubscriptionsData },
         'whatsapp-marketing': { data: state.whatsappRecipients || [], loader: loadWhatsAppMarketingData },
         'meetings': { data: state.meetings || [], loader: loadMeetingsData },
+        'website-estimations': { data: state.websiteEstimations || [], loader: loadWebsiteEstimationsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -10277,4 +10280,241 @@ function viewMeetingDetails(meetingId) {
         </div>`;
 
     showModal(content);
+}
+
+// ============================================================
+// WEBSITE ESTIMATION MANAGEMENT
+// ============================================================
+
+async function loadWebsiteEstimationsData() {
+    try {
+        showLoader();
+        const response = await apiCall('/estimation/website-estimations');
+        state.websiteEstimations = response.estimations || response.data || [];
+        renderWebsiteEstimationsTab();
+        // Update badge
+        const badge = document.getElementById('websiteEstimationCount');
+        if (badge) {
+            const pending = state.websiteEstimations.filter(e => e.status === 'pending').length;
+            badge.textContent = pending || '';
+            badge.style.display = pending > 0 ? 'inline-flex' : 'none';
+        }
+    } catch (error) {
+        console.error('Error loading website estimations:', error);
+        document.getElementById('website-estimations-content').innerHTML =
+            '<div class="error-state"><p>Failed to load website estimations.</p><button class="btn btn-primary" onclick="loadWebsiteEstimationsData()">Retry</button></div>';
+    }
+}
+
+function renderWebsiteEstimationsTab() {
+    const container = document.getElementById('website-estimations-content');
+    if (!state.websiteEstimations || state.websiteEstimations.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-globe" style="font-size:48px;color:#94a3b8;"></i><h3>No Website Estimations Yet</h3><p>Estimation requests from the landing page will appear here.</p></div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+            <div class="stat-card"><div class="stat-value">${state.websiteEstimations.length}</div><div class="stat-label">Total Requests</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:#f59e0b;">${state.websiteEstimations.filter(e => e.status === 'pending').length}</div><div class="stat-label">Pending</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:#22c55e;">${state.websiteEstimations.filter(e => e.status === 'result-ready').length}</div><div class="stat-label">Result Uploaded</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:#3b82f6;">${state.websiteEstimations.filter(e => e.status === 'viewed').length}</div><div class="stat-label">Viewed</div></div>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Visitor</th>
+                        <th>Project</th>
+                        <th>Files</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${state.websiteEstimations.map(est => {
+                        const statusColors = {
+                            'pending': '#f59e0b',
+                            'result-ready': '#22c55e',
+                            'viewed': '#3b82f6'
+                        };
+                        const statusLabels = {
+                            'pending': 'Pending',
+                            'result-ready': 'Result Ready',
+                            'viewed': 'Viewed'
+                        };
+                        const statusColor = statusColors[est.status] || '#94a3b8';
+                        const statusLabel = statusLabels[est.status] || est.status;
+                        const date = formatAdminDate(est.createdAt);
+                        const fileCount = est.fileCount || (est.uploadedFiles ? est.uploadedFiles.length : 0);
+
+                        return `<tr>
+                            <td>
+                                <strong>${sanitizeInput(est.name || 'Anonymous')}</strong><br>
+                                <span style="color:#64748b;font-size:13px;">${sanitizeInput(est.email)}</span>
+                            </td>
+                            <td>
+                                <strong>${sanitizeInput(est.projectTitle || 'Untitled')}</strong><br>
+                                <span style="color:#64748b;font-size:13px;">${sanitizeInput((est.description || '').substring(0, 80))}${(est.description || '').length > 80 ? '...' : ''}</span>
+                            </td>
+                            <td><span class="badge badge-blue">${fileCount} file${fileCount !== 1 ? 's' : ''}</span></td>
+                            <td><span class="status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${statusLabel}</span></td>
+                            <td>${date}</td>
+                            <td>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    ${fileCount > 0 ? `<button class="btn btn-sm btn-outline" onclick="viewWebsiteEstimationFiles('${est._id || est.id}')"><i class="fas fa-folder-open"></i> Files</button>` : ''}
+                                    <button class="btn btn-sm btn-primary" onclick="showUploadHtmlResultModal('${est._id || est.id}')"><i class="fas fa-file-code"></i> ${est.status === 'result-ready' ? 'Update' : 'Upload'} HTML Result</button>
+                                    ${est.status === 'result-ready' ? `<button class="btn btn-sm btn-outline" onclick="previewHtmlResult('${est._id || est.id}')"><i class="fas fa-eye"></i> Preview</button>` : ''}
+                                    <button class="btn btn-sm btn-danger" onclick="deleteWebsiteEstimation('${est._id || est.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+async function viewWebsiteEstimationFiles(estimationId) {
+    const est = state.websiteEstimations.find(e => (e._id || e.id) === estimationId);
+    if (!est || !est.uploadedFiles || est.uploadedFiles.length === 0) {
+        showNotification('No files found for this estimation.', 'warning');
+        return;
+    }
+
+    const filesHtml = est.uploadedFiles.map((file, index) => {
+        const size = file.size ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size';
+        const name = file.originalname || file.name || `File ${index + 1}`;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+            <div>
+                <i class="fas fa-file-pdf" style="color:#ef4444;margin-right:8px;"></i>
+                <strong>${sanitizeInput(name)}</strong>
+                <span style="color:#94a3b8;margin-left:8px;">(${size})</span>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="window.open('${API_BASE_URL}/api/estimation/website-estimations/${estimationId}/files/${index}', '_blank')"><i class="fas fa-download"></i> Download</button>
+        </div>`;
+    }).join('');
+
+    showModal(`
+        <div class="modal-header"><h3><i class="fas fa-folder-open"></i> Uploaded Files</h3></div>
+        <div style="padding:16px;">
+            <p style="margin-bottom:16px;color:#64748b;">Files uploaded by <strong>${sanitizeInput(est.name || 'visitor')}</strong> (${sanitizeInput(est.email)})</p>
+            ${filesHtml}
+        </div>
+        <div style="padding:16px;text-align:right;">
+            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        </div>
+    `);
+}
+
+function showUploadHtmlResultModal(estimationId) {
+    const est = state.websiteEstimations.find(e => (e._id || e.id) === estimationId);
+    if (!est) return;
+
+    showModal(`
+        <div class="modal-header"><h3><i class="fas fa-file-code"></i> Upload HTML Estimation Result</h3></div>
+        <div style="padding:20px;">
+            <p style="margin-bottom:16px;color:#64748b;">Upload an HTML file or paste HTML content as the estimation result for <strong>${sanitizeInput(est.name || 'visitor')}</strong>'s project: <strong>${sanitizeInput(est.projectTitle)}</strong></p>
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:8px;"><i class="fas fa-upload"></i> Upload HTML File</label>
+                <input type="file" id="htmlResultFile" accept=".html,.htm" style="width:100%;padding:10px;border:2px dashed #e2e8f0;border-radius:8px;cursor:pointer;" onchange="document.getElementById('htmlResultTextarea').value = ''; document.getElementById('htmlResultTextarea').placeholder = 'HTML file selected - textarea disabled';">
+            </div>
+
+            <div style="text-align:center;margin:12px 0;color:#94a3b8;font-weight:600;">— OR —</div>
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-weight:600;margin-bottom:8px;"><i class="fas fa-code"></i> Paste HTML Content</label>
+                <textarea id="htmlResultTextarea" rows="10" placeholder="Paste your HTML estimation result here..." style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-family:monospace;font-size:13px;resize:vertical;" onchange="document.getElementById('htmlResultFile').value = '';"></textarea>
+            </div>
+        </div>
+        <div style="padding:16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #e2e8f0;">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="uploadHtmlResult('${estimationId}')"><i class="fas fa-cloud-upload-alt"></i> Upload & Send Notification</button>
+        </div>
+    `);
+}
+
+async function uploadHtmlResult(estimationId) {
+    const fileInput = document.getElementById('htmlResultFile');
+    const textarea = document.getElementById('htmlResultTextarea');
+
+    let htmlContent = '';
+
+    if (fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+            showNotification('Please upload an HTML file (.html or .htm)', 'error');
+            return;
+        }
+        htmlContent = await file.text();
+    } else if (textarea.value.trim()) {
+        htmlContent = textarea.value.trim();
+    } else {
+        showNotification('Please upload an HTML file or paste HTML content.', 'error');
+        return;
+    }
+
+    if (htmlContent.length < 10) {
+        showNotification('HTML content seems too short. Please provide valid content.', 'error');
+        return;
+    }
+
+    try {
+        showNotification('Uploading result and sending notification...', 'info');
+
+        const formData = new FormData();
+        if (fileInput.files && fileInput.files.length > 0) {
+            formData.append('htmlFile', fileInput.files[0]);
+        } else {
+            formData.append('htmlContent', htmlContent);
+        }
+
+        const response = await apiCall(`/estimation/website-estimations/${estimationId}/upload-html-result`, 'POST', formData, true);
+
+        if (response.success) {
+            showNotification('HTML result uploaded and notification email sent!', 'success');
+            closeModal();
+            loadWebsiteEstimationsData();
+        } else {
+            showNotification(response.message || 'Failed to upload result.', 'error');
+        }
+    } catch (error) {
+        console.error('Error uploading HTML result:', error);
+        showNotification('Failed to upload HTML result. Please try again.', 'error');
+    }
+}
+
+async function previewHtmlResult(estimationId) {
+    try {
+        const response = await apiCall(`/estimation/website-estimations/${estimationId}`);
+        if (response.success && response.data && response.data.htmlResultContent) {
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(response.data.htmlResultContent);
+            previewWindow.document.close();
+        } else {
+            showNotification('No HTML result available for preview.', 'warning');
+        }
+    } catch (error) {
+        console.error('Error previewing HTML result:', error);
+        showNotification('Failed to load preview.', 'error');
+    }
+}
+
+async function deleteWebsiteEstimation(estimationId) {
+    if (!confirm('Are you sure you want to delete this website estimation request?')) return;
+
+    try {
+        const response = await apiCall(`/estimation/website-estimations/${estimationId}`, 'DELETE');
+        if (response.success) {
+            showNotification('Website estimation deleted.', 'success');
+            loadWebsiteEstimationsData();
+        } else {
+            showNotification(response.message || 'Failed to delete.', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting website estimation:', error);
+        showNotification('Failed to delete website estimation.', 'error');
+    }
 }

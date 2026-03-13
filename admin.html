@@ -70,6 +70,11 @@
                 <span>Estimations</span>
                 <span class="nav-badge nav-badge-teal" id="estimationsBadge"></span>
             </button>
+            <button class="sidebar-link" onclick="showTab('website-estimations')" data-tab="website-estimations">
+                <i class="fas fa-globe"></i>
+                <span>Website Estimation</span>
+                <span class="nav-badge nav-badge-violet" id="websiteEstimationCount">0</span>
+            </button>
             <button class="sidebar-link" onclick="showTab('subscriptions')" data-tab="subscriptions">
                 <i class="fas fa-credit-card"></i>
                 <span>Subscriptions</span>
@@ -255,6 +260,13 @@
             <div id="meetings-tab" class="tab-content"></div>
             <div id="conversations-tab" class="tab-content"></div>
             <div id="estimations-tab" class="tab-content"></div>
+            <div id="website-estimations-tab" class="tab-content" style="display:none;">
+                <div class="tab-header">
+                    <h2><i class="fas fa-globe"></i> Website Estimation Requests</h2>
+                    <p class="tab-subtitle">Manage estimation requests submitted from the landing page. Upload HTML result files for visitors.</p>
+                </div>
+                <div id="website-estimations-content"></div>
+            </div>
             <div id="jobs-tab" class="tab-content"></div>
             <div id="quotes-tab" class="tab-content"></div>
             <div id="messages-tab" class="tab-content"></div>
