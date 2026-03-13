@@ -10290,7 +10290,8 @@ function viewMeetingDetails(meetingId) {
 
 async function loadWebsiteEstimationsData() {
     try {
-        showLoader();
+        const container = document.getElementById('website-estimations-content');
+        if (container) showLoader(container);
         const response = await apiCall('/estimation/website-estimations');
         state.websiteEstimations = response.estimations || response.data || [];
         renderWebsiteEstimationsTab();
