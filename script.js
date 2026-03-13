@@ -476,6 +476,8 @@ function showTab(tabName) {
     // Always reload users and profile reviews for fresh data (new signups)
     if (tabName === 'users') loadUsersData();
     if (tabName === 'profile-reviews') loadProfileReviewsData();
+    // Always reload website estimations for fresh data
+    if (tabName === 'website-estimations') loadWebsiteEstimationsData();
 }
 
 // --- DASHBOARD ---
