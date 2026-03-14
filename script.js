@@ -477,10 +477,7 @@ function showTab(tabName) {
     if (tabName === 'users') loadUsersData();
     if (tabName === 'profile-reviews') loadProfileReviewsData();
     // Always reload website estimations for fresh data
-    if (tabName === 'website-estimations') {
-        loadWebsiteEstimationsData();
-        loadWebsiteEstimationToggleStatus();
-    }
+    if (tabName === 'website-estimations') loadWebsiteEstimationsData();
 }
 
 // --- DASHBOARD ---
@@ -10288,58 +10285,28 @@ function viewMeetingDetails(meetingId) {
 }
 
 // ============================================================
-// WEBSITE ESTIMATION TOGGLE
+// WEBSITE ESTIMATION PER-USER ACCESS CONTROL
 // ============================================================
 
-async function loadWebsiteEstimationToggleStatus() {
+async function toggleUserEstimationAccess(email, block) {
+    const endpoint = block ? '/website-estimation/block-user' : '/website-estimation/unblock-user';
     try {
-        const response = await apiCall('/website-estimation/status');
-        const enabled = response.enabled !== false;
-        updateWebsiteEstimationToggleUI(enabled);
-    } catch (error) {
-        console.error('Error loading website estimation toggle status:', error);
-    }
-}
-
-function updateWebsiteEstimationToggleUI(enabled) {
-    const dot = document.getElementById('weToggleStatusDot');
-    const text = document.getElementById('weToggleStatusText');
-    const checkbox = document.getElementById('weToggleSwitch');
-    const slider = document.getElementById('weToggleSlider');
-    const knob = document.getElementById('weToggleKnob');
-    if (!dot || !text || !checkbox) return;
-
-    checkbox.checked = enabled;
-    if (enabled) {
-        dot.style.background = '#22c55e';
-        dot.style.boxShadow = '0 0 8px rgba(34,197,94,0.4)';
-        text.textContent = 'Enabled — visitors can submit free estimation requests from the landing page';
-        slider.style.background = '#22c55e';
-        knob.style.transform = 'translateX(24px)';
-    } else {
-        dot.style.background = '#ef4444';
-        dot.style.boxShadow = '0 0 8px rgba(239,68,68,0.4)';
-        text.textContent = 'Disabled — visitors will be redirected to subscription options instead';
-        slider.style.background = '#cbd5e1';
-        knob.style.transform = 'translateX(0)';
-    }
-}
-
-async function toggleWebsiteEstimation(enabled) {
-    try {
-        const response = await apiCall('/website-estimation/toggle', 'POST', { enabled });
+        const response = await apiCall(endpoint, 'POST', { email });
         if (response.success) {
-            updateWebsiteEstimationToggleUI(enabled);
-            showNotification(`Website estimation ${enabled ? 'enabled' : 'disabled'} successfully.`, 'success');
+            // Update local state
+            state.websiteEstimations.forEach(est => {
+                if (est.email && est.email.toLowerCase() === email.toLowerCase()) {
+                    est.estimationBlocked = block;
+                }
+            });
+            renderWebsiteEstimationsTab();
+            showNotification(`Free estimation ${block ? 'disabled' : 'enabled'} for ${email}`, 'success');
         } else {
-            showNotification(response.message || 'Failed to toggle website estimation.', 'error');
-            // Revert checkbox
-            document.getElementById('weToggleSwitch').checked = !enabled;
+            showNotification(response.message || 'Failed to update user access.', 'error');
         }
     } catch (error) {
-        console.error('Error toggling website estimation:', error);
-        showNotification('Error toggling website estimation.', 'error');
-        document.getElementById('weToggleSwitch').checked = !enabled;
+        console.error('Error toggling user estimation access:', error);
+        showNotification('Error updating user estimation access.', 'error');
     }
 }
 
@@ -10376,11 +10343,12 @@ function renderWebsiteEstimationsTab() {
     }
 
     container.innerHTML = `
-        <div class="stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+        <div class="stats-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;">
             <div class="stat-card"><div class="stat-value">${state.websiteEstimations.length}</div><div class="stat-label">Total Requests</div></div>
             <div class="stat-card"><div class="stat-value" style="color:#f59e0b;">${state.websiteEstimations.filter(e => e.status === 'pending').length}</div><div class="stat-label">Pending</div></div>
             <div class="stat-card"><div class="stat-value" style="color:#22c55e;">${state.websiteEstimations.filter(e => e.status === 'result-ready').length}</div><div class="stat-label">Result Uploaded</div></div>
             <div class="stat-card"><div class="stat-value" style="color:#3b82f6;">${state.websiteEstimations.filter(e => e.status === 'viewed').length}</div><div class="stat-label">Viewed</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:#ef4444;">${state.websiteEstimations.filter(e => !!e.estimationBlocked).length}</div><div class="stat-label">Blocked Users</div></div>
         </div>
         <div class="table-container">
             <table class="data-table">
@@ -10390,6 +10358,7 @@ function renderWebsiteEstimationsTab() {
                         <th>Project</th>
                         <th>Files</th>
                         <th>Status</th>
+                        <th>Free Access</th>
                         <th>Submitted</th>
                         <th>Actions</th>
                     </tr>
@@ -10411,6 +10380,10 @@ function renderWebsiteEstimationsTab() {
                         const date = formatAdminDate(est.createdAt);
                         const fileCount = est.fileCount || (est.uploadedFiles ? est.uploadedFiles.length : 0);
 
+                        const isBlocked = !!est.estimationBlocked;
+                        const safeEmail = sanitizeInput(est.email).replace(/'/g, "\\'");
+                        const toggleId = `userToggle_${(est._id || est.id)}`;
+
                         return `<tr>
                             <td>
                                 <strong>${sanitizeInput(est.name || 'Anonymous')}</strong><br>
@@ -10422,6 +10395,14 @@ function renderWebsiteEstimationsTab() {
                             </td>
                             <td><span class="badge badge-blue">${fileCount} file${fileCount !== 1 ? 's' : ''}</span></td>
                             <td><span class="status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${statusLabel}</span></td>
+                            <td>
+                                <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;" title="${isBlocked ? 'Blocked — click to enable' : 'Allowed — click to disable'}">
+                                    <input type="checkbox" id="${toggleId}" ${!isBlocked ? 'checked' : ''} onchange="toggleUserEstimationAccess('${safeEmail}', !this.checked)" style="opacity:0;width:0;height:0;">
+                                    <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:${isBlocked ? '#cbd5e1' : '#22c55e'};border-radius:24px;transition:all 0.3s ease;"></span>
+                                    <span style="position:absolute;top:2px;left:${isBlocked ? '2px' : '22px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:all 0.3s ease;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                                </label>
+                                <span style="font-size:11px;color:${isBlocked ? '#ef4444' : '#22c55e'};display:block;margin-top:2px;">${isBlocked ? 'Blocked' : 'Allowed'}</span>
+                            </td>
                             <td>${date}</td>
                             <td>
                                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
