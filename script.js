@@ -477,7 +477,10 @@ function showTab(tabName) {
     if (tabName === 'users') loadUsersData();
     if (tabName === 'profile-reviews') loadProfileReviewsData();
     // Always reload website estimations for fresh data
-    if (tabName === 'website-estimations') loadWebsiteEstimationsData();
+    if (tabName === 'website-estimations') {
+        loadWebsiteEstimationsData();
+        loadWebsiteEstimationToggleStatus();
+    }
 }
 
 // --- DASHBOARD ---
@@ -10282,6 +10285,62 @@ function viewMeetingDetails(meetingId) {
         </div>`;
 
     showModal(content);
+}
+
+// ============================================================
+// WEBSITE ESTIMATION TOGGLE
+// ============================================================
+
+async function loadWebsiteEstimationToggleStatus() {
+    try {
+        const response = await apiCall('/website-estimation/status');
+        const enabled = response.enabled !== false;
+        updateWebsiteEstimationToggleUI(enabled);
+    } catch (error) {
+        console.error('Error loading website estimation toggle status:', error);
+    }
+}
+
+function updateWebsiteEstimationToggleUI(enabled) {
+    const dot = document.getElementById('weToggleStatusDot');
+    const text = document.getElementById('weToggleStatusText');
+    const checkbox = document.getElementById('weToggleSwitch');
+    const slider = document.getElementById('weToggleSlider');
+    const knob = document.getElementById('weToggleKnob');
+    if (!dot || !text || !checkbox) return;
+
+    checkbox.checked = enabled;
+    if (enabled) {
+        dot.style.background = '#22c55e';
+        dot.style.boxShadow = '0 0 8px rgba(34,197,94,0.4)';
+        text.textContent = 'Enabled — visitors can submit free estimation requests from the landing page';
+        slider.style.background = '#22c55e';
+        knob.style.transform = 'translateX(24px)';
+    } else {
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 8px rgba(239,68,68,0.4)';
+        text.textContent = 'Disabled — visitors will be redirected to subscription options instead';
+        slider.style.background = '#cbd5e1';
+        knob.style.transform = 'translateX(0)';
+    }
+}
+
+async function toggleWebsiteEstimation(enabled) {
+    try {
+        const response = await apiCall('/website-estimation/toggle', 'POST', { enabled });
+        if (response.success) {
+            updateWebsiteEstimationToggleUI(enabled);
+            showNotification(`Website estimation ${enabled ? 'enabled' : 'disabled'} successfully.`, 'success');
+        } else {
+            showNotification(response.message || 'Failed to toggle website estimation.', 'error');
+            // Revert checkbox
+            document.getElementById('weToggleSwitch').checked = !enabled;
+        }
+    } catch (error) {
+        console.error('Error toggling website estimation:', error);
+        showNotification('Error toggling website estimation.', 'error');
+        document.getElementById('weToggleSwitch').checked = !enabled;
+    }
 }
 
 // ============================================================
