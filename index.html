@@ -439,7 +439,7 @@
                 </button>
             </form>
             <div class="otp-timer" id="otpTimerContainer">
-                <i class="fas fa-clock"></i> <span id="otpTimerText">Code expires in <span class="timer-active" id="otpCountdown">5:00</span></span>
+                <i class="fas fa-clock"></i> <span id="otpTimerText">Code expires in <span class="timer-active" id="otpCountdown">10:00</span></span>
             </div>
             <div class="back-to-login">
                 <a id="resendLink" class="resend-link" onclick="resendOTP()"><i class="fas fa-redo"></i> Resend Code</a> &nbsp;|&nbsp;
@@ -453,6 +453,7 @@
 
         // View switching functions
         let pendingOTPEmail = '';
+        let pendingOTPUserId = '';
         let otpCountdownInterval = null;
         let resendCooldown = false;
 
@@ -512,7 +513,7 @@
             }
 
             // Start countdown timer
-            startOTPCountdown(300); // 5 minutes
+            startOTPCountdown(600); // 10 minutes
             // Auto-focus OTP input for better UX
             setTimeout(() => {
                 document.getElementById('otpCode').focus();
@@ -570,22 +571,27 @@
             }
         }
 
+        let loginInProgress = false;
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
+            // Prevent double-submission
+            if (loginInProgress) return;
+
             const loginButton = document.getElementById('loginButton');
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            
+
             if (!email || !password) {
                 showMessage('Please enter both email and password', 'error');
                 return;
             }
             
-            // Disable button and show loading
+            // Disable button and show loading - prevent double-submission
+            loginInProgress = true;
             loginButton.disabled = true;
             loginButton.innerHTML = '<span class="spinner"></span> Logging in...';
-            
+
             try {
                 console.log('Attempting admin login...');
                 
@@ -610,6 +616,8 @@
                     // Re-enable login button so user can retry if they go back
                     loginButton.disabled = false;
                     loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
+                    // Store userId for reliable OTP verification
+                    pendingOTPUserId = data.userId || '';
                     // Show OTP view immediately - no artificial delay
                     showOTPView(email, data.email, data.emailSent);
                     return;
@@ -624,10 +632,12 @@
             } catch (error) {
                 console.error('Login error:', error);
                 showMessage(error.message || 'Login failed. Please try again.', 'error');
-                
+
                 // Re-enable button
                 loginButton.disabled = false;
                 loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
+            } finally {
+                loginInProgress = false;
             }
         });
 
@@ -761,10 +771,12 @@
             otpButton.innerHTML = '<span class="spinner"></span> Verifying...';
 
             try {
+                const verifyPayload = { email, otp, loginType: 'admin' };
+                if (pendingOTPUserId) verifyPayload.userId = pendingOTPUserId;
                 const response = await fetch(`${API_BASE}/auth/verify-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, otp, loginType: 'admin' })
+                    body: JSON.stringify(verifyPayload)
                 });
 
                 const data = await response.json();
@@ -810,10 +822,12 @@
             const warningEl = document.getElementById('otpWarning');
 
             try {
+                const resendPayload = { email: pendingOTPEmail, loginType: 'admin' };
+                if (pendingOTPUserId) resendPayload.userId = pendingOTPUserId;
                 const response = await fetch(`${API_BASE}/auth/resend-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: pendingOTPEmail, loginType: 'admin' })
+                    body: JSON.stringify(resendPayload)
                 });
 
                 const data = await response.json();
@@ -836,7 +850,7 @@
                 document.getElementById('otpCode').value = '';
                 document.getElementById('otpCode').focus();
                 // Restart the countdown timer
-                startOTPCountdown(300);
+                startOTPCountdown(600);
 
             } catch (error) {
                 showMessage(error.message || 'Failed to resend code. Please try again.', 'error');
