@@ -607,17 +607,11 @@
                 // Check if 2FA is required
                 if (data.requires2FA) {
                     console.log('2FA required, showing OTP view, emailSent:', data.emailSent);
-                    if (data.emailSent === false) {
-                        showMessage('Code generated but email delivery failed. Try resending.', 'error');
-                    } else {
-                        showMessage('Verification code sent to your email!', 'success');
-                    }
                     // Re-enable login button so user can retry if they go back
                     loginButton.disabled = false;
                     loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Admin Portal';
-                    setTimeout(() => {
-                        showOTPView(email, data.email, data.emailSent);
-                    }, 1500);
+                    // Show OTP view immediately - no artificial delay
+                    showOTPView(email, data.email, data.emailSent);
                     return;
                 }
 
