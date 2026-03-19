@@ -2257,67 +2257,156 @@ function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
 function showUploadResultModal(estimationId) {
     var est = state.estimations ? state.estimations.find(function(e) { return e._id === estimationId; }) : null;
     var isReplace = est && (est.resultFile || (est.resultFiles && est.resultFiles.length > 0));
-    var title = isReplace ? '<i class="fas fa-sync-alt"></i> Replace Result Files' : '<i class="fas fa-upload"></i> Upload Result Files';
+    var title = isReplace ? '<i class="fas fa-sync-alt"></i> Replace Result Files' : '<i class="fas fa-upload"></i> Upload Estimation Result';
     var desc = isReplace
         ? 'Upload new result files to replace the existing ones. The contractor will be notified of the updated result.'
         : 'Upload estimation result files (PDF, Excel, or both). This will mark the estimation as \'completed\' and notify the contractor.';
     var btnText = isReplace ? '<i class="fas fa-sync-alt"></i> Replace & Notify Contractor' : '<i class="fas fa-upload"></i> Upload & Send to Contractor';
+
+    // Build existing result files preview
+    var existingHTML = '';
+    if (isReplace) {
+        var existingFiles = est.resultFiles || (est.resultFile ? [est.resultFile] : []);
+        if (existingFiles.length > 0) {
+            existingHTML = '<div style="margin-bottom:14px;padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;">' +
+                '<div style="font-size:0.78rem;font-weight:700;color:#92400e;margin-bottom:6px;"><i class="fas fa-info-circle"></i> Current Result Files (will be replaced)</div>';
+            existingFiles.forEach(function(rf) {
+                var fname = rf.originalname || rf.name || rf.path || 'Result file';
+                if (fname.includes('/')) fname = fname.split('/').pop();
+                var fsize = rf.size ? (rf.size / (1024*1024)).toFixed(1) + ' MB' : '';
+                var icon = /\.pdf$/i.test(fname) ? 'fa-file-pdf' : /\.xlsx?$/i.test(fname) ? 'fa-file-excel' : 'fa-file';
+                var color = /\.pdf$/i.test(fname) ? '#dc2626' : /\.xlsx?$/i.test(fname) ? '#16a34a' : '#6366f1';
+                existingHTML += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><i class="fas ' + icon + '" style="color:' + color + ';font-size:14px;"></i><span style="font-size:0.85rem;font-weight:600;">' + fname + '</span><small style="color:#94a3b8;margin-left:auto;">' + fsize + '</small></div>';
+            });
+            existingHTML += '</div>';
+        }
+    }
+
     showModal(`
-        <div class="modal-body">
-            <h3>${title}</h3>
-            <p>${desc}</p>
-            <div class="form-group">
-                <label for="result-file-input">Result Files (PDF, Excel, Word, CSV - select multiple):</label>
-                <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv" multiple>
-                <small style="color:#64748b;display:block;margin-top:4px;">Hold Ctrl/Cmd to select multiple files (e.g., PDF report + Excel breakdown)</small>
+        <div class="modal-body" style="max-width:560px;">
+            <h3 style="margin-bottom:4px;">${title}</h3>
+            <p style="color:#64748b;font-size:0.88rem;margin-bottom:14px;">${desc}</p>
+            ${existingHTML}
+            <div id="result-upload-drop-zone" style="border:2px dashed #cbd5e1;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:#f8fafc;" onclick="document.getElementById('result-file-input').click()">
+                <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv" multiple style="display:none;">
+                <div style="margin-bottom:6px;"><i class="fas fa-cloud-upload-alt" style="font-size:36px;color:#6366f1;"></i></div>
+                <div style="font-weight:700;color:#1e293b;font-size:0.95rem;">Drag & drop files here</div>
+                <div style="color:#94a3b8;font-size:0.82rem;margin-top:2px;">or click to browse</div>
+                <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;"><i class="fas fa-file-pdf" style="font-size:10px;"></i> PDF</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#d1fae5;color:#16a34a;font-size:11px;font-weight:600;"><i class="fas fa-file-excel" style="font-size:10px;"></i> Excel</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#dbeafe;color:#2563eb;font-size:11px;font-weight:600;"><i class="fas fa-file-word" style="font-size:10px;"></i> Word</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:600;"><i class="fas fa-file-csv" style="font-size:10px;"></i> CSV</span>
+                </div>
+                <div style="color:#cbd5e1;font-size:0.75rem;margin-top:6px;">Max 50MB per file</div>
             </div>
-            <div id="result-files-preview" style="margin:8px 0;"></div>
-            <div class="modal-actions">
-                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">${btnText}</button>
+            <div id="result-files-preview" style="margin-top:10px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-success" id="result-upload-btn" onclick="uploadEstimationResult('${estimationId}')" disabled style="opacity:0.5;">${btnText}</button>
             </div>
         </div>
     `);
-    // File preview listener
-    setTimeout(() => {
-        const input = document.getElementById('result-file-input');
-        if (input) input.addEventListener('change', function() {
-            const preview = document.getElementById('result-files-preview');
-            if (!preview || !this.files.length) { if (preview) preview.innerHTML = ''; return; }
-            preview.innerHTML = Array.from(this.files).map(f => {
-                const icon = f.name.endsWith('.pdf') ? 'fa-file-pdf' : f.name.match(/\\.xlsx?$/i) ? 'fa-file-excel' : 'fa-file';
-                const color = f.name.endsWith('.pdf') ? '#dc2626' : f.name.match(/\\.xlsx?$/i) ? '#16a34a' : '#6366f1';
-                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:4px;border:1px solid #e2e8f0;"><i class="fas ' + icon + '" style="color:' + color + ';font-size:16px;"></i><span style="font-weight:600;font-size:0.88rem;">' + f.name + '</span><small style="color:#94a3b8;">' + (f.size / (1024 * 1024)).toFixed(1) + ' MB</small></div>';
-            }).join('');
+
+    // Wire up drag-and-drop and file input
+    setTimeout(function() {
+        var dropZone = document.getElementById('result-upload-drop-zone');
+        var input = document.getElementById('result-file-input');
+        var preview = document.getElementById('result-files-preview');
+        var uploadBtn = document.getElementById('result-upload-btn');
+        if (!dropZone || !input) return;
+
+        // Drag-and-drop events
+        ['dragenter', 'dragover'].forEach(function(evt) {
+            dropZone.addEventListener(evt, function(e) {
+                e.preventDefault(); e.stopPropagation();
+                dropZone.style.borderColor = '#6366f1';
+                dropZone.style.background = '#eef2ff';
+            });
         });
+        ['dragleave', 'drop'].forEach(function(evt) {
+            dropZone.addEventListener(evt, function(e) {
+                e.preventDefault(); e.stopPropagation();
+                dropZone.style.borderColor = '#cbd5e1';
+                dropZone.style.background = '#f8fafc';
+            });
+        });
+        dropZone.addEventListener('drop', function(e) {
+            var dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                input.files = dt.files;
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // File change — render preview with remove buttons
+        input.addEventListener('change', function() {
+            _resultUploadFiles = this.files.length > 0 ? Array.from(this.files) : [];
+            renderResultFilesPreview();
+        });
+
+        // Global array to manage selected files
+        window._resultUploadFiles = [];
+
+        window.renderResultFilesPreview = function() {
+            if (!_resultUploadFiles.length) {
+                preview.innerHTML = '';
+                uploadBtn.disabled = true;
+                uploadBtn.style.opacity = '0.5';
+                return;
+            }
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            var totalSize = _resultUploadFiles.reduce(function(s, f) { return s + f.size; }, 0);
+            preview.innerHTML = '<div style="font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:6px;">' + _resultUploadFiles.length + ' file(s) selected <small style="color:#94a3b8;">(' + (totalSize / (1024*1024)).toFixed(1) + ' MB total)</small></div>' +
+                _resultUploadFiles.map(function(f, i) {
+                    var icon = /\.pdf$/i.test(f.name) ? 'fa-file-pdf' : /\.xlsx?$/i.test(f.name) ? 'fa-file-excel' : /\.docx?$/i.test(f.name) ? 'fa-file-word' : /\.csv$/i.test(f.name) ? 'fa-file-csv' : 'fa-file';
+                    var color = /\.pdf$/i.test(f.name) ? '#dc2626' : /\.xlsx?$/i.test(f.name) ? '#16a34a' : /\.docx?$/i.test(f.name) ? '#2563eb' : '#7c3aed';
+                    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:4px;border:1px solid #e2e8f0;">' +
+                        '<i class="fas ' + icon + '" style="color:' + color + ';font-size:18px;"></i>' +
+                        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + f.name + '</div>' +
+                        '<small style="color:#94a3b8;">' + (f.size / (1024*1024)).toFixed(1) + ' MB</small></div>' +
+                        '<button type="button" onclick="removeResultFile(' + i + ')" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;padding:4px;"><i class="fas fa-times-circle"></i></button></div>';
+                }).join('');
+        };
+
+        window.removeResultFile = function(index) {
+            _resultUploadFiles.splice(index, 1);
+            renderResultFilesPreview();
+        };
     }, 100);
 }
 
 async function uploadEstimationResult(estimationId) {
-    const fileInput = document.getElementById('result-file-input');
-    if (!fileInput || !fileInput.files.length) return showNotification('Please select at least one file.', 'warning');
-    const files = Array.from(fileInput.files);
-    const maxSize = 50 * 1024 * 1024;
-    const allowedExts = ['.pdf', '.xls', '.xlsx', '.doc', '.docx', '.csv'];
-    for (const file of files) {
+    var files = window._resultUploadFiles || [];
+    // Fallback: check the file input directly
+    if (files.length === 0) {
+        var fileInput = document.getElementById('result-file-input');
+        if (fileInput && fileInput.files.length) files = Array.from(fileInput.files);
+    }
+    if (files.length === 0) return showNotification('Please select at least one file.', 'warning');
+    var maxSize = 50 * 1024 * 1024;
+    var allowedExts = ['.pdf', '.xls', '.xlsx', '.doc', '.docx', '.csv'];
+    for (var i = 0; i < files.length; i++) {
+        var file = files[i];
         if (file.size > maxSize) {
-            return showNotification(`"${file.name}" exceeds 50MB limit.`, 'error');
+            return showNotification('"' + file.name + '" exceeds 50MB limit.', 'error');
         }
-        const ext = '.' + file.name.split('.').pop().toLowerCase();
-        if (!allowedExts.includes(ext)) {
-            return showNotification(`"${file.name}" has invalid type. Allowed: PDF, Excel, Word, CSV.`, 'error');
+        var ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (allowedExts.indexOf(ext) === -1) {
+            return showNotification('"' + file.name + '" has invalid type. Allowed: PDF, Excel, Word, CSV.', 'error');
         }
     }
-    const uploadBtn = document.querySelector('.modal .btn-success');
+    var uploadBtn = document.getElementById('result-upload-btn');
     if (uploadBtn) {
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = '<div class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle;"></div> Uploading ' + files.length + ' file(s)...';
     }
-    const formData = new FormData();
-    files.forEach(file => formData.append('resultFiles', file));
+    var formData = new FormData();
+    files.forEach(function(f) { formData.append('resultFiles', f); });
     try {
-        const data = await apiCall(`/estimations/${estimationId}/result`, 'POST', formData, true);
-        showNotification(data.message || `${files.length} result file(s) uploaded successfully`, 'success');
+        var data = await apiCall('/estimations/' + estimationId + '/result', 'POST', formData, true);
+        showNotification(data.message || files.length + ' result file(s) uploaded successfully!', 'success');
         closeModal();
         await loadEstimationsData();
     } catch (error) {
