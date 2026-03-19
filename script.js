@@ -1292,6 +1292,7 @@ function renderEstimationsTab() {
         <div class="section-header">
             <h3>All Estimations (${state.estimations.length})</h3>
             <div class="header-actions">
+                ${state.estimations.some(e => !e.projectType || !e.region) ? `<button class="btn" onclick="batchEditMissingEstimationInfo()" style="background:#f59e0b;color:#fff;"><i class="fas fa-exclamation-triangle"></i> Fix ${state.estimations.filter(e => !e.projectType || !e.region).length} Incomplete</button>` : ''}
                 <button class="btn" onclick="loadEstimationsData()">Refresh</button>
                 <button class="btn btn-primary" onclick="exportData('estimations')">Export</button>
             </div>
@@ -1331,7 +1332,7 @@ function renderEstimationsTab() {
                             <td>
                                 <div class="project-cell">
                                     <strong>${est.projectName || est.projectTitle || 'Untitled Project'}</strong>
-                                    ${est.projectType ? `<br><small style="color:#6366f1;font-weight:600;">${est.projectType}</small>` : ''}
+                                    ${est.projectType ? `<br><small style="color:#6366f1;font-weight:600;">${est.projectType}</small>` : `<br><small style="color:#f59e0b;cursor:pointer;" onclick="editEstimationDetails('${est._id}')"><i class="fas fa-exclamation-triangle"></i> Set type</small>`}
                                     ${(est.scopeOfEstimation || est.description) ? `<br><small class="project-desc" title="${(est.scopeOfEstimation || est.description || '').replace(/"/g, '&quot;')}">${(est.scopeOfEstimation || est.description || '').substring(0, 80)}${(est.scopeOfEstimation || est.description || '').length > 80 ? '...' : ''}</small>` : ''}
                                 </div>
                             </td>
@@ -1342,7 +1343,7 @@ function renderEstimationsTab() {
                                 </div>
                             </td>
                             <td>
-                                ${est.region ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:10px;"></i> ${est.region}</span>` : '<small style="color:#94a3b8;">N/A</small>'}
+                                ${est.region ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:10px;"></i> ${est.region}</span>` : `<small style="color:#f59e0b;cursor:pointer;" onclick="editEstimationDetails('${est._id}')"><i class="fas fa-exclamation-triangle"></i> Set location</small>`}
                             </td>
                             <td><span class="status ${est.status}">${est.status}</span></td>
                             <td>
@@ -1396,9 +1397,11 @@ function renderEstimationsTab() {
                                         <i class="fas fa-robot"></i> Send AI Report
                                     </button>
                                 ` : ''}
-                                <button class="btn btn-sm" onclick="viewEstimationDetails('${est._id}')">
+                                ${!est.projectType || !est.region ? `<button class="btn btn-sm" onclick="editEstimationDetails('${est._id}')" style="background:#f59e0b;color:#fff;">
+                                    <i class="fas fa-edit"></i> Complete Info
+                                </button>` : `<button class="btn btn-sm" onclick="viewEstimationDetails('${est._id}')">
                                     <i class="fas fa-info-circle"></i> Details
-                                </button>
+                                </button>`}
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
                                     <i class="fas fa-upload"></i> Upload Result
                                 </button>
@@ -1585,11 +1588,23 @@ async function saveEstimationDetails(estimationId) {
         showNotification('Estimation details updated successfully.', 'success');
         closeModal();
         await loadEstimationsData();
+        // Auto-open next incomplete estimation if batch editing
+        var nextIncomplete = state.estimations.find(function(e) { return e._id !== estimationId && (!e.projectType || !e.region); });
+        if (nextIncomplete) {
+            setTimeout(function() { editEstimationDetails(nextIncomplete._id); }, 300);
+        }
     } catch (error) {
         console.error('[EDIT-EST] Error:', error);
         showNotification('Failed to update: ' + (error.message || 'Unknown error'), 'error');
         if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes'; }
     }
+}
+
+function batchEditMissingEstimationInfo() {
+    var incomplete = state.estimations.filter(function(e) { return !e.projectType || !e.region; });
+    if (incomplete.length === 0) { showNotification('All estimations have complete info!', 'success'); return; }
+    showNotification('Opening editor for ' + incomplete.length + ' incomplete estimation(s). Fill in details and save each one.', 'info');
+    editEstimationDetails(incomplete[0]._id);
 }
 
 function showEstimationFiles(estimationId) {
