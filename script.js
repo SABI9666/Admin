@@ -1378,8 +1378,9 @@ function renderEstimationsTab() {
                             </td>
                             <td>
                                 ${est.resultFile ? `
+                                    <span style="font-size:10px;color:#16a34a;font-weight:600;">${est.resultFiles ? est.resultFiles.length + ' file(s)' : '1 file'}</span><br>
                                     <button class="btn btn-xs result-link" onclick="viewEstimationResult('${est._id}')">
-                                        <i class="fas fa-file-alt"></i> View Result
+                                        <i class="fas fa-file-alt"></i> View
                                     </button>
                                     <button class="btn btn-xs" onclick="downloadEstimationResult('${est._id}')" title="Download">
                                         <i class="fas fa-download"></i>
@@ -1395,8 +1396,11 @@ function renderEstimationsTab() {
                                         <i class="fas fa-robot"></i> Send AI Report
                                     </button>
                                 ` : ''}
+                                <button class="btn btn-sm" onclick="viewEstimationDetails('${est._id}')">
+                                    <i class="fas fa-info-circle"></i> Details
+                                </button>
                                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
-                                    <i class="fas fa-upload"></i> Upload Manual Result
+                                    <i class="fas fa-upload"></i> Upload Result
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">
                                     <i class="fas fa-trash"></i> Delete
@@ -1407,6 +1411,96 @@ function renderEstimationsTab() {
                 }).join('')}
             </tbody>
         </table>`;
+}
+
+function viewEstimationDetails(estimationId) {
+    const est = state.estimations.find(e => e._id === estimationId);
+    if (!est) return showNotification('Estimation not found.', 'error');
+
+    const fileCount = est.uploadedFiles ? est.uploadedFiles.length : 0;
+    const totalSize = est.uploadedFiles ? est.uploadedFiles.reduce((sum, f) => sum + (f.size || 0), 0) : 0;
+    const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(1) + ' MB' : 'N/A';
+    const hasAI = !!(est.aiEstimate);
+    const hasResult = !!(est.resultFile && est.resultFile.path);
+    const resultFiles = est.resultFiles || [];
+    const hasMultipleResults = resultFiles.length > 0;
+
+    showModal(`
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+            <h3 style="margin-bottom:4px;"><i class="fas fa-clipboard-list"></i> Estimation Details</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;">
+                <div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">
+                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-project-diagram"></i> Project Information</div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Project Title</div>
+                        <div style="font-size:0.95rem;font-weight:700;color:#1e293b;">${est.projectTitle || est.projectName || 'Untitled'}</div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Project Type</div>
+                        <div style="font-weight:600;color:#6366f1;">${est.projectType || 'N/A'}</div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Location / Region</div>
+                        <div style="font-weight:600;color:#4338ca;"><i class="fas fa-map-marker-alt" style="font-size:11px;"></i> ${est.region || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.78rem;color:#94a3b8;">Scope of Work</div>
+                        <div style="font-size:0.88rem;color:#334155;line-height:1.5;">${est.scopeOfEstimation || est.description || 'N/A'}</div>
+                    </div>
+                </div>
+                <div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">
+                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-user"></i> Client & Status</div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Contractor</div>
+                        <div style="font-weight:600;color:#1e293b;">${est.contractorName || 'N/A'}</div>
+                        <div style="font-size:0.82rem;color:#64748b;">${est.contractorEmail || est.userEmail || ''}</div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Status</div>
+                        <span class="status ${est.status}" style="font-size:13px;">${est.status}</span>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Files Uploaded</div>
+                        <div style="font-weight:600;">${fileCount} file${fileCount !== 1 ? 's' : ''} ${totalSize > 0 ? '(' + totalSizeMB + ')' : ''}</div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Submitted</div>
+                        <div>${formatAdminDate(est.createdAt)}</div>
+                    </div>
+                    ${est.completedAt ? `<div style="margin-bottom:8px;">
+                        <div style="font-size:0.78rem;color:#94a3b8;">Completed</div>
+                        <div>${formatAdminDate(est.completedAt)}</div>
+                    </div>` : ''}
+                    ${est.estimatedAmount ? `<div>
+                        <div style="font-size:0.78rem;color:#94a3b8;">Estimated Amount</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:#16a34a;">$${Number(est.estimatedAmount).toLocaleString()}</div>
+                    </div>` : ''}
+                </div>
+            </div>
+            ${hasResult || hasMultipleResults ? `
+            <div style="background:#f0fdf4;padding:12px;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:12px;">
+                <div style="font-size:0.78rem;font-weight:600;color:#166534;margin-bottom:6px;"><i class="fas fa-file-check"></i> Result Files</div>
+                ${hasMultipleResults ? resultFiles.map(rf => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <i class="fas ${rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file'}" style="color:${rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : '#16a34a'};"></i>
+                    <span style="font-size:0.88rem;">${rf.originalname || rf.name || 'Result file'}</span>
+                    <small style="color:#94a3b8;">${rf.size ? (rf.size / (1024 * 1024)).toFixed(1) + ' MB' : ''}</small>
+                </div>`).join('') : `<div style="display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-file-alt" style="color:#166534;"></i>
+                    <span style="font-size:0.88rem;">${est.resultFile.originalname || est.resultFile.name || 'Result file'}</span>
+                </div>`}
+            </div>` : ''}
+            ${est.notes ? `<div style="background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fde68a;margin-bottom:12px;">
+                <div style="font-size:0.78rem;font-weight:600;color:#92400e;margin-bottom:4px;"><i class="fas fa-sticky-note"></i> Admin Notes</div>
+                <div style="font-size:0.88rem;color:#78350f;">${est.notes}</div>
+            </div>` : ''}
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                ${hasAI ? `<button class="btn btn-sm btn-success" onclick="closeModal();viewAIEstimate('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
+                ${fileCount > 0 ? `<button class="btn btn-sm" onclick="closeModal();showEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
+                <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')"><i class="fas fa-upload"></i> Upload Result</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    `);
 }
 
 function showEstimationFiles(estimationId) {
@@ -2103,43 +2197,60 @@ function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
 function showUploadResultModal(estimationId) {
     showModal(`
         <div class="modal-body">
-            <h3><i class="fas fa-upload"></i> Upload Manual Result</h3>
-            <p>Upload your own estimation result file. This will mark the estimation as 'completed' and notify the contractor.</p>
+            <h3><i class="fas fa-upload"></i> Upload Result Files</h3>
+            <p>Upload estimation result files (PDF, Excel, or both). This will mark the estimation as 'completed' and notify the contractor.</p>
             <div class="form-group">
-                <label for="result-file-input">Result File (PDF, Excel, Word, CSV):</label>
-                <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv">
+                <label for="result-file-input">Result Files (PDF, Excel, Word, CSV - select multiple):</label>
+                <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv" multiple>
+                <small style="color:#64748b;display:block;margin-top:4px;">Hold Ctrl/Cmd to select multiple files (e.g., PDF report + Excel breakdown)</small>
             </div>
+            <div id="result-files-preview" style="margin:8px 0;"></div>
             <div class="modal-actions">
                 <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')"><i class="fas fa-upload"></i> Upload & Send to Contractor</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
     `);
+    // File preview listener
+    setTimeout(() => {
+        const input = document.getElementById('result-file-input');
+        if (input) input.addEventListener('change', function() {
+            const preview = document.getElementById('result-files-preview');
+            if (!preview || !this.files.length) { if (preview) preview.innerHTML = ''; return; }
+            preview.innerHTML = Array.from(this.files).map(f => {
+                const icon = f.name.endsWith('.pdf') ? 'fa-file-pdf' : f.name.match(/\\.xlsx?$/i) ? 'fa-file-excel' : 'fa-file';
+                const color = f.name.endsWith('.pdf') ? '#dc2626' : f.name.match(/\\.xlsx?$/i) ? '#16a34a' : '#6366f1';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;margin-bottom:4px;border:1px solid #e2e8f0;"><i class="fas ' + icon + '" style="color:' + color + ';font-size:16px;"></i><span style="font-weight:600;font-size:0.88rem;">' + f.name + '</span><small style="color:#94a3b8;">' + (f.size / (1024 * 1024)).toFixed(1) + ' MB</small></div>';
+            }).join('');
+        });
+    }, 100);
 }
 
 async function uploadEstimationResult(estimationId) {
     const fileInput = document.getElementById('result-file-input');
-    if (!fileInput || !fileInput.files[0]) return showNotification('Please select a file.', 'warning');
-    const file = fileInput.files[0];
+    if (!fileInput || !fileInput.files.length) return showNotification('Please select at least one file.', 'warning');
+    const files = Array.from(fileInput.files);
     const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-        return showNotification('File size exceeds 50MB limit. Please select a smaller file.', 'error');
-    }
     const allowedExts = ['.pdf', '.xls', '.xlsx', '.doc', '.docx', '.csv'];
-    const ext = '.' + file.name.split('.').pop().toLowerCase();
-    if (!allowedExts.includes(ext)) {
-        return showNotification('Invalid file type. Allowed: PDF, Excel, Word, CSV.', 'error');
+    for (const file of files) {
+        if (file.size > maxSize) {
+            return showNotification(`"${file.name}" exceeds 50MB limit.`, 'error');
+        }
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedExts.includes(ext)) {
+            return showNotification(`"${file.name}" has invalid type. Allowed: PDF, Excel, Word, CSV.`, 'error');
+        }
     }
     const uploadBtn = document.querySelector('.modal .btn-success');
     if (uploadBtn) {
         uploadBtn.disabled = true;
-        uploadBtn.innerHTML = '<div class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle;"></div> Uploading...';
+        uploadBtn.innerHTML = '<div class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle;"></div> Uploading ' + files.length + ' file(s)...';
     }
     const formData = new FormData();
-    formData.append('resultFile', file);
+    files.forEach(file => formData.append('resultFiles', file));
     try {
         const data = await apiCall(`/estimations/${estimationId}/result`, 'POST', formData, true);
-        showNotification(data.message || 'Result uploaded successfully', 'success');
+        showNotification(data.message || `${files.length} result file(s) uploaded successfully`, 'success');
         closeModal();
         await loadEstimationsData();
     } catch (error) {
