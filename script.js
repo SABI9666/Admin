@@ -2223,10 +2223,17 @@ function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
 }
 
 function showUploadResultModal(estimationId) {
+    var est = appState.estimations ? appState.estimations.find(function(e) { return e._id === estimationId; }) : null;
+    var isReplace = est && (est.resultFile || (est.resultFiles && est.resultFiles.length > 0));
+    var title = isReplace ? '<i class="fas fa-sync-alt"></i> Replace Result Files' : '<i class="fas fa-upload"></i> Upload Result Files';
+    var desc = isReplace
+        ? 'Upload new result files to replace the existing ones. The contractor will be notified of the updated result.'
+        : 'Upload estimation result files (PDF, Excel, or both). This will mark the estimation as \'completed\' and notify the contractor.';
+    var btnText = isReplace ? '<i class="fas fa-sync-alt"></i> Replace & Notify Contractor' : '<i class="fas fa-upload"></i> Upload & Send to Contractor';
     showModal(`
         <div class="modal-body">
-            <h3><i class="fas fa-upload"></i> Upload Result Files</h3>
-            <p>Upload estimation result files (PDF, Excel, or both). This will mark the estimation as 'completed' and notify the contractor.</p>
+            <h3>${title}</h3>
+            <p>${desc}</p>
             <div class="form-group">
                 <label for="result-file-input">Result Files (PDF, Excel, Word, CSV - select multiple):</label>
                 <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv" multiple>
@@ -2234,7 +2241,7 @@ function showUploadResultModal(estimationId) {
             </div>
             <div id="result-files-preview" style="margin:8px 0;"></div>
             <div class="modal-actions">
-                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')"><i class="fas fa-upload"></i> Upload & Send to Contractor</button>
+                <button class="btn btn-success" onclick="uploadEstimationResult('${estimationId}')">${btnText}</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
             </div>
         </div>
