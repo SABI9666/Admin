@@ -2287,11 +2287,11 @@ function showUploadResultModal(estimationId) {
             <h3 style="margin-bottom:4px;">${title}</h3>
             <p style="color:#64748b;font-size:0.88rem;margin-bottom:14px;">${desc}</p>
             ${existingHTML}
-            <div id="result-upload-drop-zone" style="border:2px dashed #cbd5e1;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:#f8fafc;" onclick="document.getElementById('result-file-input').click()">
+            <div id="result-upload-drop-zone" style="border:2px dashed #cbd5e1;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:#f8fafc;">
                 <input type="file" id="result-file-input" accept=".pdf,.xls,.xlsx,.doc,.docx,.csv" multiple style="display:none;">
                 <div style="margin-bottom:6px;"><i class="fas fa-cloud-upload-alt" style="font-size:36px;color:#6366f1;"></i></div>
                 <div style="font-weight:700;color:#1e293b;font-size:0.95rem;">Drag & drop files here</div>
-                <div style="color:#94a3b8;font-size:0.82rem;margin-top:2px;">or click to browse</div>
+                <div style="color:#94a3b8;font-size:0.82rem;margin-top:2px;">or click to browse — you can add files multiple times</div>
                 <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
                     <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;"><i class="fas fa-file-pdf" style="font-size:10px;"></i> PDF</span>
                     <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:#d1fae5;color:#16a34a;font-size:11px;font-weight:600;"><i class="fas fa-file-excel" style="font-size:10px;"></i> Excel</span>
@@ -2316,7 +2316,13 @@ function showUploadResultModal(estimationId) {
         var uploadBtn = document.getElementById('result-upload-btn');
         if (!dropZone || !input) return;
 
-        // Drag-and-drop events
+        // Click on drop zone opens file picker
+        dropZone.addEventListener('click', function(e) {
+            if (e.target === input) return;
+            input.click();
+        });
+
+        // Drag-and-drop visual feedback
         ['dragenter', 'dragover'].forEach(function(evt) {
             dropZone.addEventListener(evt, function(e) {
                 e.preventDefault(); e.stopPropagation();
@@ -2331,24 +2337,39 @@ function showUploadResultModal(estimationId) {
                 dropZone.style.background = '#f8fafc';
             });
         });
+
+        // Drop: ACCUMULATE new files into the list
         dropZone.addEventListener('drop', function(e) {
             var dt = e.dataTransfer;
             if (dt && dt.files && dt.files.length > 0) {
-                input.files = dt.files;
-                input.dispatchEvent(new Event('change'));
+                _addResultFiles(Array.from(dt.files));
             }
         });
 
-        // File change — render preview with remove buttons
+        // File input change: ACCUMULATE new files (not replace)
         input.addEventListener('change', function() {
-            _resultUploadFiles = this.files.length > 0 ? Array.from(this.files) : [];
-            renderResultFilesPreview();
+            if (this.files && this.files.length > 0) {
+                _addResultFiles(Array.from(this.files));
+            }
+            // Reset input value so same file can be re-added if removed
+            this.value = '';
         });
 
-        // Global array to manage selected files
-        window._resultUploadFiles = [];
+        // Add files to accumulated list, skip duplicates by name+size
+        window._addResultFiles = function(newFiles) {
+            newFiles.forEach(function(f) {
+                var isDuplicate = _resultUploadFiles.some(function(existing) {
+                    return existing.name === f.name && existing.size === f.size;
+                });
+                if (!isDuplicate) {
+                    _resultUploadFiles.push(f);
+                }
+            });
+            _renderResultPreview();
+        };
 
-        window.renderResultFilesPreview = function() {
+        // Render file preview list with remove buttons and "Add More" button
+        window._renderResultPreview = function() {
             if (!_resultUploadFiles.length) {
                 preview.innerHTML = '';
                 uploadBtn.disabled = true;
@@ -2358,7 +2379,8 @@ function showUploadResultModal(estimationId) {
             uploadBtn.disabled = false;
             uploadBtn.style.opacity = '1';
             var totalSize = _resultUploadFiles.reduce(function(s, f) { return s + f.size; }, 0);
-            preview.innerHTML = '<div style="font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:6px;">' + _resultUploadFiles.length + ' file(s) selected <small style="color:#94a3b8;">(' + (totalSize / (1024*1024)).toFixed(1) + ' MB total)</small></div>' +
+            preview.innerHTML = '<div style="font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:6px;"><i class="fas fa-check-circle" style="color:#16a34a;"></i> ' +
+                _resultUploadFiles.length + ' file(s) ready to upload <small style="color:#94a3b8;">(' + (totalSize / (1024*1024)).toFixed(1) + ' MB total)</small></div>' +
                 _resultUploadFiles.map(function(f, i) {
                     var icon = /\.pdf$/i.test(f.name) ? 'fa-file-pdf' : /\.xlsx?$/i.test(f.name) ? 'fa-file-excel' : /\.docx?$/i.test(f.name) ? 'fa-file-word' : /\.csv$/i.test(f.name) ? 'fa-file-csv' : 'fa-file';
                     var color = /\.pdf$/i.test(f.name) ? '#dc2626' : /\.xlsx?$/i.test(f.name) ? '#16a34a' : /\.docx?$/i.test(f.name) ? '#2563eb' : '#7c3aed';
@@ -2366,24 +2388,21 @@ function showUploadResultModal(estimationId) {
                         '<i class="fas ' + icon + '" style="color:' + color + ';font-size:18px;"></i>' +
                         '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + f.name + '</div>' +
                         '<small style="color:#94a3b8;">' + (f.size / (1024*1024)).toFixed(1) + ' MB</small></div>' +
-                        '<button type="button" onclick="removeResultFile(' + i + ')" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;padding:4px;"><i class="fas fa-times-circle"></i></button></div>';
-                }).join('');
+                        '<button type="button" onclick="_removeResultFile(' + i + ')" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;padding:4px;" title="Remove file"><i class="fas fa-times-circle"></i></button></div>';
+                }).join('') +
+                '<div style="margin-top:6px;"><button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById(\'result-file-input\').click()" style="font-size:0.8rem;"><i class="fas fa-plus"></i> Add More Files</button></div>';
         };
 
-        window.removeResultFile = function(index) {
+        // Remove a single file from the accumulated list
+        window._removeResultFile = function(index) {
             _resultUploadFiles.splice(index, 1);
-            renderResultFilesPreview();
+            _renderResultPreview();
         };
     }, 100);
 }
 
 async function uploadEstimationResult(estimationId) {
     var files = window._resultUploadFiles || [];
-    // Fallback: check the file input directly
-    if (files.length === 0) {
-        var fileInput = document.getElementById('result-file-input');
-        if (fileInput && fileInput.files.length) files = Array.from(fileInput.files);
-    }
     if (files.length === 0) return showNotification('Please select at least one file.', 'warning');
     var maxSize = 50 * 1024 * 1024;
     var allowedExts = ['.pdf', '.xls', '.xlsx', '.doc', '.docx', '.csv'];
@@ -2407,6 +2426,7 @@ async function uploadEstimationResult(estimationId) {
     try {
         var data = await apiCall('/estimations/' + estimationId + '/result', 'POST', formData, true);
         showNotification(data.message || files.length + ' result file(s) uploaded successfully!', 'success');
+        window._resultUploadFiles = [];
         closeModal();
         await loadEstimationsData();
     } catch (error) {
