@@ -1868,6 +1868,11 @@ function viewAIEstimate(estimationId) {
     showModal(`
         <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
             <h3><i class="fas fa-robot"></i> AI Estimate - ${estimation.projectTitle || estimation.projectName}</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px;">
+                ${estimation.projectType ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#f5f3ff;color:#6d28d9;font-size:12px;font-weight:600;"><i class="fas fa-building" style="font-size:10px;"></i> ${estimation.projectType}</span>` : ''}
+                ${estimation.region ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:10px;"></i> ${estimation.region}</span>` : ''}
+                ${estimation.contractorName ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:#f0fdf4;color:#166534;font-size:12px;font-weight:600;"><i class="fas fa-user" style="font-size:10px;"></i> ${estimation.contractorName}</span>` : ''}
+            </div>
             <div style="display:grid;grid-template-columns:${confidenceScore > 0 ? '1fr 1fr auto' : '1fr 1fr'};gap:12px;margin:16px 0;align-items:center;">
                 <div style="background:#f0f9ff;padding:12px;border-radius:8px;text-align:center;">
                     <small>Grand Total</small>
