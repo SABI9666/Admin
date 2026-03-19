@@ -1419,89 +1419,111 @@ function viewEstimationDetails(estimationId) {
 
     const fileCount = est.uploadedFiles ? est.uploadedFiles.length : 0;
     const totalSize = est.uploadedFiles ? est.uploadedFiles.reduce((sum, f) => sum + (f.size || 0), 0) : 0;
-    const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(1) + ' MB' : 'N/A';
+    const totalSizeMB = totalSize > 0 ? (totalSize / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB';
     const hasAI = !!(est.aiEstimate);
     const hasResult = !!(est.resultFile && est.resultFile.path);
     const resultFiles = est.resultFiles || [];
     const hasMultipleResults = resultFiles.length > 0;
 
-    showModal(`
-        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
-            <h3 style="margin-bottom:4px;"><i class="fas fa-clipboard-list"></i> Estimation Details</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;">
-                <div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">
-                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-project-diagram"></i> Project Information</div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Project Title</div>
-                        <div style="font-size:0.95rem;font-weight:700;color:#1e293b;">${est.projectTitle || est.projectName || 'Untitled'}</div>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Project Type</div>
-                        <div style="font-weight:600;color:#6366f1;">${est.projectType || 'N/A'}</div>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Location / Region</div>
-                        <div style="font-weight:600;color:#4338ca;"><i class="fas fa-map-marker-alt" style="font-size:11px;"></i> ${est.region || 'N/A'}</div>
-                    </div>
-                    <div>
-                        <div style="font-size:0.78rem;color:#94a3b8;">Scope of Work</div>
-                        <div style="font-size:0.88rem;color:#334155;line-height:1.5;">${est.scopeOfEstimation || est.description || 'N/A'}</div>
-                    </div>
-                </div>
-                <div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">
-                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-user"></i> Client & Status</div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Contractor</div>
-                        <div style="font-weight:600;color:#1e293b;">${est.contractorName || 'N/A'}</div>
-                        <div style="font-size:0.82rem;color:#64748b;">${est.contractorEmail || est.userEmail || ''}</div>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Status</div>
-                        <span class="status ${est.status}" style="font-size:13px;">${est.status}</span>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Files Uploaded</div>
-                        <div style="font-weight:600;">${fileCount} file${fileCount !== 1 ? 's' : ''} ${totalSize > 0 ? '(' + totalSizeMB + ')' : ''}</div>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Submitted</div>
-                        <div>${formatAdminDate(est.createdAt)}</div>
-                    </div>
-                    ${est.completedAt ? `<div style="margin-bottom:8px;">
-                        <div style="font-size:0.78rem;color:#94a3b8;">Completed</div>
-                        <div>${formatAdminDate(est.completedAt)}</div>
-                    </div>` : ''}
-                    ${est.estimatedAmount ? `<div>
-                        <div style="font-size:0.78rem;color:#94a3b8;">Estimated Amount</div>
-                        <div style="font-size:1.1rem;font-weight:700;color:#16a34a;">$${Number(est.estimatedAmount).toLocaleString()}</div>
-                    </div>` : ''}
-                </div>
-            </div>
-            ${hasResult || hasMultipleResults ? `
-            <div style="background:#f0fdf4;padding:12px;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:12px;">
-                <div style="font-size:0.78rem;font-weight:600;color:#166534;margin-bottom:6px;"><i class="fas fa-file-check"></i> Result Files</div>
-                ${hasMultipleResults ? resultFiles.map(rf => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                    <i class="fas ${rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file'}" style="color:${rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : '#16a34a'};"></i>
-                    <span style="font-size:0.88rem;">${rf.originalname || rf.name || 'Result file'}</span>
-                    <small style="color:#94a3b8;">${rf.size ? (rf.size / (1024 * 1024)).toFixed(1) + ' MB' : ''}</small>
-                </div>`).join('') : `<div style="display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-file-alt" style="color:#166534;"></i>
-                    <span style="font-size:0.88rem;">${est.resultFile.originalname || est.resultFile.name || 'Result file'}</span>
-                </div>`}
-            </div>` : ''}
-            ${est.notes ? `<div style="background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fde68a;margin-bottom:12px;">
-                <div style="font-size:0.78rem;font-weight:600;color:#92400e;margin-bottom:4px;"><i class="fas fa-sticky-note"></i> Admin Notes</div>
-                <div style="font-size:0.88rem;color:#78350f;">${est.notes}</div>
-            </div>` : ''}
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-                <button class="btn btn-sm" onclick="editEstimationDetails('${est._id}')" style="background:#f59e0b;color:#fff;"><i class="fas fa-edit"></i> Edit Details</button>
-                ${hasAI ? `<button class="btn btn-sm btn-success" onclick="closeModal();viewAIEstimate('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
-                ${fileCount > 0 ? `<button class="btn btn-sm" onclick="closeModal();showEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
-                <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')"><i class="fas fa-upload"></i> Upload Result</button>
-                <button class="btn btn-secondary btn-sm" onclick="closeModal()">Close</button>
-            </div>
-        </div>
-    `);
+    // Helper to get clean filename from path or name
+    function cleanFN(rf) {
+        var raw = rf.originalname || rf.name || rf.path || 'Result file';
+        return raw.includes('/') ? raw.split('/').pop() : raw;
+    }
+    function fSizeStr(rf) {
+        if (!rf.size) return '';
+        var mb = rf.size / (1024 * 1024);
+        return mb >= 0.01 ? mb.toFixed(2) + ' MB' : (rf.size / 1024).toFixed(1) + ' KB';
+    }
+
+    // Build uploaded files list
+    var uploadedFilesHTML = '';
+    if (est.uploadedFiles && est.uploadedFiles.length > 0) {
+        uploadedFilesHTML = est.uploadedFiles.map(function(f) {
+            var fname = cleanFN(f);
+            var fsize = fSizeStr(f);
+            var icon = fname.endsWith('.pdf') ? 'fa-file-pdf' : /\.xlsx?$/i.test(fname) ? 'fa-file-excel' : /\.dwg$/i.test(fname) ? 'fa-drafting-compass' : 'fa-file';
+            var color = fname.endsWith('.pdf') ? '#dc2626' : /\.xlsx?$/i.test(fname) ? '#16a34a' : '#6366f1';
+            return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;"><i class="fas ' + icon + '" style="color:' + color + ';font-size:13px;"></i><span style="font-size:0.85rem;">' + fname + '</span>' + (fsize ? '<small style="color:#94a3b8;margin-left:auto;">' + fsize + '</small>' : '') + '</div>';
+        }).join('');
+    }
+
+    // Build result files list
+    var resultFilesHTML = '';
+    if (hasMultipleResults) {
+        resultFilesHTML = resultFiles.map(function(rf) {
+            var icon = rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file';
+            var color = rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : '#16a34a';
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><i class="fas ' + icon + '" style="color:' + color + ';"></i><span style="font-size:0.88rem;">' + cleanFN(rf) + '</span><small style="color:#94a3b8;margin-left:auto;">' + fSizeStr(rf) + '</small></div>';
+        }).join('');
+    } else if (hasResult) {
+        resultFilesHTML = '<div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-file-alt" style="color:#166534;"></i><span style="font-size:0.88rem;">' + cleanFN(est.resultFile) + '</span><small style="color:#94a3b8;margin-left:auto;">' + fSizeStr(est.resultFile) + '</small></div>';
+    }
+
+    var typeDisplay = est.projectType ? '<span style="font-weight:600;color:#6366f1;">' + est.projectType + '</span>' : '<em style="color:#cbd5e1;">Not set — click Edit Details</em>';
+    var regionDisplay = est.region ? '<span style="font-weight:600;color:#4338ca;"><i class="fas fa-map-marker-alt" style="font-size:11px;"></i> ' + est.region + '</span>' : '<em style="color:#cbd5e1;">Not set — click Edit Details</em>';
+
+    var html = '<div class="modal-body" style="max-height:70vh;overflow-y:auto;">';
+    html += '<h3 style="margin-bottom:4px;"><i class="fas fa-clipboard-list"></i> Estimation Details</h3>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;">';
+
+    // Left column - Project Info
+    html += '<div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">';
+    html += '<div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-project-diagram"></i> Project Information</div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Project Title</div><div style="font-size:0.95rem;font-weight:700;color:#1e293b;">' + (est.projectTitle || est.projectName || 'Untitled') + '</div></div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Project Type</div><div>' + typeDisplay + '</div></div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Location / Region</div><div>' + regionDisplay + '</div></div>';
+    html += '<div><div style="font-size:0.78rem;color:#94a3b8;">Scope of Work</div><div style="font-size:0.88rem;color:#334155;line-height:1.5;">' + (est.scopeOfEstimation || est.description || 'N/A') + '</div></div>';
+    html += '</div>';
+
+    // Right column - Client & Status
+    html += '<div style="background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">';
+    html += '<div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:8px;"><i class="fas fa-user"></i> Client & Status</div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Contractor</div><div style="font-weight:600;color:#1e293b;">' + (est.contractorName || 'N/A') + '</div><div style="font-size:0.82rem;color:#64748b;">' + (est.contractorEmail || est.userEmail || '') + '</div></div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Status</div><span class="status ' + est.status + '" style="font-size:13px;">' + est.status + '</span></div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Files Uploaded</div><div style="font-weight:600;">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + ' (' + totalSizeMB + ')</div></div>';
+    html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Submitted</div><div>' + formatAdminDate(est.createdAt) + '</div></div>';
+    if (est.completedAt) {
+        html += '<div style="margin-bottom:8px;"><div style="font-size:0.78rem;color:#94a3b8;">Completed</div><div>' + formatAdminDate(est.completedAt) + '</div></div>';
+    }
+    if (est.estimatedAmount) {
+        html += '<div><div style="font-size:0.78rem;color:#94a3b8;">Estimated Amount</div><div style="font-size:1.1rem;font-weight:700;color:#16a34a;">$' + Number(est.estimatedAmount).toLocaleString() + '</div></div>';
+    }
+    html += '</div></div>';
+
+    // Uploaded project files section
+    if (uploadedFilesHTML) {
+        html += '<div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:12px;">';
+        html += '<div style="font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:6px;"><i class="fas fa-paperclip"></i> Uploaded Project Files (' + fileCount + ')</div>';
+        html += uploadedFilesHTML;
+        html += '</div>';
+    }
+
+    // Result files section
+    if (hasResult || hasMultipleResults) {
+        html += '<div style="background:#f0fdf4;padding:12px;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:12px;">';
+        html += '<div style="font-size:0.78rem;font-weight:600;color:#166534;margin-bottom:6px;"><i class="fas fa-check-circle"></i> Result Files</div>';
+        html += resultFilesHTML;
+        html += '</div>';
+    }
+
+    // Admin notes
+    if (est.notes) {
+        html += '<div style="background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fde68a;margin-bottom:12px;">';
+        html += '<div style="font-size:0.78rem;font-weight:600;color:#92400e;margin-bottom:4px;"><i class="fas fa-sticky-note"></i> Admin Notes</div>';
+        html += '<div style="font-size:0.88rem;color:#78350f;">' + est.notes + '</div></div>';
+    }
+
+    // Action buttons
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">';
+    html += '<button class="btn btn-sm" onclick="editEstimationDetails(\'' + est._id + '\')" style="background:#f59e0b;color:#fff;"><i class="fas fa-edit"></i> Edit Details</button>';
+    if (hasAI) html += '<button class="btn btn-sm btn-success" onclick="closeModal();viewAIEstimate(\'' + est._id + '\')"><i class="fas fa-robot"></i> View AI Report</button>';
+    if (fileCount > 0) html += '<button class="btn btn-sm" onclick="closeModal();showEstimationFiles(\'' + est._id + '\')"><i class="fas fa-folder-open"></i> View Files</button>';
+    html += '<button class="btn btn-sm" onclick="showUploadResultModal(\'' + est._id + '\')"><i class="fas fa-upload"></i> Upload Result</button>';
+    html += '<button class="btn btn-secondary btn-sm" onclick="closeModal()">Close</button>';
+    html += '</div></div>';
+
+    showModal(html);
 }
 
 function editEstimationDetails(estimationId) {
