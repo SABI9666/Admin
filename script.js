@@ -1399,9 +1399,11 @@ function renderEstimationsTab() {
                                 <button class="btn btn-sm" onclick="viewEstimationDetails('${est._id}')">
                                     <i class="fas fa-info-circle"></i> Details
                                 </button>
-                                <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
+                                ${est.resultFile ? `<button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')" style="background:#f59e0b;color:#fff;">
+                                    <i class="fas fa-sync-alt"></i> Replace Result
+                                </button>` : `<button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')">
                                     <i class="fas fa-upload"></i> Upload Result
-                                </button>
+                                </button>`}
                                 <button class="btn btn-sm btn-danger" onclick="deleteEstimation('${est._id}')">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
@@ -1515,10 +1517,14 @@ function viewEstimationDetails(estimationId) {
     }
 
     // Action buttons
-    html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">';
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;">';
     if (hasAI) html += '<button class="btn btn-sm btn-success" onclick="closeModal();viewAIEstimate(\'' + est._id + '\')"><i class="fas fa-robot"></i> View AI Report</button>';
     if (fileCount > 0) html += '<button class="btn btn-sm" onclick="closeModal();showEstimationFiles(\'' + est._id + '\')"><i class="fas fa-folder-open"></i> View Files</button>';
-    html += '<button class="btn btn-sm" onclick="showUploadResultModal(\'' + est._id + '\')"><i class="fas fa-upload"></i> Upload Result</button>';
+    if (hasResult || hasMultipleResults) {
+        html += '<button class="btn btn-sm" onclick="closeModal();showUploadResultModal(\'' + est._id + '\')" style="background:#f59e0b;color:#fff;"><i class="fas fa-sync-alt"></i> Replace Result</button>';
+    } else {
+        html += '<button class="btn btn-sm" onclick="closeModal();showUploadResultModal(\'' + est._id + '\')"><i class="fas fa-upload"></i> Upload Result</button>';
+    }
     html += '<button class="btn btn-secondary btn-sm" onclick="closeModal()">Close</button>';
     html += '</div></div>';
 
