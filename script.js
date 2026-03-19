@@ -1301,6 +1301,7 @@ function renderEstimationsTab() {
                 <tr>
                     <th>Project</th>
                     <th>Client</th>
+                    <th>Location</th>
                     <th>Status</th>
                     <th>Files</th>
                     <th>AI Report</th>
@@ -1330,7 +1331,8 @@ function renderEstimationsTab() {
                             <td>
                                 <div class="project-cell">
                                     <strong>${est.projectName || est.projectTitle || 'Untitled Project'}</strong>
-                                    ${est.description ? `<br><small class="project-desc">${est.description.substring(0, 60)}${est.description.length > 60 ? '...' : ''}</small>` : ''}
+                                    ${est.projectType ? `<br><small style="color:#6366f1;font-weight:600;">${est.projectType}</small>` : ''}
+                                    ${(est.scopeOfEstimation || est.description) ? `<br><small class="project-desc" title="${(est.scopeOfEstimation || est.description || '').replace(/"/g, '&quot;')}">${(est.scopeOfEstimation || est.description || '').substring(0, 80)}${(est.scopeOfEstimation || est.description || '').length > 80 ? '...' : ''}</small>` : ''}
                                 </div>
                             </td>
                             <td>
@@ -1338,6 +1340,9 @@ function renderEstimationsTab() {
                                     ${est.contractorName || 'N/A'}<br>
                                     <small>${est.contractorEmail || est.userEmail || 'N/A'}</small>
                                 </div>
+                            </td>
+                            <td>
+                                ${est.region ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:600;"><i class="fas fa-map-marker-alt" style="font-size:10px;"></i> ${est.region}</span>` : '<small style="color:#94a3b8;">N/A</small>'}
                             </td>
                             <td><span class="status ${est.status}">${est.status}</span></td>
                             <td>
