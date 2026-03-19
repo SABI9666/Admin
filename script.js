@@ -1494,6 +1494,7 @@ function viewEstimationDetails(estimationId) {
                 <div style="font-size:0.88rem;color:#78350f;">${est.notes}</div>
             </div>` : ''}
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                <button class="btn btn-sm" onclick="editEstimationDetails('${est._id}')" style="background:#f59e0b;color:#fff;"><i class="fas fa-edit"></i> Edit Details</button>
                 ${hasAI ? `<button class="btn btn-sm btn-success" onclick="closeModal();viewAIEstimate('${est._id}')"><i class="fas fa-robot"></i> View AI Report</button>` : ''}
                 ${fileCount > 0 ? `<button class="btn btn-sm" onclick="closeModal();showEstimationFiles('${est._id}')"><i class="fas fa-folder-open"></i> View Files</button>` : ''}
                 <button class="btn btn-sm" onclick="showUploadResultModal('${est._id}')"><i class="fas fa-upload"></i> Upload Result</button>
@@ -1501,6 +1502,72 @@ function viewEstimationDetails(estimationId) {
             </div>
         </div>
     `);
+}
+
+function editEstimationDetails(estimationId) {
+    const est = state.estimations.find(e => e._id === estimationId);
+    if (!est) return showNotification('Estimation not found.', 'error');
+
+    const regions = ['India','China','Japan','South Korea','Singapore','Malaysia','Thailand','Vietnam','Philippines','Indonesia','Bangladesh','Sri Lanka','Pakistan','Southeast Asia - Other','Central Asia','UAE','Saudi Arabia','Qatar','Kuwait','Oman','Bahrain','Iraq','Jordan','Lebanon','Middle East - Other','United Kingdom','Germany','France','Netherlands','Italy','Spain','Poland','Sweden','Norway','Denmark','Finland','Belgium','Switzerland','Austria','Ireland','Czech Republic','Romania','Turkey','Russia','Eastern Europe - Other','Europe - Other','United States','Canada','Mexico','Brazil','Argentina','Chile','Colombia','Peru','Latin America - Other','South Africa','Nigeria','Kenya','Egypt','Ghana','Tanzania','Ethiopia','Morocco','Algeria','North Africa - Other','Africa - Other','Australia','New Zealand','Pacific Islands'];
+    const projectTypes = ['Commercial Building','Residential Building','Mixed-Use Development','High-Rise Tower','Villa / Housing','Industrial / Warehouse','Factory / Manufacturing','Oil & Gas / Petrochemical','Power Plant / Energy','Infrastructure / Bridge','Road & Highway','Water / Wastewater Treatment','Hospital / Healthcare','School / University','Hotel / Hospitality','Retail / Shopping Mall','Airport / Transportation','Stadium / Sports Facility','Government / Public Building','Data Center','Cold Storage / Food Processing','Pre-Engineered Building','Renovation / Retrofit','Marine / Port','Other'];
+
+    const regionOptions = regions.map(r => `<option value="${r}" ${est.region === r ? 'selected' : ''}>${r}</option>`).join('');
+    const typeOptions = projectTypes.map(t => `<option value="${t}" ${est.projectType === t ? 'selected' : ''}>${t}</option>`).join('');
+
+    showModal(`
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+            <h3 style="margin-bottom:12px;"><i class="fas fa-edit"></i> Edit Estimation Details</h3>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600;font-size:0.85rem;">Project Title</label>
+                <input type="text" id="edit-est-title" class="form-input" value="${(est.projectTitle || est.projectName || '').replace(/"/g, '&quot;')}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600;font-size:0.85rem;">Project Type</label>
+                <select id="edit-est-type" class="form-input" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                    <option value="">-- Select Type --</option>
+                    ${typeOptions}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600;font-size:0.85rem;">Location / Region</label>
+                <select id="edit-est-region" class="form-input" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                    <option value="">-- Select Location --</option>
+                    ${regionOptions}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600;font-size:0.85rem;">Description / Scope</label>
+                <textarea id="edit-est-desc" class="form-input" rows="3" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">${est.description || est.scopeOfEstimation || ''}</textarea>
+            </div>
+            <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-success" onclick="saveEstimationDetails('${est._id}')"><i class="fas fa-save"></i> Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    `);
+}
+
+async function saveEstimationDetails(estimationId) {
+    const projectTitle = document.getElementById('edit-est-title').value.trim();
+    const projectType = document.getElementById('edit-est-type').value;
+    const region = document.getElementById('edit-est-region').value;
+    const description = document.getElementById('edit-est-desc').value.trim();
+
+    if (!projectTitle) return showNotification('Project title is required.', 'warning');
+
+    const saveBtn = document.querySelector('.modal .btn-success');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+
+    try {
+        await apiCall(`/estimations/${estimationId}`, 'PUT', { projectTitle, projectType, region, description });
+        showNotification('Estimation details updated successfully.', 'success');
+        closeModal();
+        await loadEstimationsData();
+    } catch (error) {
+        console.error('[EDIT-EST] Error:', error);
+        showNotification('Failed to update: ' + (error.message || 'Unknown error'), 'error');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes'; }
+    }
 }
 
 function showEstimationFiles(estimationId) {
