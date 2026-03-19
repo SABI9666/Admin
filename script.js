@@ -1642,9 +1642,33 @@ async function downloadEstimationFile(estimationId, fileIndex, fileName) {
 
 async function viewEstimationResult(estimationId) {
     try {
-        showNotification('Loading result file...', 'info');
+        showNotification('Loading result file(s)...', 'info');
         const data = await apiCall(`/estimations/${estimationId}/result/download`);
-        if (data.file && data.file.url) {
+        const resultFiles = data.resultFiles || [];
+
+        if (resultFiles.length > 1) {
+            // Multiple result files - show a modal with links
+            const fileListHTML = resultFiles.map((rf, i) => {
+                const icon = rf.mimetype && rf.mimetype.includes('pdf') ? 'fa-file-pdf' : rf.mimetype && rf.mimetype.includes('sheet') ? 'fa-file-excel' : 'fa-file';
+                const color = rf.mimetype && rf.mimetype.includes('pdf') ? '#dc2626' : rf.mimetype && rf.mimetype.includes('sheet') ? '#16a34a' : '#6366f1';
+                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border-radius:8px;margin-bottom:6px;border:1px solid #e2e8f0;">
+                    <i class="fas ${icon}" style="color:${color};font-size:20px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.9rem;">${rf.filename || rf.name}</div>
+                        <small style="color:#94a3b8;">${rf.fileSizeMB ? rf.fileSizeMB + ' MB' : ''}</small>
+                    </div>
+                    <a href="${rf.url}" target="_blank" class="btn btn-sm" style="text-decoration:none;"><i class="fas fa-eye"></i> View</a>
+                    <button class="btn btn-sm btn-success" onclick="downloadFileSilent('${rf.url}', '${(rf.filename || rf.name || 'result').replace(/'/g, "\\'")}')"><i class="fas fa-download"></i></button>
+                </div>`;
+            }).join('');
+            showModal(`
+                <div class="modal-body">
+                    <h3><i class="fas fa-file-alt"></i> Result Files (${resultFiles.length})</h3>
+                    <div style="margin:12px 0;">${fileListHTML}</div>
+                    <div style="text-align:right;"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+                </div>
+            `);
+        } else if (data.file && data.file.url) {
             window.open(data.file.url, '_blank');
         } else {
             showNotification('Could not generate file link.', 'error');
@@ -1658,7 +1682,15 @@ async function downloadEstimationResult(estimationId) {
     try {
         showNotification('Preparing download...', 'info');
         const data = await apiCall(`/estimations/${estimationId}/result/download`);
-        if (data.file && data.file.url) {
+        const resultFiles = data.resultFiles || [];
+
+        if (resultFiles.length > 1) {
+            for (let i = 0; i < resultFiles.length; i++) {
+                const rf = resultFiles[i];
+                setTimeout(() => downloadFileSilent(rf.url, rf.filename || rf.name || `result_${i + 1}.pdf`), i * 500);
+            }
+            showNotification(`Downloading ${resultFiles.length} result file(s)...`, 'success');
+        } else if (data.file && data.file.url) {
             await downloadFileSilent(data.file.url, data.file.name || 'estimation_result.pdf');
         } else {
             showNotification('Could not generate download link.', 'error');
@@ -2223,7 +2255,7 @@ function pollAIStatus(estimationId, attempts = 0, maxAttempts = 20) {
 }
 
 function showUploadResultModal(estimationId) {
-    var est = appState.estimations ? appState.estimations.find(function(e) { return e._id === estimationId; }) : null;
+    var est = state.estimations ? state.estimations.find(function(e) { return e._id === estimationId; }) : null;
     var isReplace = est && (est.resultFile || (est.resultFiles && est.resultFiles.length > 0));
     var title = isReplace ? '<i class="fas fa-sync-alt"></i> Replace Result Files' : '<i class="fas fa-upload"></i> Upload Result Files';
     var desc = isReplace
