@@ -10986,8 +10986,8 @@ function renderReferralRewardsTab(referrals, stats) {
             <div style="font-size:11px;color:#3b82f6;font-weight:600;margin-top:4px;">Total Referrers</div>
         </div>
         <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:14px;padding:18px;text-align:center;">
-            <div style="font-size:26px;font-weight:800;color:#7c2d12;">${stats.totalSent || 0}</div>
-            <div style="font-size:11px;color:#ea580c;font-weight:600;margin-top:4px;">Referrals Sent</div>
+            <div style="font-size:26px;font-weight:800;color:#7c2d12;">${stats.totalShares || 0}</div>
+            <div style="font-size:11px;color:#ea580c;font-weight:600;margin-top:4px;">Times Shared</div>
         </div>
         <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;padding:18px;text-align:center;">
             <div style="font-size:26px;font-weight:800;color:#14532d;">${stats.totalRegistered || 0}</div>
@@ -11063,7 +11063,7 @@ function renderReferralRewardsTab(referrals, stats) {
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <code style="background:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:12px;color:#334155;font-weight:700;">${r.referralCode}</code>
-                        <span style="background:#fff7ed;color:#ea580c;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Referrals sent but not yet signed up"><i class="fas fa-paper-plane" style="margin-right:4px;"></i>${r.sentCount} sent</span>
+                        <span style="background:#fff7ed;color:#ea580c;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Times shared via WhatsApp/Gmail"><i class="fas fa-paper-plane" style="margin-right:4px;"></i>${r.totalShares || 0} shared</span>
                         <span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Friends who signed up"><i class="fas fa-user-check" style="margin-right:4px;"></i>${r.registeredCount} signed up</span>
                         <span style="background:#f5f3ff;color:#7c3aed;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Total rewards approved"><i class="fas fa-gift" style="margin-right:4px;"></i>${rewardsEarned} approved</span>
                         ${r.rewardsAvailable > 0 ? `<span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;" title="Unused rewards"><i class="fas fa-star" style="margin-right:4px;"></i>${r.rewardsAvailable} available</span>` : ''}
