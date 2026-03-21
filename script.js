@@ -10930,7 +10930,7 @@ async function deleteWebsiteEstimation(estimationId) {
 }
 
 // ================================================================
-// REFERRAL REWARDS MANAGEMENT
+// REFERRAL REWARDS MANAGEMENT - Full tracking with admin approval
 // ================================================================
 async function loadReferralRewardsData() {
     const tab = document.getElementById('referral-rewards-tab');
@@ -10976,111 +10976,143 @@ function renderReferralRewardsTab(referrals, stats) {
     tab.innerHTML = `
     <div class="tab-header">
         <h2><i class="fas fa-gift"></i> Referral Rewards Program</h2>
-        <p class="tab-subtitle">Track referral program activity — shares, signups, and rewards earned</p>
+        <p class="tab-subtitle">Track referrals — who sent, who signed up, approve rewards when 3 friends registered</p>
     </div>
 
     <!-- Stats Overview -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
-        <div style="background:linear-gradient(135deg,#eff6ff,#e0e7ff);border:1px solid #bfdbfe;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#1e3a8a;">${stats.totalReferrers || 0}</div>
-            <div style="font-size:12px;color:#3b82f6;font-weight:600;margin-top:4px;">Total Referrers</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px;">
+        <div style="background:linear-gradient(135deg,#eff6ff,#e0e7ff);border:1px solid #bfdbfe;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#1e3a8a;">${stats.totalReferrers || 0}</div>
+            <div style="font-size:11px;color:#3b82f6;font-weight:600;margin-top:4px;">Total Referrers</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#14532d;">${stats.totalShares || 0}</div>
-            <div style="font-size:12px;color:#16a34a;font-weight:600;margin-top:4px;">Total Shares</div>
+        <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#7c2d12;">${stats.totalSent || 0}</div>
+            <div style="font-size:11px;color:#ea580c;font-weight:600;margin-top:4px;">Referrals Sent</div>
         </div>
-        <div style="background:linear-gradient(135deg,#fefce8,#fef9c3);border:1px solid #fde047;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#713f12;">${stats.totalSuccessfulReferrals || 0}</div>
-            <div style="font-size:12px;color:#ca8a04;font-weight:600;margin-top:4px;">Successful Referrals</div>
+        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#14532d;">${stats.totalRegistered || 0}</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:600;margin-top:4px;">Friends Signed Up</div>
         </div>
-        <div style="background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#831843;">${stats.totalRewardsEarned || 0}</div>
-            <div style="font-size:12px;color:#db2777;font-weight:600;margin-top:4px;">Rewards Earned</div>
+        <div style="background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#831843;">${stats.totalRewardsEarned || 0}</div>
+            <div style="font-size:11px;color:#db2777;font-weight:600;margin-top:4px;">Rewards Approved</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#4c1d95;">${stats.totalRewardsUsed || 0}</div>
-            <div style="font-size:12px;color:#7c3aed;font-weight:600;margin-top:4px;">Rewards Used</div>
+        <div style="background:linear-gradient(135deg,#fefce8,#fef9c3);border:1px solid #fde047;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#713f12;">${stats.pendingApprovals || 0}</div>
+            <div style="font-size:11px;color:#ca8a04;font-weight:600;margin-top:4px;">Pending Approval</div>
         </div>
-        <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:14px;padding:20px;text-align:center;">
-            <div style="font-size:28px;font-weight:800;color:#7c2d12;">${stats.contractorReferrers || 0} / ${stats.designerReferrers || 0}</div>
-            <div style="font-size:12px;color:#ea580c;font-weight:600;margin-top:4px;">Contractors / Designers</div>
-        </div>
-    </div>
-
-    <!-- Program Info -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;">
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-                <div style="width:40px;height:40px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-hard-hat"></i></div>
-                <h3 style="margin:0;font-size:16px;color:#0f172a;">Contractor Rewards</h3>
-            </div>
-            <p style="color:#64748b;font-size:13px;margin:0;">Share with <strong>3 friends</strong> → Get <strong>1 Free Estimation/Analysis</strong></p>
-            <div style="margin-top:10px;font-size:13px;color:#94a3b8;">${contractorReferrals.length} contractors participating</div>
-        </div>
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-                <div style="width:40px;height:40px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-drafting-compass"></i></div>
-                <h3 style="margin:0;font-size:16px;color:#0f172a;">Designer Rewards</h3>
-            </div>
-            <p style="color:#64748b;font-size:13px;margin:0;">Share with <strong>3 friends</strong> → Get <strong>1 Free Quote</strong></p>
-            <div style="margin-top:10px;font-size:13px;color:#94a3b8;">${designerReferrals.length} designers participating</div>
+        <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:14px;padding:18px;text-align:center;">
+            <div style="font-size:26px;font-weight:800;color:#4c1d95;">${stats.totalRewardsUsed || 0}</div>
+            <div style="font-size:11px;color:#7c3aed;font-weight:600;margin-top:4px;">Rewards Used</div>
         </div>
     </div>
 
-    <!-- Referrers Table -->
+    <!-- Program Rules Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div style="width:36px;height:36px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;"><i class="fas fa-hard-hat"></i></div>
+                <h3 style="margin:0;font-size:15px;color:#0f172a;">Contractor Reward</h3>
+            </div>
+            <p style="color:#64748b;font-size:13px;margin:0;">3 friends sign up → Admin approves → <strong>1 Free Estimation/Analysis</strong></p>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div style="width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;"><i class="fas fa-drafting-compass"></i></div>
+                <h3 style="margin:0;font-size:15px;color:#0f172a;">Designer Reward</h3>
+            </div>
+            <p style="color:#64748b;font-size:13px;margin:0;">3 friends sign up → Admin approves → <strong>1 Free Quote</strong></p>
+        </div>
+    </div>
+
+    <!-- Referrers Detail Table -->
     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
-        <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="margin:0;font-size:16px;color:#0f172a;"><i class="fas fa-users" style="color:#2563eb;margin-right:8px;"></i>Referral Activity</h3>
+        <div style="padding:18px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:16px;color:#0f172a;"><i class="fas fa-users" style="color:#2563eb;margin-right:8px;"></i>Referral Activity — Detailed View</h3>
             <button class="btn btn-secondary" onclick="loadReferralRewardsData()" style="font-size:12px;padding:6px 14px;"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
         ${referrals.length === 0 ? `
         <div style="text-align:center;padding:40px;color:#94a3b8;">
             <i class="fas fa-inbox" style="font-size:36px;display:block;margin-bottom:12px;"></i>
-            <p>No referral activity yet. Users will appear here once they start sharing.</p>
-        </div>` : `
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                    <tr style="background:#f8fafc;">
-                        <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">User</th>
-                        <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Type</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Code</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Shares</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Referrals</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Rewards Earned</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Rewards Used</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Available</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${referrals.map(r => {
-                        const typeColor = r.userType === 'contractor' ? '#2563eb' : '#6366f1';
-                        const typeBg = r.userType === 'contractor' ? '#eff6ff' : '#f5f3ff';
-                        const typeIcon = r.userType === 'contractor' ? 'fa-hard-hat' : 'fa-drafting-compass';
-                        return `
-                        <tr style="border-bottom:1px solid #f1f5f9;">
-                            <td style="padding:14px 16px;">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div style="width:36px;height:36px;background:${typeBg};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${typeColor};"><i class="fas ${typeIcon}"></i></div>
-                                    <div>
-                                        <strong style="font-size:14px;color:#0f172a;">${r.userName || 'Unknown'}</strong>
-                                        <div style="font-size:11px;color:#94a3b8;">${r.userId.substring(0, 12)}...</div>
-                                    </div>
+            <p>No referral activity yet.</p>
+        </div>` : referrals.map(r => {
+            const typeColor = r.userType === 'contractor' ? '#2563eb' : '#6366f1';
+            const typeBg = r.userType === 'contractor' ? '#eff6ff' : '#f5f3ff';
+            const typeIcon = r.userType === 'contractor' ? 'fa-hard-hat' : 'fa-drafting-compass';
+            const rewardName = r.userType === 'contractor' ? 'Free Estimation' : 'Free Quote';
+            const invitedUsers = r.invitedUsers || [];
+            const sentList = invitedUsers.filter(u => u.status === 'sent');
+            const registeredList = invitedUsers.filter(u => u.status === 'registered');
+            const eligibleForApproval = registeredList.length >= ((r.rewardsEarned || 0) + 1) * 3;
+
+            return `
+            <div style="border-bottom:1px solid #f1f5f9;padding:20px 24px;">
+                <!-- User Header Row -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;background:${typeBg};border-radius:10px;display:flex;align-items:center;justify-content:center;color:${typeColor};font-size:18px;"><i class="fas ${typeIcon}"></i></div>
+                        <div>
+                            <strong style="font-size:15px;color:#0f172a;">${r.userName || 'Unknown'}</strong>
+                            <div style="font-size:12px;color:#94a3b8;">${r.userEmail || ''} • <span style="background:${typeBg};color:${typeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:capitalize;">${r.userType}</span></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <code style="background:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:12px;color:#334155;font-weight:700;">${r.referralCode}</code>
+                        <div style="display:flex;gap:6px;">
+                            <span style="background:#fff7ed;color:#ea580c;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Referrals sent but not yet signed up"><i class="fas fa-paper-plane" style="margin-right:4px;"></i>${r.sentCount} sent</span>
+                            <span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Friends who signed up"><i class="fas fa-user-check" style="margin-right:4px;"></i>${r.registeredCount} signed up</span>
+                            <span style="background:#f5f3ff;color:#7c3aed;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Rewards earned"><i class="fas fa-gift" style="margin-right:4px;"></i>${r.rewardsEarned || 0} earned</span>
+                        </div>
+                        ${eligibleForApproval ? `
+                        <button onclick="approveReferralReward('${r.userId}','${r.userName}')" style="padding:8px 18px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.3);"><i class="fas fa-check-circle" style="margin-right:4px;"></i> Approve ${rewardName}</button>` : ''}
+                    </div>
+                </div>
+
+                <!-- Invited Users Detail -->
+                ${invitedUsers.length > 0 ? `
+                <div style="margin-left:56px;">
+                    <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Referred Friends:</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        ${invitedUsers.map(u => {
+                            const isSent = u.status === 'sent';
+                            const stColor = isSent ? '#f59e0b' : '#10b981';
+                            const stBg = isSent ? '#fffbeb' : '#ecfdf5';
+                            const stIcon = isSent ? 'fa-clock' : 'fa-check-circle';
+                            const stText = isSent ? 'Sent — NOT signed up' : 'SIGNED UP';
+                            const dateStr = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : (u.sentAt ? new Date(u.sentAt).toLocaleDateString() : '');
+                            return `
+                            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${stBg};border-radius:8px;border:1px solid ${isSent ? '#fde68a' : '#a7f3d0'};">
+                                <i class="fas ${stIcon}" style="color:${stColor};font-size:14px;"></i>
+                                <div style="flex:1;">
+                                    <strong style="font-size:13px;color:#0f172a;">${u.name || 'Friend'}</strong>
+                                    <span style="font-size:12px;color:#64748b;margin-left:8px;">${u.email || ''}</span>
                                 </div>
-                            </td>
-                            <td style="padding:14px 16px;"><span style="background:${typeBg};color:${typeColor};padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;text-transform:capitalize;">${r.userType}</span></td>
-                            <td style="padding:14px 16px;text-align:center;"><code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:12px;color:#334155;font-weight:600;">${r.referralCode}</code></td>
-                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#334155;">${r.totalShares || 0}</td>
-                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#059669;">${r.successfulReferrals || 0}</td>
-                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#d97706;">${r.rewardsEarned || 0}</td>
-                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#7c3aed;">${r.rewardsUsed || 0}</td>
-                            <td style="padding:14px 16px;text-align:center;">
-                                <span style="background:${(r.rewardsAvailable || 0) > 0 ? '#ecfdf5' : '#f8fafc'};color:${(r.rewardsAvailable || 0) > 0 ? '#059669' : '#94a3b8'};padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;">${r.rewardsAvailable || 0}</span>
-                            </td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>`}
+                                <span style="font-size:11px;font-weight:700;color:${stColor};text-transform:uppercase;">${stText}</span>
+                                ${dateStr ? `<span style="font-size:11px;color:#94a3b8;margin-left:6px;">${dateStr}</span>` : ''}
+                                ${u.platform ? `<span style="font-size:10px;background:#f1f5f9;color:#64748b;padding:2px 6px;border-radius:4px;">${u.platform}</span>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>` : `
+                <div style="margin-left:56px;font-size:13px;color:#94a3b8;font-style:italic;">No referrals sent yet</div>`}
+            </div>`;
+        }).join('')}
     </div>`;
+}
+
+async function approveReferralReward(userId, userName) {
+    if (!confirm('Approve reward for ' + (userName || 'this user') + '? They will receive a free estimation/analysis or quote.')) return;
+
+    try {
+        const response = await apiCall('/referrals/admin/approve-reward', 'POST', { userId });
+        if (response.success) {
+            showNotification('Reward approved for ' + (userName || 'user') + '!', 'success');
+            loadReferralRewardsData();
+        } else {
+            showNotification(response.message || 'Failed to approve reward', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving reward:', error);
+        showNotification('Failed to approve reward: ' + (error.message || 'Unknown error'), 'error');
+    }
 }
