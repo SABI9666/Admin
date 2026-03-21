@@ -125,6 +125,8 @@ const state = {
     subscriptionPlans: {},
     meetings: [],
     websiteEstimations: [],
+    referralData: [],
+    referralStats: {},
 };
 
 // --- INITIALIZATION ---
@@ -429,6 +431,7 @@ function showTab(tabName) {
         'subscriptions': { title: 'Subscriptions', subtitle: 'Manage subscription plans, view client details, and control billing' },
         'whatsapp-marketing': { title: 'WhatsApp Marketing', subtitle: 'Send marketing messages to clients via WhatsApp Business API — Sender: (configured via env) (testing)' },
         'website-estimations': { title: 'Website Estimation', subtitle: 'Manage estimation requests submitted from the landing page' },
+        'referral-rewards': { title: 'Referral Rewards', subtitle: 'Track referral program activity — shares, signups, rewards earned by contractors & designers' },
     };
     const info = titleMap[tabName] || { title: tabName, subtitle: '' };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -467,6 +470,7 @@ function showTab(tabName) {
         'whatsapp-marketing': { data: state.whatsappRecipients || [], loader: loadWhatsAppMarketingData },
         'meetings': { data: state.meetings || [], loader: loadMeetingsData },
         'website-estimations': { data: state.websiteEstimations || [], loader: loadWebsiteEstimationsData },
+        'referral-rewards': { data: state.referralData || [], loader: loadReferralRewardsData },
     };
 
     if (manualLoadMap[tabName] && manualLoadMap[tabName].data.length === 0) {
@@ -10923,4 +10927,160 @@ async function deleteWebsiteEstimation(estimationId) {
         console.error('Error deleting website estimation:', error);
         showNotification('Failed to delete website estimation.', 'error');
     }
+}
+
+// ================================================================
+// REFERRAL REWARDS MANAGEMENT
+// ================================================================
+async function loadReferralRewardsData() {
+    const tab = document.getElementById('referral-rewards-tab');
+    if (!tab) return;
+
+    tab.innerHTML = `<div style="text-align:center;padding:60px;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;color:#2563eb;"></i>Loading referral rewards data...</div>`;
+
+    try {
+        const response = await apiCall('/referrals/admin/all');
+        if (!response.success) throw new Error(response.message);
+
+        const { referrals, stats } = response.data;
+        state.referralData = referrals;
+        state.referralStats = stats;
+
+        // Update badge
+        const badge = document.getElementById('referralRewardsBadge');
+        if (badge) badge.textContent = stats.totalReferrers || 0;
+
+        renderReferralRewardsTab(referrals, stats);
+    } catch (error) {
+        console.error('Error loading referral data:', error);
+        tab.innerHTML = `
+        <div class="tab-header">
+            <h2><i class="fas fa-gift"></i> Referral Rewards Program</h2>
+            <p class="tab-subtitle">Track referral program activity across contractors and designers</p>
+        </div>
+        <div style="text-align:center;padding:40px;color:#64748b;">
+            <i class="fas fa-gift" style="font-size:48px;margin-bottom:16px;display:block;color:#cbd5e1;"></i>
+            <h3 style="margin:0 0 8px;color:#334155;">No Referral Data Yet</h3>
+            <p>Referral activity will appear here once users start sharing.</p>
+        </div>`;
+    }
+}
+
+function renderReferralRewardsTab(referrals, stats) {
+    const tab = document.getElementById('referral-rewards-tab');
+    if (!tab) return;
+
+    const contractorReferrals = referrals.filter(r => r.userType === 'contractor');
+    const designerReferrals = referrals.filter(r => r.userType === 'designer');
+
+    tab.innerHTML = `
+    <div class="tab-header">
+        <h2><i class="fas fa-gift"></i> Referral Rewards Program</h2>
+        <p class="tab-subtitle">Track referral program activity — shares, signups, and rewards earned</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
+        <div style="background:linear-gradient(135deg,#eff6ff,#e0e7ff);border:1px solid #bfdbfe;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#1e3a8a;">${stats.totalReferrers || 0}</div>
+            <div style="font-size:12px;color:#3b82f6;font-weight:600;margin-top:4px;">Total Referrers</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#14532d;">${stats.totalShares || 0}</div>
+            <div style="font-size:12px;color:#16a34a;font-weight:600;margin-top:4px;">Total Shares</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fefce8,#fef9c3);border:1px solid #fde047;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#713f12;">${stats.totalSuccessfulReferrals || 0}</div>
+            <div style="font-size:12px;color:#ca8a04;font-weight:600;margin-top:4px;">Successful Referrals</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#831843;">${stats.totalRewardsEarned || 0}</div>
+            <div style="font-size:12px;color:#db2777;font-weight:600;margin-top:4px;">Rewards Earned</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#4c1d95;">${stats.totalRewardsUsed || 0}</div>
+            <div style="font-size:12px;color:#7c3aed;font-weight:600;margin-top:4px;">Rewards Used</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:14px;padding:20px;text-align:center;">
+            <div style="font-size:28px;font-weight:800;color:#7c2d12;">${stats.contractorReferrers || 0} / ${stats.designerReferrers || 0}</div>
+            <div style="font-size:12px;color:#ea580c;font-weight:600;margin-top:4px;">Contractors / Designers</div>
+        </div>
+    </div>
+
+    <!-- Program Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <div style="width:40px;height:40px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-hard-hat"></i></div>
+                <h3 style="margin:0;font-size:16px;color:#0f172a;">Contractor Rewards</h3>
+            </div>
+            <p style="color:#64748b;font-size:13px;margin:0;">Share with <strong>3 friends</strong> → Get <strong>1 Free Estimation/Analysis</strong></p>
+            <div style="margin-top:10px;font-size:13px;color:#94a3b8;">${contractorReferrals.length} contractors participating</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <div style="width:40px;height:40px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-drafting-compass"></i></div>
+                <h3 style="margin:0;font-size:16px;color:#0f172a;">Designer Rewards</h3>
+            </div>
+            <p style="color:#64748b;font-size:13px;margin:0;">Share with <strong>3 friends</strong> → Get <strong>1 Free Quote</strong></p>
+            <div style="margin-top:10px;font-size:13px;color:#94a3b8;">${designerReferrals.length} designers participating</div>
+        </div>
+    </div>
+
+    <!-- Referrers Table -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+        <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:16px;color:#0f172a;"><i class="fas fa-users" style="color:#2563eb;margin-right:8px;"></i>Referral Activity</h3>
+            <button class="btn btn-secondary" onclick="loadReferralRewardsData()" style="font-size:12px;padding:6px 14px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+        ${referrals.length === 0 ? `
+        <div style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fas fa-inbox" style="font-size:36px;display:block;margin-bottom:12px;"></i>
+            <p>No referral activity yet. Users will appear here once they start sharing.</p>
+        </div>` : `
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8fafc;">
+                        <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">User</th>
+                        <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Type</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Code</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Shares</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Referrals</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Rewards Earned</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Rewards Used</th>
+                        <th style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Available</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${referrals.map(r => {
+                        const typeColor = r.userType === 'contractor' ? '#2563eb' : '#6366f1';
+                        const typeBg = r.userType === 'contractor' ? '#eff6ff' : '#f5f3ff';
+                        const typeIcon = r.userType === 'contractor' ? 'fa-hard-hat' : 'fa-drafting-compass';
+                        return `
+                        <tr style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:14px 16px;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div style="width:36px;height:36px;background:${typeBg};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${typeColor};"><i class="fas ${typeIcon}"></i></div>
+                                    <div>
+                                        <strong style="font-size:14px;color:#0f172a;">${r.userName || 'Unknown'}</strong>
+                                        <div style="font-size:11px;color:#94a3b8;">${r.userId.substring(0, 12)}...</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:14px 16px;"><span style="background:${typeBg};color:${typeColor};padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;text-transform:capitalize;">${r.userType}</span></td>
+                            <td style="padding:14px 16px;text-align:center;"><code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:12px;color:#334155;font-weight:600;">${r.referralCode}</code></td>
+                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#334155;">${r.totalShares || 0}</td>
+                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#059669;">${r.successfulReferrals || 0}</td>
+                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#d97706;">${r.rewardsEarned || 0}</td>
+                            <td style="padding:14px 16px;text-align:center;font-weight:700;color:#7c3aed;">${r.rewardsUsed || 0}</td>
+                            <td style="padding:14px 16px;text-align:center;">
+                                <span style="background:${(r.rewardsAvailable || 0) > 0 ? '#ecfdf5' : '#f8fafc'};color:${(r.rewardsAvailable || 0) > 0 ? '#059669' : '#94a3b8'};padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;">${r.rewardsAvailable || 0}</span>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`}
+    </div>`;
 }
