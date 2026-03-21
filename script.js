@@ -10939,7 +10939,7 @@ async function loadReferralRewardsData() {
     tab.innerHTML = `<div style="text-align:center;padding:60px;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;color:#2563eb;"></i>Loading referral rewards data...</div>`;
 
     try {
-        const response = await apiCall('/referrals/admin/all');
+        const response = await apiCall('/referrals/all');
         if (!response.success) throw new Error(response.message);
 
         const { referrals, stats } = response.data;
@@ -11104,7 +11104,7 @@ async function approveReferralReward(userId, userName) {
     if (!confirm('Approve reward for ' + (userName || 'this user') + '? They will receive a free estimation/analysis or quote.')) return;
 
     try {
-        const response = await apiCall('/referrals/admin/approve-reward', 'POST', { userId });
+        const response = await apiCall('/referrals/approve-reward', 'POST', { userId });
         if (response.success) {
             showNotification('Reward approved for ' + (userName || 'user') + '!', 'success');
             loadReferralRewardsData();
