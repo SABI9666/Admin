@@ -11043,7 +11043,12 @@ function renderReferralRewardsTab(referrals, stats) {
             const invitedUsers = r.invitedUsers || [];
             const sentList = invitedUsers.filter(u => u.status === 'sent');
             const registeredList = invitedUsers.filter(u => u.status === 'registered');
-            const eligibleForApproval = registeredList.length >= ((r.rewardsEarned || 0) + 1) * 3;
+            const rewardsEarned = r.rewardsEarned || 0;
+            const nextRewardNumber = rewardsEarned + 1;
+            const neededForNext = nextRewardNumber * 3;
+            const eligibleForApproval = registeredList.length >= neededForNext;
+            const progressToNext = registeredList.length - (rewardsEarned * 3); // how many towards next reward
+            const progressPercent = Math.min(Math.round((progressToNext / 3) * 100), 100);
 
             return `
             <div style="border-bottom:1px solid #f1f5f9;padding:20px 24px;">
@@ -11056,16 +11061,36 @@ function renderReferralRewardsTab(referrals, stats) {
                             <div style="font-size:12px;color:#94a3b8;">${r.userEmail || ''} • <span style="background:${typeBg};color:${typeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:capitalize;">${r.userType}</span></div>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <code style="background:#f1f5f9;padding:4px 10px;border-radius:6px;font-size:12px;color:#334155;font-weight:700;">${r.referralCode}</code>
-                        <div style="display:flex;gap:6px;">
-                            <span style="background:#fff7ed;color:#ea580c;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Referrals sent but not yet signed up"><i class="fas fa-paper-plane" style="margin-right:4px;"></i>${r.sentCount} sent</span>
-                            <span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Friends who signed up"><i class="fas fa-user-check" style="margin-right:4px;"></i>${r.registeredCount} signed up</span>
-                            <span style="background:#f5f3ff;color:#7c3aed;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Rewards earned"><i class="fas fa-gift" style="margin-right:4px;"></i>${r.rewardsEarned || 0} earned</span>
-                        </div>
-                        ${eligibleForApproval ? `
-                        <button onclick="approveReferralReward('${r.userId}','${r.userName}')" style="padding:8px 18px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.3);"><i class="fas fa-check-circle" style="margin-right:4px;"></i> Approve ${rewardName}</button>` : ''}
+                        <span style="background:#fff7ed;color:#ea580c;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Referrals sent but not yet signed up"><i class="fas fa-paper-plane" style="margin-right:4px;"></i>${r.sentCount} sent</span>
+                        <span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Friends who signed up"><i class="fas fa-user-check" style="margin-right:4px;"></i>${r.registeredCount} signed up</span>
+                        <span style="background:#f5f3ff;color:#7c3aed;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;" title="Total rewards approved"><i class="fas fa-gift" style="margin-right:4px;"></i>${rewardsEarned} approved</span>
+                        ${r.rewardsAvailable > 0 ? `<span style="background:#ecfdf5;color:#059669;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;" title="Unused rewards"><i class="fas fa-star" style="margin-right:4px;"></i>${r.rewardsAvailable} available</span>` : ''}
                     </div>
+                </div>
+
+                <!-- Reward Progress Bar -->
+                <div style="margin:0 0 14px 56px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:12px;font-weight:700;color:#0f172a;">Reward #${nextRewardNumber} Progress</span>
+                        <span style="font-size:12px;font-weight:600;color:${eligibleForApproval ? '#059669' : '#64748b'};">${progressToNext}/3 signed up ${eligibleForApproval ? '— READY TO APPROVE' : ''}</span>
+                    </div>
+                    <div style="width:100%;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;">
+                        <div style="width:${progressPercent}%;height:100%;background:${eligibleForApproval ? 'linear-gradient(90deg,#10b981,#059669)' : 'linear-gradient(90deg,#2563eb,#6366f1)'};border-radius:5px;transition:width 0.3s;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                        <span style="font-size:11px;color:#94a3b8;">${eligibleForApproval
+                            ? `All 3 referrals completed! Click approve to grant ${rewardName}.`
+                            : `${3 - progressToNext} more friend${3 - progressToNext !== 1 ? 's' : ''} need to sign up for Reward #${nextRewardNumber}`}</span>
+                        ${rewardsEarned > 0 ? `<span style="font-size:11px;color:#7c3aed;">Total: ${registeredList.length} signed up across ${rewardsEarned} reward${rewardsEarned > 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                    ${eligibleForApproval ? `
+                    <div style="margin-top:12px;text-align:center;">
+                        <button onclick="approveReferralReward('${r.userId}','${r.userName}',${nextRewardNumber})" style="padding:10px 28px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);transition:all 0.2s;">
+                            <i class="fas fa-check-circle" style="margin-right:6px;"></i> Approve ${rewardName} #${nextRewardNumber}
+                        </button>
+                    </div>` : ''}
                 </div>
 
                 <!-- Invited Users Detail -->
@@ -11100,13 +11125,14 @@ function renderReferralRewardsTab(referrals, stats) {
     </div>`;
 }
 
-async function approveReferralReward(userId, userName) {
-    if (!confirm('Approve reward for ' + (userName || 'this user') + '? They will receive a free estimation/analysis or quote.')) return;
+async function approveReferralReward(userId, userName, rewardNumber) {
+    const rewardNum = rewardNumber || '';
+    if (!confirm(`Approve Reward #${rewardNum} for ${userName || 'this user'}?\n\nThey have completed 3 referral sign-ups and will receive a free estimation/analysis or quote.\n\nAfter this, they can earn another reward by getting 3 MORE friends to sign up.`)) return;
 
     try {
         const response = await apiCall('/referrals/approve-reward', 'POST', { userId });
         if (response.success) {
-            showNotification('Reward approved for ' + (userName || 'user') + '!', 'success');
+            showNotification(`Reward #${rewardNum} approved for ${userName || 'user'}! They can earn the next reward by getting 3 more friends to sign up.`, 'success');
             loadReferralRewardsData();
         } else {
             showNotification(response.message || 'Failed to approve reward', 'error');
