@@ -9540,12 +9540,16 @@ function renderSubscriptionsTab() {
             </div>
         </div>
 
-        <!-- Stripe Configuration Notice -->
+        <!-- Payment Gateway Configuration Notice -->
         <div class="sub-stripe-notice">
-            <div class="sub-stripe-notice-icon"><i class="fas fa-info-circle"></i></div>
+            <div class="sub-stripe-notice-icon"><i class="fas fa-credit-card"></i></div>
             <div class="sub-stripe-notice-content">
-                <strong>Stripe Payment Integration</strong>
-                <p>Stripe checkout is ready to be connected. Add your Stripe API keys in the server environment variables (<code>STRIPE_SECRET_KEY</code>, <code>STRIPE_WEBHOOK_SECRET</code>) to enable live payments.</p>
+                <strong>Payment Gateway Integration</strong>
+                <p>
+                    <strong>Stripe (International - USD):</strong> Add <code>STRIPE_SECRET_KEY</code>, <code>STRIPE_PUBLISHABLE_KEY</code>, <code>STRIPE_WEBHOOK_SECRET</code> in Render env vars.<br>
+                    <strong>Razorpay (India - INR):</strong> Add <code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code>, <code>RAZORPAY_WEBHOOK_SECRET</code> in Render env vars.<br>
+                    Webhook URLs: <code>/api/subscriptions/stripe-webhook</code> and <code>/api/subscriptions/razorpay-webhook</code>
+                </p>
             </div>
         </div>
 
@@ -9839,6 +9843,8 @@ function renderSubscriptionsTable(subs) {
                                 <td>${formatAdminDate(sub.startDate)}</td>
                                 <td>
                                     <span style="text-transform:capitalize; font-size:13px;">${sub.paymentMethod}</span>
+                                    ${sub.paymentGateway ? `<div style="font-size:10px; color:#6b7280; margin-top:2px;">${sub.paymentGateway === 'stripe' ? '<i class="fab fa-stripe" style="color:#635bff;"></i> Stripe' : sub.paymentGateway === 'razorpay' ? '<i class="fas fa-rupee-sign" style="color:#0a2540;"></i> Razorpay' : ''}</div>` : ''}
+                                    ${sub.billingCycle === 'yearly' ? '<div style="font-size:10px; color:#059669; font-weight:600; margin-top:1px;">Yearly</div>' : ''}
                                 </td>
                                 <td>
                                     <div class="sub-actions" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
@@ -10081,10 +10087,28 @@ function viewSubscriptionDetails(subscriptionId) {
                                 <span>$${sub.aiAnalysisRate}/MB</span>
                             </div>
                         ` : ''}
+                        ${sub.paymentGateway ? `
+                            <div class="sub-detail-field">
+                                <label>Payment Gateway</label>
+                                <span style="font-weight:600; text-transform:capitalize;">${sub.paymentGateway === 'stripe' ? '<i class="fab fa-stripe" style="color:#635bff;"></i> Stripe (USD)' : '<i class="fas fa-rupee-sign" style="color:#0a2540;"></i> Razorpay (INR)'}</span>
+                            </div>
+                        ` : ''}
                         ${sub.stripeCustomerId ? `
                             <div class="sub-detail-field">
                                 <label>Stripe Customer</label>
                                 <span style="font-family:monospace; font-size:12px;">${sub.stripeCustomerId}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.razorpayOrderId ? `
+                            <div class="sub-detail-field">
+                                <label>Razorpay Order</label>
+                                <span style="font-family:monospace; font-size:12px;">${sub.razorpayOrderId}</span>
+                            </div>
+                        ` : ''}
+                        ${sub.razorpayPaymentId ? `
+                            <div class="sub-detail-field">
+                                <label>Razorpay Payment</label>
+                                <span style="font-family:monospace; font-size:12px;">${sub.razorpayPaymentId}</span>
                             </div>
                         ` : ''}
                         ${sub.statusChangedBy ? `
@@ -10194,6 +10218,10 @@ function showCreateSubscriptionModal() {
                             <option value="yearly">Yearly (10% discount)</option>
                         </select>
                         <div id="billingCyclePriceInfo" style="font-size:12px; color:#059669; font-weight:600; margin-top:6px; display:none;"></div>
+                    </div>
+                    <div style="margin-bottom:16px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                        <label style="display:block; font-weight:600; margin-bottom:6px; font-size:13px; color:#374151;"><i class="fas fa-info-circle" style="color:#6366f1;"></i> Payment Note</label>
+                        <p style="font-size:12px; color:#6b7280; margin:0; line-height:1.5;">Admin-created subscriptions use <strong>manual</strong> payment method. For Stripe/Razorpay payments, the user must subscribe from the frontend.</p>
                     </div>
                     <div style="margin-bottom:20px;">
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:#374151;">
