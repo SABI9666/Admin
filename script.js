@@ -9651,6 +9651,13 @@ function renderPlanCards(plans) {
             priceDisplay = `$${plan.price}/${plan.billingCycle === 'weekly' ? 'wk' : 'mo'}`;
         }
 
+        // Yearly pricing display
+        let yearlyPriceHtml = '';
+        if (plan.supportsYearly && plan.yearlyPrice) {
+            const monthlyEquiv = (plan.yearlyPrice / 12).toFixed(2);
+            yearlyPriceHtml = `<div style="font-size:11px; color:#059669; font-weight:600; margin-top:2px;">Yearly: $${plan.yearlyPrice}/yr ($${monthlyEquiv}/mo) — 10% off</div>`;
+        }
+
         let detailsHtml = '';
         if (isEstimation) {
             detailsHtml = `
@@ -9695,6 +9702,7 @@ function renderPlanCards(plans) {
                 ${!isEnabled ? '<div style="position:absolute; top:8px; right:8px; background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; text-transform:uppercase; z-index:1;">STOPPED</div>' : ''}
                 <div class="sub-plan-header" style="background:${isEnabled ? color.gradient : 'linear-gradient(135deg, #9ca3af, #6b7280)'};">
                     <div class="sub-plan-price">${priceDisplay}</div>
+                    ${yearlyPriceHtml}
                     <div class="sub-plan-name">${plan.label}</div>
                 </div>
                 <div class="sub-plan-body">
@@ -10154,7 +10162,7 @@ function showCreateSubscriptionModal() {
                     </div>
                     <div style="margin-bottom:16px;">
                         <label style="display:block; font-weight:600; margin-bottom:6px; font-size:14px; color:#374151;">Plan</label>
-                        <select id="newSubPlan" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                        <select id="newSubPlan" onchange="updateBillingCycleVisibility()" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
                             <option value="">Select a plan...</option>
                             <optgroup label="Designer Plans">
                                 <option value="designer_free">Designer Free (1 quote)</option>
@@ -10179,6 +10187,14 @@ function showCreateSubscriptionModal() {
                             </optgroup>
                         </select>
                     </div>
+                    <div id="billingCycleRow" style="margin-bottom:16px; display:none;">
+                        <label style="display:block; font-weight:600; margin-bottom:6px; font-size:14px; color:#374151;">Billing Cycle</label>
+                        <select id="newSubBillingCycle" onchange="updateBillingCyclePrice()" style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly (10% discount)</option>
+                        </select>
+                        <div id="billingCyclePriceInfo" style="font-size:12px; color:#059669; font-weight:600; margin-top:6px; display:none;"></div>
+                    </div>
                     <div style="margin-bottom:20px;">
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:#374151;">
                             <input type="checkbox" id="newSubFree" style="width:18px; height:18px;">
@@ -10199,10 +10215,56 @@ function showCreateSubscriptionModal() {
     document.getElementById('modal-container').innerHTML = modalHtml;
 }
 
+// Plans that support yearly billing (must match backend PLAN_DEFINITIONS)
+const YEARLY_ELIGIBLE_PLANS = [
+    'designer_5', 'designer_10', 'designer_15', 'designer_30',
+    'estimation_starter', 'estimation_professional', 'estimation_business',
+    'analysis_pro', 'analysis_business',
+];
+
+const PLAN_MONTHLY_PRICES = {
+    designer_5: 5, designer_10: 10, designer_15: 15, designer_30: 30,
+    estimation_starter: 29, estimation_professional: 79, estimation_business: 149,
+    analysis_pro: 49, analysis_business: 99,
+};
+
+function updateBillingCycleVisibility() {
+    const planId = document.getElementById('newSubPlan')?.value;
+    const billingRow = document.getElementById('billingCycleRow');
+    const billingSelect = document.getElementById('newSubBillingCycle');
+    if (!billingRow) return;
+
+    if (planId && YEARLY_ELIGIBLE_PLANS.includes(planId)) {
+        billingRow.style.display = 'block';
+        if (billingSelect) billingSelect.value = 'monthly';
+        updateBillingCyclePrice();
+    } else {
+        billingRow.style.display = 'none';
+    }
+}
+
+function updateBillingCyclePrice() {
+    const planId = document.getElementById('newSubPlan')?.value;
+    const cycle = document.getElementById('newSubBillingCycle')?.value;
+    const priceInfo = document.getElementById('billingCyclePriceInfo');
+    if (!priceInfo || !planId) return;
+
+    if (cycle === 'yearly' && PLAN_MONTHLY_PRICES[planId]) {
+        const monthlyPrice = PLAN_MONTHLY_PRICES[planId];
+        const yearlyTotal = parseFloat((monthlyPrice * 12 * 0.9).toFixed(2));
+        const monthlyEquiv = (yearlyTotal / 12).toFixed(2);
+        priceInfo.style.display = 'block';
+        priceInfo.innerHTML = `<i class="fas fa-tag"></i> Yearly: $${yearlyTotal}/yr ($${monthlyEquiv}/mo) — Save 10% vs $${monthlyPrice * 12}/yr monthly`;
+    } else {
+        priceInfo.style.display = 'none';
+    }
+}
+
 async function createManualSubscription() {
     const email = document.getElementById('newSubEmail')?.value?.trim();
     const planId = document.getElementById('newSubPlan')?.value;
     const isFree = document.getElementById('newSubFree')?.checked || false;
+    const billingCycle = document.getElementById('newSubBillingCycle')?.value || 'monthly';
 
     if (!email) return showNotification('Please enter a user email', 'warning');
     if (!planId) return showNotification('Please select a plan', 'warning');
@@ -10212,6 +10274,7 @@ async function createManualSubscription() {
             userEmail: email,
             planId,
             isFree,
+            billingCycle: YEARLY_ELIGIBLE_PLANS.includes(planId) ? billingCycle : undefined,
         });
 
         showNotification(result.message || 'Subscription created', 'success');
